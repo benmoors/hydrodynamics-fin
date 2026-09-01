@@ -1,0 +1,8 @@
+# MMA3001 board-geometry surrogate.
+# Pinned to what is installed and verified on Python 3.14.6 (cp314 wheels).
+numpy>=2.5
+pandas>=3.0
+scipy>=1.18
+scikit-learn>=1.9
+pytest>=9.0
+pdoc>=16.0

@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 benmoors
+Copyright (c) 2026 Benjamin Moors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+THIRD-PARTY MATERIAL — NOT COVERED BY THE LICENCE ABOVE
+
+ShaperWaveDynamics (SWD) is commercial software. No part of it is redistributed
+in this repository. The CSVs under SWD/data/ are measurements taken from a
+licensed installation, not extracts of the application.
+
+Supplementary data under SWD/data/paper-supplementary/ accompanies:
+
+    Charles et al. (2026), Results in Engineering 29:108868
+    DOI 10.1016/j.rineng.2025.108868
+
+and is redistributed under CC BY 4.0 with attribution recorded in that
+directory's SOURCE.md.
+
+Surfboard designs in the SWD library are attributable to named third-party
+shapers. Shaper names are never exported, and the per-element contact geometry
+(a reproducible description of a hull's wetted shape) is gitignored rather than
+committed.

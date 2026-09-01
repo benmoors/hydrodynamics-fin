@@ -1,0 +1,16 @@
+[project]
+name = "virtual-surfer"
+version = "0.1.0"
+description = "ML surrogate for SWD board hydrodynamics (MMA3001 individual project)"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.5", "pandas>=3.0", "scipy>=1.18", "scikit-learn>=1.9",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9.0", "pdoc>=16.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# src/ is a plain package at the repo root; make it importable without installing.
+pythonpath = ["."]

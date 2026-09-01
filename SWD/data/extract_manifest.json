@@ -1,0 +1,69 @@
+{
+    "generated_utc":  "2026-08-31T22:23:25.2244743Z",
+    "skip_elements":  false,
+    "tables":  {
+                   "boards.csv":  {
+                                      "rows":  29,
+                                      "cols":  10
+                                  },
+                   "operating_points.csv":  {
+                                                "rows":  720,
+                                                "cols":  22
+                                            },
+                   "elements.csv":  {
+                                        "rows":  6867,
+                                        "cols":  24
+                                    },
+                   "fin_polars.csv":  {
+                                          "rows":  680400,
+                                          "cols":  7
+                                      }
+               },
+    "polar_blocks":  1890,
+    "dropped_columns":  {
+                            "boards.csv":  [
+                                               "structure_mass_kg"
+                                           ],
+                            "operating_points.csv":  [
+
+                                                     ],
+                            "elements.csv":  [
+                                                 "roll_surface_rad",
+                                                 "max_area_m2",
+                                                 "immersed_section_m2",
+                                                 "dynamic_pressure_pa",
+                                                 "cv_savitsky",
+                                                 "lambda_savitsky",
+                                                 "cl0_savitsky",
+                                                 "cl0_theoretical",
+                                                 "boundary_layer_mm",
+                                                 "laminar_bl_mm",
+                                                 "lam_turb_transition_mm",
+                                                 "element_length_mm",
+                                                 "rail_deviation_deg"
+                                             ],
+                            "fin_polars.csv":  [
+
+                                               ]
+                        },
+    "parse_failures":  {
+                           "boards":  0,
+                           "reports":  0
+                       },
+    "sentinel_hits":  {
+                          "_largeur_B_element_mm":  68
+                      },
+    "rho":  {
+                "v_ref_ms":  20,
+                "snap_rtol":  2E-05,
+                "snap_misses":  0,
+                "snap_worst_rel":  5.27255348858337E-06
+            },
+    "warnings":  {
+                     "nan_aggregates":  0,
+                     "polar_bad_tokens":  0,
+                     "polar_truncated":  0,
+                     "scan_speed_spread":  4
+                 },
+    "complete":  true
+}

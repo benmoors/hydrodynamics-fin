@@ -1,0 +1,12 @@
+{
+    "generated_utc":  "2026-08-31T22:27:05.1975378Z",
+    "board":  "default_shortboard",
+    "fields":  340,
+    "reports_found":  11,
+    "reports_failed":  0,
+    "roll_cases":  51,
+    "elements":  467,
+    "untrusted_skipped":  0,
+    "provenance_gate":  "enforced",
+    "sentinel_fields":  1
+}

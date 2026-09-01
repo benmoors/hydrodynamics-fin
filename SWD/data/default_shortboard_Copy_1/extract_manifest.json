@@ -1,0 +1,40 @@
+{
+    "generated_utc":  "2026-09-01T12:35:06.6850500Z",
+    "board":  "default_shortboard_Copy_1",
+    "tables":  {
+                   "elements.csv":  {
+                                        "rows":  474,
+                                        "cols":  57
+                                    },
+                   "sub_elements.csv":  {
+                                            "rows":  4740,
+                                            "cols":  52
+                                        },
+                   "operating_points.csv":  {
+                                                "rows":  50,
+                                                "cols":  9
+                                            },
+                   "geometry_contact.csv":  {
+                                                "rows":  63749,
+                                                "cols":  7
+                                            }
+               },
+    "reports":  {
+                    "found":  11,
+                    "read":  11
+                },
+    "not_deserialised":  {
+                             "untrusted":  1,
+                             "failed":  0
+                         },
+    "rho":  {
+                "v_ref_ms":  20,
+                "snap_rtol":  2E-05,
+                "snap_misses":  0,
+                "snap_worst_rel":  2.4328105144199867E-07
+            },
+    "sentinel_hits":  {
+                          "_largeur_B_element_mm":  8
+                      },
+    "complete":  true
+}

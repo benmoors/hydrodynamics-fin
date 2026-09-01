@@ -1,0 +1,67 @@
+Project/
+CLAUDE.md
+
+# --- SWD acquisition ---
+# Backups live OUTSIDE this repo (see SWD/README.md). These entries are a
+# second line of defence in case one is ever copied in by mistake.
+SWD/backup/
+*.reg
+swdy-licence*
+
+# SWD fin polars
+SWD/data/fin_polars.csv
+
+# Per-element contact-patch geometry: literal scale-1 hull coordinates, in metres,
+# ~59k vertices per board. That is a reproducible description of a board's wetted
+# shape, and the library holds designs attributable to named third parties. The
+# derived scalar CSVs beside it (elements, sub_elements, operating_points, board)
+# carry the physics the project actually needs and are committed; this one is the
+# geometry itself, so it stays local. Same reasoning as dropping shaper_name.
+SWD/data/**/geometry_contact.csv
+
+# Raw SWD binaries are large (biblio/ is 629 MB) and are the user's own
+# licensed data. Only the extracted CSVs belong in version control.
+*.fynrhydro
+*.fynbs
+*.fynbdi
+*.fynvague
+*.fynlines
+*.fyncoup
+*.fyntail
+*.fynsurfr
+*.fyncplroc
+*.fynstat
+*.fyndyn
+*.fynrail
+*.fynscoup
+*.fynsrail
+
+# Working files
+SWD/scratch/
+*.tmp
+__pycache__/
+.ipynb_checkpoints/
+
+# --- Phase 2 automation runtime artefacts ---
+# control-map.csv holds WM_GETTEXT output from every SWD control, and the PNGs
+# are renders of the app window. Both can carry the library path (username and
+# tenant) and board/designer names - the same leak class round 1 fixed by
+# dropping shaper_name. Regenerated on every run, so nothing is lost.
+SWD/tools/phase2/logs/
+SWD/tools/phase2/control-map*.csv
+# The two rules above are path-literal and only cover the DEFAULT locations.
+# -LogDir and -Dir are caller-supplied, so a log or a window render written
+# anywhere else under phase2 would have been tracked. (SQA W15, W16.)
+SWD/tools/phase2/**/*.log
+SWD/tools/phase2/**/*.png
+
+# --- graphify knowledge graph ---
+# Rebuildable artifact (graphify update . --force), ~hundreds of KB of graph.json
+# plus a self-contained graph.html. Rubric marks repo structure, so the build
+# output stays out of the tree; the graph is cheap to regenerate on demand.
+graphify-out/
+
+# Project-scoped Claude Code config written by `graphify claude install`
+# (PreToolUse hooks pointing at a machine-local graphify.EXE path). Machine
+# specific, and CLAUDE.md + graphify-out/ are already ignored — keep it consistent.
+.claude/

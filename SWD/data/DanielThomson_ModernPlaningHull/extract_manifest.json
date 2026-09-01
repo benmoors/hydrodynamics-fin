@@ -1,0 +1,44 @@
+{
+    "generated_utc":  "2026-09-01T12:33:32.1220348Z",
+    "board":  "DanielThomson_ModernPlaningHull",
+    "tables":  {
+                   "elements.csv":  {
+                                        "rows":  521,
+                                        "cols":  57
+                                    },
+                   "sub_elements.csv":  {
+                                            "rows":  5210,
+                                            "cols":  52
+                                        },
+                   "operating_points.csv":  {
+                                                "rows":  52,
+                                                "cols":  9
+                                            },
+                   "geometry_contact.csv":  {
+                                                "rows":  64058,
+                                                "cols":  7
+                                            },
+                   "board.csv":  {
+                                     "rows":  1,
+                                     "cols":  53
+                                 }
+               },
+    "reports":  {
+                    "found":  11,
+                    "read":  11
+                },
+    "not_deserialised":  {
+                             "untrusted":  0,
+                             "failed":  0
+                         },
+    "rho":  {
+                "v_ref_ms":  20,
+                "snap_rtol":  2E-05,
+                "snap_misses":  0,
+                "snap_worst_rel":  5.27255348858337E-06
+            },
+    "sentinel_hits":  {
+                          "_largeur_B_element_mm":  6
+                      },
+    "complete":  true
+}

@@ -9,7 +9,7 @@
 > phantom second speed was `20500/1023 = 20.0391` — the 1025-density scans divided by an
 > assumed 1023. Wherever this file treats 20.039 as a speed or as float noise, read it as
 > a ρ = 1025 scan instead. **The conclusion that `flow ms` does nothing is unaffected and
-> in fact strengthened**: the flow speed was 20.000 throughout. See `CLAUDE.md` § 5.
+> in fact strengthened**: the flow speed was 20.000 throughout. See [`CLAUDE.md`](../../CLAUDE.md) § 5.
 
 
 
@@ -97,14 +97,14 @@ SWD's are fixed.
 | yaw moment | — | — | ❌ both fields are `[NonSerialized]` |
 
 The paper's supplementary archives are already saved under `SWD/data/paper-supplementary/` with full
-provenance in `SOURCE.md`. **That is the natural two-component shape: SWD for board forces, measured
+provenance in [`SOURCE.md`](../data/paper-supplementary/SOURCE.md). **That is the natural two-component shape: SWD for board forces, measured
 data for the surfer-side indicators**, each validated independently.
 
 ---
 
 ## 📂 3. The two columns the supplied specification gets wrong
 
-`mma3001-project-spec.md` Part 4 § 3 names features `(V_t, φ)` and targets `(R, F_drag)`. Measured:
+[`mma3001-project-spec.md`](../../mma3001-project-spec.md) Part 4 § 3 names features `(V_t, φ)` and targets `(R, F_drag)`. Measured:
 
 | Spec role | Column | Measured reality |
 |---|---|---|
@@ -155,7 +155,7 @@ Required explicitly by the rubric. Every artefact below was re-measured today.
 ## 📂 5. The reference-velocity question
 
 Every operating point sits at `V_ref ≈ 20.04 m/s`, and no control in the application changes it
-(`what-swd-can-yield.md` § 3). A trajectory at any other speed therefore needs
+([`what-swd-can-yield.md`](what-swd-can-yield.md) § 3). A trajectory at any other speed therefore needs
 
     F(V) = F_ref · (V / V_ref)²
 
@@ -225,7 +225,7 @@ the PCB is later work.
 
 ### 🔹 Magnetometer
 
-`fin_sensor_pcb_overview.md` concludes absolute heading is "not a design requirement". That is too
+[`fin_sensor_pcb_overview.md`](../../fin_sensor_pcb_overview.md) concludes absolute heading is "not a design requirement". That is too
 strong, and the reasoning splits three ways:
 
 * **Yaw has no gravity reference.** Roll and pitch can be corrected against gravity; yaw cannot.
@@ -245,7 +245,7 @@ Radicality specifically does not depend on it. Both halves should be stated.
 
 ### 🔹 Pressure sensor
 
-`fin_sensor_pcb_overview.md` describes dynamic pressure as "much smaller" than hydrostatic. At surfing
+[`fin_sensor_pcb_overview.md`](../../fin_sensor_pcb_overview.md) describes dynamic pressure as "much smaller" than hydrostatic. At surfing
 speed the ordering is the other way round:
 
 | Component | Expression | At a fin |
@@ -329,9 +329,9 @@ are possible — controlled and parametric — rather than relying on donated hu
 Recorded rather than silently corrected. Both documents are inputs to this project and are left
 unedited.
 
-1. **`mma3001-project-spec.md` Part 4 § 3** — the surrogate as specified is untrainable: one feature is
+1. **[`mma3001-project-spec.md`](../../mma3001-project-spec.md) Part 4 § 3** — the surrogate as specified is untrainable: one feature is
    constant, one target is board metadata (§ 3).
-2. **`mma3001-project-spec.md` Part 4 § 2 vs the paper's Eq 7** — the specification defines the
+2. **[`mma3001-project-spec.md`](../../mma3001-project-spec.md) Part 4 § 2 vs the paper's Eq 7** — the specification defines the
    normalisation length `D` as `∫V dt`, the arc length. The paper defines it as the **double integral
    of acceleration**, i.e. net displacement. These are different quantities, and `D` enters the jerk
    cost squared through `C = T⁵/D²`. **Follow the paper.**

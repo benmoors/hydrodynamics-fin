@@ -1,7 +1,7 @@
 # 🛠️ Phase 2 automation — build notes
 
 Production record for every script in `SWD/tools/phase2/`, written so a later SQA pass has the
-reasoning, not just the result. Working document, kept in the same register as `SWD/TODO.md` — no
+reasoning, not just the result. Working document, kept in the same register as [`SWD/TODO.md`](../../TODO.md) — no
 prose pass applied, deliberately, because it is an audit record rather than a deliverable.
 
 **Started 2026-08-27.** Plan: `~/.claude/plans/coudl-you-open-up-expressive-rose.md`.
@@ -254,7 +254,7 @@ untouched.
 Both are the same species as the bug this project exists to avoid: output that looks fine and is not.
 
 1. **The log was UTF-16LE with a BOM.** `Tee-Object` under Windows PowerShell 5.1 writes Unicode;
-   first bytes measured `ff fe 53 00`. `CLAUDE.md` para 5 already records that a BOM breaks the
+   first bytes measured `ff fe 53 00`. [`CLAUDE.md`](../../../CLAUDE.md) para 5 already records that a BOM breaks the
    Python readers downstream, and the QA protocol records *"never parse an agent report out of a
    PowerShell pipe"* for this exact reason. Replaced with `[IO.File]::AppendAllText` and a
    `UTF8Encoding($false)`. Re-measured: `53 57 44 20` - UTF-8, no BOM.
@@ -283,7 +283,7 @@ for a console diagnostic that is never piped.
 
 ## 📂 5. Suggested SQA scope
 
-`CLAUDE.md` § 4 requires an SQA pass over any new `.ps1` that touches SWD **before it runs against
+[`CLAUDE.md`](../../../CLAUDE.md) § 4 requires an SQA pass over any new `.ps1` that touches SWD **before it runs against
 the real installation**. This is that code.
 
 **In scope:** `swd_msg.ps1`, `swd_diagnose.ps1`.

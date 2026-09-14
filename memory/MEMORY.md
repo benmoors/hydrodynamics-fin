@@ -1,0 +1,3 @@
+- [SQA loops are gated by the weekly limit](sqa-loops-gated-by-weekly-limit.md) — schedule them as their own dated stage; never launch one unprompted.
+- [Stage plans for multi-day work](stage-plans-for-multiday-work.md) — split long plans into standalone per-stage files in the repo, indexed with live status in CLAUDE.md.
+- [Run the full QA loop, fixer included](user-triggers-the-fixer-round.md) — the "user triggers the fixer" rule was WITHDRAWN 2026-09-02; follow global CLAUDE.md to the cap.

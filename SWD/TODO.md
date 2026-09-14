@@ -3,7 +3,7 @@
 Live checklist for the data-acquisition work. Kept current so the job survives
 session boundaries; Phase 2 alone spans days of scan time.
 
-> ### ▶️ Picking this up cold? Read `SWD/tools/phase2/RESUME.md` first.
+> ### ▶️ Picking this up cold? Read [`SWD/tools/phase2/RESUME.md`](tools/phase2/RESUME.md) first.
 > Phase 2 was paused mid-fix on 2026-08-27 and **the code in `tools/phase2/` does not
 > currently run** - `swd_msg.ps1` was rewritten and its type rename was not propagated to
 > `swd_diagnose.ps1`. RESUME.md says exactly what state everything is in and what to do next.
@@ -47,9 +47,9 @@ Two things changed from the plan, both because this repo gets uploaded:
 | 12 | Scan the 15 unscanned boards (~825 new points) | 2 | ⏸ needs item 10 |
 | 13 | Re-scan at new speeds beyond 2–20 m/s | 2 | ⏸ needs item 10 |
 | 14 | Radius sweep on `.fynbs` copies | 2 | ⏸ needs item 10 |
-| 15 | Re-extract; write `coverage.md` | 3 | ✅ regenerated 2026-08-28 for 667 rows |
+| 15 | Re-extract; write [`coverage.md`](data/coverage.md) | 3 | ✅ regenerated 2026-08-28 for 667 rows |
 | 16 | Write `SWD\README.md` + AI Acknowledgment | 3 | ✅ |
-| 17 | Write repo-root `CLAUDE.md` | 4 | ✅ |
+| 17 | Write repo-root [`CLAUDE.md`](../CLAUDE.md) | 4 | ✅ |
 
 Items 1–7 touch nothing but files and complete without launching SWD.
 **Item 8 gates everything after it.** Items 9+ drive the GUI.
@@ -137,7 +137,7 @@ files" premise turns out to be false: the library carries seven distinct
 SWD only deserialises files you explicitly open; this script auto-deserialises
 everything in the tree, so a hostile file arriving by OneDrive sync would execute
 without being opened. **Not fixed** — security fixes need sign-off. A ready-to-apply
-patch is being written to `SWD/docs/pending-security-fix.md`.
+patch is being written to [`SWD/docs/pending-security-fix.md`](docs/pending-security-fix.md).
 
 **Privacy (Warning 5).** The repo has a live public remote
 (`github.com/benmoors/hydrodynamics-fin`), `boards.csv` is not gitignored, and
@@ -165,7 +165,7 @@ an agent never certifies its own fixes.
 |---|---|
 | C1 half the fin-polar DB missing | fixed — `fin_polars.csv` **340,200 → 680,400 rows**, with a permanent `1890/1890` block assertion |
 | C2 13 fake-zero columns | fixed — constant-zero columns detected and dropped by name at write time |
-| C3 unrestricted `BinaryFormatter` | **NOT APPLIED — awaiting sign-off**, patch in `SWD/docs/pending-security-fix.md` |
+| C3 unrestricted `BinaryFormatter` | **NOT APPLIED — awaiting sign-off**, patch in [`SWD/docs/pending-security-fix.md`](docs/pending-security-fix.md) |
 | W1 unconstrained `-OutDir` | fixed — anchored to `$PWD.ProviderPath`, refuses a path inside the install or library trees |
 | W2 board null → `0.0` | fixed — absent *and* null now map to `NaN` |
 | W3 board name from fixed parent hop | fixed — first segment under `rapports_hydro`, warns on lookup miss |
@@ -191,7 +191,7 @@ a session-scoped scratchpad into `SWD/tools/tests/`, re-run from the new locatio
 
 ## ~~⚠️ ONE DECISION WAITING ON YOU~~ — RESOLVED 2026-08-27, gate applied
 
-`SWD/docs/pending-security-fix.md` — whether to apply the `BinaryFormatter`
+[`SWD/docs/pending-security-fix.md`](docs/pending-security-fix.md) — whether to apply the `BinaryFormatter`
 provenance gate. Its own recommendation is **Layer A only** (~40 lines, refuses to
 deserialise any `.fyn*` whose SHA-256 is not in a manifest you approved once; no
 change to extracted data). Layer B, a type allowlist, is written up but not
@@ -304,7 +304,7 @@ was the fix. This is the second time this exact trap has appeared in this loop.
 
 ### Outstanding, deliberately
 
-1. **`SWD/docs/pending-security-fix.md`** — still needs your sign-off, and now needs its own
+1. **[`SWD/docs/pending-security-fix.md`](docs/pending-security-fix.md)** — still needs your sign-off, and now needs its own
    two defects fixed first.
 2. **The `board` join key** carries designer/model names — your call, it is the key across all
    three tables.
@@ -319,7 +319,7 @@ was the fix. This is the second time this exact trap has appeared in this loop.
 ## Provenance gate APPLIED — 2026-08-27
 
 Layer A applied, both defects in the proposed patch fixed first. Layer B still not
-applied, for the reasons in `SWD/docs/provenance-gate.md` § 6.
+applied, for the reasons in [`SWD/docs/provenance-gate.md`](docs/provenance-gate.md) § 6.
 
 **Defect 1** (patch added a write target outside containment) closed by putting
 `-TrustManifest` through the same treatment as `-OutDir`: `$PWD` anchoring, `\`
@@ -368,7 +368,7 @@ ages against a moving codebase, and nothing re-checks it automatically.
 
 **Phase 2 is parked, not dropped.** Item 9 (the round-trip gate) passed: 59 of 59 serialised
 scalars identical, so writing modified board copies is proven safe. Item 10 is blocked by an
-OS-level input block on this machine, diagnosed in `docs/phase2-hydroscan.md`. Everything needed
+OS-level input block on this machine, diagnosed in [`docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md). Everything needed
 to resume is written down, including the two coordinate bugs that were found and fixed along the
 way and the working GUI helper at `tools/phase2/swd_ui.ps1`.
 
@@ -376,11 +376,11 @@ way and the working GUI helper at `tools/phase2/swd_ui.ps1`.
 
 | Item | Where |
 |---|---|
-| Project documentation to the brief's seven sections | `SWD/README.md` |
-| Provenance gate design, verification and limits | `SWD/docs/provenance-gate.md` |
-| Phase 2 findings, blocker diagnosis, resume steps | `SWD/docs/phase2-hydroscan.md` |
-| Dataset coverage with artefacts named | `SWD/data/coverage.md` |
-| Standing instructions for future sessions | repo-root `CLAUDE.md` |
+| Project documentation to the brief's seven sections | [`SWD/README.md`](README.md) |
+| Provenance gate design, verification and limits | [`SWD/docs/provenance-gate.md`](docs/provenance-gate.md) |
+| Phase 2 findings, blocker diagnosis, resume steps | [`SWD/docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md) |
+| Dataset coverage with artefacts named | [`SWD/data/coverage.md`](data/coverage.md) |
+| Standing instructions for future sessions | repo-root [`CLAUDE.md`](../CLAUDE.md) |
 
 ### A note on the sentinel, which earned its place
 
@@ -393,7 +393,7 @@ been shipped on the strength of looking right.
 
 ### Documentation style pass
 
-`SWD/README.md` had a `humanizer` pass applied, with the fact-preservation check the protocol
+[`SWD/README.md`](README.md) had a `humanizer` pass applied, with the fact-preservation check the protocol
 requires: **95 of 95 numbers, 4 of 4 paths, 3 of 3 commands and 32 of 32 code identifiers survived
 unchanged**, all 22 em dashes, 19 emoji headings and 24 tables intact, and the
 `## 🤖 AI Acknowledgment` section byte-identical (it is graded and is never style-edited). Net
@@ -415,7 +415,7 @@ change was 230 characters of tightening.
 
 Item 10 is being unblocked. Two contradictory diagnoses of the original failure were on record;
 rather than pick one, the new code measures which is right. Full production record in
-`SWD/tools/phase2/BUILD-NOTES.md`.
+[`SWD/tools/phase2/BUILD-NOTES.md`](tools/phase2/BUILD-NOTES.md).
 
 | File | Role |
 |---|---|
@@ -456,13 +456,13 @@ One run, not a full loop.
 | 2 | **Launch SWD by hand and watch for a UAC prompt** | you | ✅ no prompt seen - superseded by the token measurement |
 | 3 | Diagnostic, non-elevated, SWD running — the "before" half of the comparison | script | ✅ 12:11 |
 | 4 | Diagnostic, **elevated** — the "after" half; writes `control-map.csv` | you launch, script runs | ✅ 12:13 |
-| 5 | **SQA pass — ONE run, not a loop** — `swd_msg.ps1` + `swd_diagnose.ps1` | sqa-lead | ✅ `C=6 / W=11 / S=14` → `SQA-FINDINGS.md` |
+| 5 | **SQA pass — ONE run, not a loop** — `swd_msg.ps1` + `swd_diagnose.ps1` | sqa-lead | ✅ `C=6 / W=11 / S=14` → [`SQA-FINDINGS.md`](tools/phase2/SQA-FINDINGS.md) |
 | 5b | **3-round SQA loop** — fix + independent verify ×3 | code-reviewer / fresh sqa-lead | ✅ closed at cap, **`C=0 W=7 S=11`** |
 | 6 | `-ClickProbe <handle>` on a harmless control — settles the headless question | script | ⬜ |
 | 7 | Write the scan driver (`swd_scan.ps1`) — **needs a SECOND control map taken with the scanner panel open** | — | ⬜ |
 | 8 | Verification scan: 1 unscanned board, 3 drift angles, **36 km/h = 10 m/s** | script | ⬜ |
 | 9 | `-TrustCurrentLibrary`, re-extract, check recovered `scan_speed_ms` is 10.000 not 20.000 | script | ⬜ |
-| 10 | Answer the radius-persistence question; rewrite `docs/phase2-hydroscan.md` §§ 3, 5 | — | ⬜ |
+| 10 | Answer the radius-persistence question; rewrite [`docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md) §§ 3, 5 | — | ⬜ |
 
 Step 2 is the one no script can do: **whether SWD raises a UAC prompt decides the whole diagnosis**,
 and only a person watching the screen can see it.
@@ -479,7 +479,7 @@ against the real control set rather than against the plan's narrative.
 | **Cursor actually landed** | **`True`** — asked (1026,730), got (1026,730) |
 | `BlockInput(false)` | `False`, **lastError 5** |
 
-**There is no input block now.** `docs/phase2-hydroscan.md` § 5 treated
+**There is no input block now.** [`docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md) § 5 treated
 `BlockInput(false) → ERROR_ACCESS_DENIED` as proof that *"another process holds an input block"*. That
 same error appears here while the cursor moves freely, so the inference does not hold — error 5 is
 just what a non-elevated caller gets. Whether an elevated call returns `True` is a step-4 check.
@@ -509,7 +509,7 @@ Same SWD process (pid 42488) for both runs; only the shell's elevation differed.
 | UIA descendants | **98, all bare `Pane`** | **131, named** - 15 Button, 8 MenuItem, 16 Text, 6 Group, 2 ComboBox... |
 | `BlockInput(false)` | `False`, lastError 5 | `False`, lastError **0** |
 
-`docs/phase2-hydroscan.md` section 5 is wrong on both of its load-bearing claims and needs the
+[`docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md) section 5 is wrong on both of its load-bearing claims and needs the
 rewrite at step 10. **The fix is elevation**, exactly as the WP3 plan predicted.
 
 **Unexpected, and useful: reads cross the boundary.** `EnumChildWindows` + `WM_GETTEXT` returned real
@@ -528,7 +528,7 @@ open question about a wave being a precondition is untouched.
 ### Two more defects found by running, both fixed
 
 1. **Log was UTF-16LE with a BOM** (`ff fe 53 00`) - `Tee-Object` under PowerShell 5.1. This is the
-   trap `CLAUDE.md` section 5 already records for CSVs. Now `[IO.File]::AppendAllText` with
+   trap [`CLAUDE.md`](../CLAUDE.md) section 5 already records for CSVs. Now `[IO.File]::AppendAllText` with
    `UTF8Encoding($false)`; re-measured `53 57 44 20`, UTF-8 no BOM.
 2. **Section A contradicted section B in the same report** - `WindowsIdentity.Groups` said
    "Medium-or-lower" where the token query said High. A gets its answer from the token now; both
@@ -539,7 +539,7 @@ open question about a wave being a precondition is untouched.
 
 ## Paused 2026-08-27 ~12:40
 
-Stopped mid-fix. **`SWD/tools/phase2/RESUME.md` is the entry point** for picking this up cold.
+Stopped mid-fix. **[`SWD/tools/phase2/RESUME.md`](tools/phase2/RESUME.md) is the entry point** for picking this up cold.
 
 ### What happened after the SQA pass
 
@@ -561,11 +561,11 @@ before it had read anything.
 |---|---|
 | `swd_msg.ps1` | **Rewritten, UNVERIFIED.** 496 lines, parses, never executed. Type renamed `W` to `SwdWin` |
 | `swd_diagnose.ps1` | **Pre-fix.** 331 lines. Still calls `[W]::` in 15 places - **the pair does not run** |
-| `SQA-FINDINGS.md` | New. All 32 findings verbatim - **the only copy**, the agent could not write to disk |
-| `RESUME.md` | New. Entry point for a cold session |
-| `docs/phase2-hydroscan.md` | Rewritten - sections 3 and 5 were teaching a refuted diagnosis |
+| [`SQA-FINDINGS.md`](tools/phase2/SQA-FINDINGS.md) | New. All 32 findings verbatim - **the only copy**, the agent could not write to disk |
+| [`RESUME.md`](tools/phase2/RESUME.md) | New. Entry point for a cold session |
+| [`docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md) | Rewritten - sections 3 and 5 were teaching a refuted diagnosis |
 | `.gitignore` | `*.log` and `*.png` rules added under `phase2/**` (findings W15b, W16), verified with `git check-ignore` |
-| `BUILD-NOTES.md` section 4 | Stale token counts and InjectionHunter line numbers corrected (finding S32) |
+| [`BUILD-NOTES.md`](tools/phase2/BUILD-NOTES.md) section 4 | Stale token counts and InjectionHunter line numbers corrected (finding S32) |
 
 The break is loud, not silent: running the diagnostic fails with `Unable to find type [W]`. Nothing
 is at risk, but do not expect it to work until 5b is done.
@@ -668,7 +668,7 @@ read **0** - neither landed. The favourable case gives the identical code, so th
 indistinguishable from the return value alone. Replacing one confident reading with the opposite one
 would have been the same mistake. Observe instead: poll for a dialog, check the target's state.
 
-**Sequencing note:** this is new `.ps1` touching SWD, so `CLAUDE.md` section 4 puts it through an SQA
+**Sequencing note:** this is new `.ps1` touching SWD, so [`CLAUDE.md`](../CLAUDE.md) section 4 puts it through an SQA
 pass before it runs against the real installation - same gate the message layer went through.
 
 
@@ -716,7 +716,7 @@ as all 132 earlier reports. Phase 2's actual purpose is untouched.
 
 Timestamps on old scans implied 12-21 min per board (~95 s/angle). **Measured end to end: ~30 min for
 11 angles, ~163 s each.** Every estimate built on 95 s was ~1.7x too cheap. The 13 distinct unscanned
-boards are **~6 hours**, not ~4. Corrected in `docs/phase2-hydroscan.md`, `README.md` and above.
+boards are **~6 hours**, not ~4. Corrected in [`docs/phase2-hydroscan.md`](docs/phase2-hydroscan.md), [`README.md`](README.md) and above.
 
 ### New extractor warning, recorded not suppressed
 
@@ -734,7 +734,7 @@ Ordered. Items 1-2 need SWD open with the scanner panel showing; everything belo
 | # | Task | Needs | Est. | State |
 |---|---|---|---|---|
 | 1 | **Unfocused click probe** - the headless claim is still an inference | SWD open, NOT focused | 2 min | ⬜ |
-| 2 | ~~**Identify the scan parameter controls** in the 241-control scanner-open map~~ | - | - | ❌ **PREMISE REFUTED 2026-08-29 - see below.** Superseded by `docs/plans/WP3-STEP-0-3-verification-scan.md` Step 0 |
+| 2 | ~~**Identify the scan parameter controls** in the 241-control scanner-open map~~ | - | - | ❌ **PREMISE REFUTED 2026-08-29 - see below.** Superseded by [`docs/plans/WP3-STEP-0-3-verification-scan.md`](docs/plans/WP3-STEP-0-3-verification-scan.md) Step 0 |
 | 3 | **Modal-dialog handling** - `EnumWindows`-by-PID so the driver dismisses the confirmation itself | code | done | ✅ built, 11 tests, SQA running |
 | 4 | Fix `lastError=1460` misreported as "THE SEND FAILED" | code | done | ✅ |
 | 5 | Fix QA Warning 1 - `$heldFocus` compares a cached `MainWindowHandle` | code | done | ✅ now tests the owning PROCESS |
@@ -753,7 +753,7 @@ headless premise changes.
 ### Why item 8 exists
 
 `default_shortboard_Copy_1` is +20.6% mass and +41.7% volume against its siblings at the **same
-1800 mm length**, and the cause is unknown - see `data/coverage.md`. No pre-scan `boards.csv` survives
+1800 mm length**, and the cause is unknown - see [`data/coverage.md`](data/coverage.md). No pre-scan `boards.csv` survives
 to compare against, because the data directory is regenerated in place and `SWD/` is untracked. One
 `cp` before the next scan makes the next occurrence answerable.
 
@@ -862,8 +862,8 @@ geometry difference exists precisely because no pre-scan snapshot survives.
 
 ## WP1 complete - paper supplementary data saved, 2026-08-31
 
-`CLAUDE.md` section 9 item 1 closed. Three archives in `SWD/data/paper-supplementary/`, kept zipped,
-with SHA-256 and a measured `SOURCE.md`. No SWD, no SQA, no `.ps1` touched.
+[`CLAUDE.md`](../CLAUDE.md) section 9 item 1 closed. Three archives in `SWD/data/paper-supplementary/`, kept zipped,
+with SHA-256 and a measured [`SOURCE.md`](data/paper-supplementary/SOURCE.md). No SWD, no SQA, no `.ps1` touched.
 
 | Archive | Bytes | Inner file | Rows | Rate |
 |---|---:|---|---:|---|
@@ -910,19 +910,19 @@ limitation on a graded metric and belongs in WP2's limitations section, not a fo
 | Check | Result |
 |---|---|
 | Three archives, valid zips, one member each | pass |
-| SHA-256 re-hashed and matched against `SOURCE.md` | 3/3 |
-| Byte counts matched against `SOURCE.md` | 3/3 |
-| `SOURCE.md` UTF-8 **no BOM** | pass (`23 20 f0 9f 93 98`) |
+| SHA-256 re-hashed and matched against [`SOURCE.md`](data/paper-supplementary/SOURCE.md) | 3/3 |
+| Byte counts matched against [`SOURCE.md`](data/paper-supplementary/SOURCE.md) | 3/3 |
+| [`SOURCE.md`](data/paper-supplementary/SOURCE.md) UTF-8 **no BOM** | pass (`23 20 f0 9f 93 98`) |
 | SWD process launched | none |
 | Writes outside `SWD/data/paper-supplementary/` | none |
 
 ### Still open
 
-`SOURCE.md` section 1 records that the authors will supply their **Arduino, Matlab and Python analysis
+[`SOURCE.md`](data/paper-supplementary/SOURCE.md) section 1 records that the authors will supply their **Arduino, Matlab and Python analysis
 scripts on request**. Not needed now, but that is the reference implementation of the paper's own
 metrics - worth an email if a BJ or Ra cross-check ever disagrees with the published values.
 
-**Next:** `CLAUDE.md` section 9 item 2 - WP3 Steps 0-3, the verification scan. Needs SWD open and
+**Next:** [`CLAUDE.md`](../CLAUDE.md) section 9 item 2 - WP3 Steps 0-3, the verification scan. Needs SWD open and
 supervised.
 
 ---
@@ -930,14 +930,14 @@ supervised.
 ## First driven verification scan - AUTOMATION PASSED, EXPERIMENT FAILED, 2026-08-31
 
 WP3 Steps 0-3 executed end to end under tool control. Full findings in
-`tools/phase2/LIVE-RUN-FINDINGS.md`; dialog captures in `tools/phase2/SCAN-FLOW.md`.
+[`tools/phase2/LIVE-RUN-FINDINGS.md`](tools/phase2/LIVE-RUN-FINDINGS.md); dialog captures in [`tools/phase2/SCAN-FLOW.md`](tools/phase2/SCAN-FLOW.md).
 
 ### The gate failed, and the plan said what that means
 
 `flow ms` was set to **10** and read back **10** immediately before the scan started. All **53** new
 operating points recovered **scan_speed_ms = 20.0391** - unchanged from the whole existing corpus.
 
-`WP3-STEP-0-3-verification-scan.md` section 7 wrote the consequence in advance: *"If it still reads
+[`WP3-STEP-0-3-verification-scan.md`](docs/plans/WP3-STEP-0-3-verification-scan.md) section 7 wrote the consequence in advance: *"If it still reads
 ~20, the parameter path silently did nothing and Steps 4-7 do not start."* **Step 4 is blocked.**
 
 The `flow ms` box belongs to the `Test Position` single-point solver (`Compute` / `Solve Planing`).
@@ -1013,7 +1013,7 @@ This block used to read *"find the control that actually sets hydroscan speed, b
 scanning again"*. **That search is finished and the answer is that no such control exists.** The
 enumeration was completed later on 2026-08-31 - `Solver option:` holds three buttons and no numeric
 field at all, and `flow ms` drives the single-point solver rather than the hydroscan. Written up in
-`SWD/docs/what-swd-can-yield.md` § 2-3 and closed as item 2a in `CLAUDE.md` § 9.
+[`SWD/docs/what-swd-can-yield.md`](docs/what-swd-can-yield.md) § 2-3 and closed as item 2a in [`CLAUDE.md`](../CLAUDE.md) § 9.
 
 The open candidate that replaced it is **item 2b, the surfer-mass axis** - one board scanned against
 two surfer profiles, ~24 min, supervised. Untested; nothing asserts it works.
@@ -1028,7 +1028,7 @@ control has not been located, and surfer mass enters the planing solution.
 
 ## WP2 complete - the metrics reference, 2026-08-31
 
-`SWD/docs/performance-metrics.md`, written as an **internal working reference** and labelled as one at
+[`SWD/docs/performance-metrics.md`](docs/performance-metrics.md), written as an **internal working reference** and labelled as one at
 the top: source material for the report, implementing nothing, and containing no AI-acknowledgement or
 academic-integrity text. Every figure was read from the article PDF this session; nothing was carried
 over from an earlier summary.
@@ -1036,7 +1036,7 @@ over from an earlier summary.
 ### The paper defines 17 equations, not two
 
 The project has been treating Charles et al. as defining Board-Jerk and Radicality because those are
-the two `mma3001-project-spec.md` names. It defines a sensor layer (Eq 1-3), four primary indicators
+the two [`mma3001-project-spec.md`](../mma3001-project-spec.md) names. It defines a sensor layer (Eq 1-3), four primary indicators
 (Eq 4-11), five discriminators (Eq 12-16), a mechanical-coupling ratio (Eq 17), and a five-phase wave
 decomposition. All 17 are now transcribed with their symbols, units and windows.
 
@@ -1086,11 +1086,11 @@ can determine. `D_MA,SJ` reproduces cleanly on both waves, so Eq 15 itself is so
 
 ### The `D` defect, characterised rather than restated
 
-`CLAUDE.md` § 7 already says the two supplied specs disagree about `D` and to follow the paper. Reading
+[`CLAUDE.md`](../CLAUDE.md) § 7 already says the two supplied specs disagree about `D` and to follow the paper. Reading
 Eq 7 shows **why**: the equation computes the magnitude of net displacement, while the sentence
 introducing it calls `D` *"the length of the overall trajectory"* - a different quantity. The maths is
-unambiguous, the prose is not, and `mma3001-project-spec.md`'s arc-length reading is a faithful
-transcription of the sentence. `surfing-performance-io.md` transcribes the **equation** correctly, so
+unambiguous, the prose is not, and [`mma3001-project-spec.md`](../mma3001-project-spec.md)'s arc-length reading is a faithful
+transcription of the sentence. [`surfing-performance-io.md`](../surfing-performance-io.md) transcribes the **equation** correctly, so
 only one of the two spec files is wrong. Neither was edited; both are supplied material.
 
 ### A PDF trap worth not re-learning

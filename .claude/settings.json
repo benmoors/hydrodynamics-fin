@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.obsidian/plugins/obsidian-local-rest-api/data.json)",
+      "Edit(./.obsidian/plugins/obsidian-local-rest-api/data.json)",
+      "mcp__obsidian__vault_delete",
+      "mcp__obsidian__vault_write_binary",
+      "mcp__obsidian__command_execute"
+    ]
+  }
+}

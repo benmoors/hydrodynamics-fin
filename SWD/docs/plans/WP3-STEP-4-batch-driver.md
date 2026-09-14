@@ -1,3 +1,9 @@
+---
+type: plan
+status: blocked
+worklist: SWD/docs/worklist/03-wp3-step-4-batch-driver.md
+---
+
 # WP3 Step 4 — the batch driver `swd_scan.ps1`
 
 > ### ⚠️ Correction, 2026-09-01 — `20.0391 m/s` is not a speed
@@ -9,7 +15,7 @@
 > phantom second speed was `20500/1023 = 20.0391` — the 1025-density scans divided by an
 > assumed 1023. Wherever this file treats 20.039 as a speed or as float noise, read it as
 > a ρ = 1025 scan instead. **The conclusion that `flow ms` does nothing is unaffected and
-> in fact strengthened**: the flow speed was 20.000 throughout. See `CLAUDE.md` § 5.
+> in fact strengthened**: the flow speed was 20.000 throughout. See [`CLAUDE.md`](../../../CLAUDE.md) § 5.
 
 
 
@@ -17,14 +23,14 @@
 here.
 
 > ### 🚦 Prerequisite — do not start otherwise
-> **`WP3-STEP-0-3-verification-scan.md` Step 3 must have PASSED**, meaning the re-extracted
+> **[`WP3-STEP-0-3-verification-scan.md`](WP3-STEP-0-3-verification-scan.md) Step 3 must have PASSED**, meaning the re-extracted
 > `scan_speed_ms` for `2003_Taylor_Knox_channel_island` reads **10.000, not 20.039**. If it still
 > reads ~20, the parameter path silently did nothing and there is nothing worth automating yet.
 >
 > **Deferred to Monday deliberately.** This stage needs a full SQA pass, which does not fit the
 > weekly usage limit. Everything else in WP3 is cheap; this is where the budget goes.
 
-**Unlocks:** `WP3-STEP-5-7-batch-run.md`.
+**Unlocks:** [`WP3-STEP-5-7-batch-run.md`](WP3-STEP-5-7-batch-run.md).
 
 > ### ❌ PREMISE REFUTED 2026-08-31 — read before acting on anything below
 >
@@ -35,7 +41,7 @@ here.
 > the single-point solver only (proved independently: `Solve Planing`'s caption reads back
 > `Relative speed:10 m/s`), and an exhaustive control enumeration found **no scan-speed control
 > anywhere** — `Solver option:` holds three buttons and no numerics. Evidence:
-> `SWD/tools/phase2/LIVE-RUN-FINDINGS.md` § 0, `SWD/docs/what-swd-can-yield.md` § 3.
+> [`SWD/tools/phase2/LIVE-RUN-FINDINGS.md`](../../tools/phase2/LIVE-RUN-FINDINGS.md) § 0, [`SWD/docs/what-swd-can-yield.md`](../what-swd-can-yield.md) § 3.
 >
 > **Do not run this batch for speed.** It would return 26 boards at the same ~20 m/s the corpus
 > already has, at 5–13 hours of machine time.
@@ -50,7 +56,7 @@ here.
 > | **Geometry** — 13 unscanned boards, or parametric sweeps via `Apply Length/Width/Volume` | ~12 min per board | available |
 > | **Fin configuration** — 7 static + 2 dynamic fins, toe/cant angles editable | unmeasured | available |
 >
-> None is a commitment. See `SWD/docs/project-io-spec.md` § 8.
+> None is a commitment. See [`SWD/docs/project-io-spec.md`](../project-io-spec.md) § 8.
 
 
 ---
@@ -60,7 +66,7 @@ here.
 `SWD/data/operating_points.csv` has 667 rows and every channel the surrogate needs, but
 `scan_speed_ms` holds **one physical value** (20.000 / 20.039 m/s, the second being float noise). All
 143 existing reports ran at that single condition, so nothing trained on the corpus can speak to
-speed dependence. Speed is a top-level input in `surfing-performance-io.md` § 4.1, and the heaviest
+speed dependence. Speed is a top-level input in [`surfing-performance-io.md`](../../../surfing-performance-io.md) § 4.1, and the heaviest
 rubric item (**25 %**) is *Validation and engineering credibility*. `turn_radius_m` is settled as
 per-board metadata (constant within 13 of 13 scanned boards), so speed is the one axis still
 recoverable by scanning.
@@ -160,17 +166,17 @@ replacement — and that is the entire existing corpus.
 |---|---|
 | `rapports_hydro/` total | **590 MB** (13 boards × 11 files × ~4 MB) |
 | Free space on C: | 546 GB |
-| Backup destination | `%USERPROFILE%\SWD-backup\<date>\` — **outside the repo**, per `CLAUDE.md` § 4 |
+| Backup destination | `%USERPROFILE%\SWD-backup\<date>\` — **outside the repo**, per [`CLAUDE.md`](../../../CLAUDE.md) § 4 |
 
 Back up **before** each board is scanned, not once at the start, so an interrupted run never leaves a
-board half-overwritten with no copy. `WP3-STEP-5-7-batch-run.md` § Step 6 is what turns those backups
+board half-overwritten with no copy. [`WP3-STEP-5-7-batch-run.md`](WP3-STEP-5-7-batch-run.md) § Step 6 is what turns those backups
 back into a two-speed dataset.
 
 ---
 
 ## 5. The SQA gate — mandatory
 
-`CLAUDE.md` § 4: *"Run an SQA pass over any new `.ps1` that touches SWD before running it against the
+[`CLAUDE.md`](../../../CLAUDE.md) § 4: *"Run an SQA pass over any new `.ps1` that touches SWD before running it against the
 real installation."* Same gate `swd_msg.ps1` went through.
 
 | Setting | Value |
@@ -213,7 +219,7 @@ edit its own tests.
 
 ---
 
-## 7. Standing constraints — `CLAUDE.md` § 4, quoted not referenced
+## 7. Standing constraints — [`CLAUDE.md`](../../../CLAUDE.md) § 4, quoted not referenced
 
 - **Never write inside `C:\Program Files\ShaperWaveDynamics\`.**
 - **Never modify a file in `biblio\` in place** — deserialise a **copy**. Documents is redirected to

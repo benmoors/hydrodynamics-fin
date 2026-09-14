@@ -1,5 +1,4 @@
 Project/
-CLAUDE.md
 
 # --- SWD acquisition ---
 # Backups live OUTSIDE this repo (see SWD/README.md). These entries are a
@@ -55,13 +54,44 @@ SWD/tools/phase2/control-map*.csv
 SWD/tools/phase2/**/*.log
 SWD/tools/phase2/**/*.png
 
-# --- graphify knowledge graph ---
-# Rebuildable artifact (graphify update . --force), ~hundreds of KB of graph.json
-# plus a self-contained graph.html. Rubric marks repo structure, so the build
-# output stays out of the tree; the graph is cheap to regenerate on demand.
-graphify-out/
+# --- Computed views ---
+# Everything under a board's computed-data/ folder is produced from the extracted
+# CSVs beside it, by `python SWD/tools/make_computed_view.py` and
+# `python SWD/model/trajectory.py`. The extracted data itself stays tracked.
+# NOTE: default_shortboard's computed-data/ files are already tracked and stay
+# that way by choice, so this rule only keeps NEW computed views out of the tree.
+SWD/data/**/computed-data/
 
-# Project-scoped Claude Code config written by `graphify claude install`
-# (PreToolUse hooks pointing at a machine-local graphify.EXE path). Machine
-# specific, and CLAUDE.md + graphify-out/ are already ignored — keep it consistent.
-.claude/
+# --- Test-run artefacts ---
+# pytest writes its own self-ignoring .gitignore inside this dir; being explicit
+# means the rule survives that file being cleaned away.
+.pytest_cache/
+# mutate.py stages mutants under %TEMP%, but falls back to this in-repo path when
+# TEMP is unset (SWD/tools/tests/mutate.py:29-30).
+SWD/tools/tests/_mutants/
+
+# --- Claude Code config ---
+# Shared: skills, path-scoped rules, and settings.json (permission denies only).
+# Personal: settings.local.json holds each person's absolute autoMemoryDirectory.
+.claude/*
+!.claude/skills/
+!.claude/rules/
+!.claude/settings.json
+
+# --- Obsidian vault (repo root is the vault) ---
+# Per-person window layout, and the Local REST API plugin's data.json, which
+# holds that person's API key and TLS private key. Never commit either.
+.obsidian/workspace*.json
+.obsidian/plugins/*/data.json
+.trash/
+
+# Research drafts from other AI tools (Gemini, Fable). Several claims in them
+# were refuted; see AI-USE.md errors ledger. Kept local, not published.
+FABLE-RES.md
+GEM-RES.docx
+
+# Pester's -CI switch writes an NUnit report to the working directory. It embeds
+# user=, user-domain= and machine-name=, so it is a repo rule R9 leak, not just
+# clutter. An SQA agent produced one at the repo root on 2026-09-02.
+testResults.xml
+**/testResults.xml

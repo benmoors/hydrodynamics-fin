@@ -1,3 +1,9 @@
+---
+type: plan
+status: failed
+worklist: SWD/docs/worklist/02-wp3-steps-0-3-verification-scan.md
+---
+
 # WP3 Steps 0–3 — the verification scan
 
 > ### ⚠️ Correction, 2026-09-01 — `20.0391 m/s` is not a speed
@@ -9,7 +15,7 @@
 > phantom second speed was `20500/1023 = 20.0391` — the 1025-density scans divided by an
 > assumed 1023. Wherever this file treats 20.039 as a speed or as float noise, read it as
 > a ρ = 1025 scan instead. **The conclusion that `flow ms` does nothing is unaffected and
-> in fact strengthened**: the flow speed was 20.000 throughout. See `CLAUDE.md` § 5.
+> in fact strengthened**: the flow speed was 20.000 throughout. See [`CLAUDE.md`](../../../CLAUDE.md) § 5.
 
 
 
@@ -17,7 +23,7 @@
 Do not go looking for a predecessor document.
 
 **Prerequisite:** none. This is the first WP3 stage.
-**Unlocks:** `WP3-STEP-4-batch-driver.md`, which must not start until Step 3 passes.
+**Unlocks:** [`WP3-STEP-4-batch-driver.md`](WP3-STEP-4-batch-driver.md), which must not start until Step 3 passes.
 
 ---
 
@@ -31,7 +37,7 @@ bridge. One column is degenerate:
 > noise around the first. Every one of the 143 existing reports ran at the same condition.
 
 So nothing trained on this corpus can speak to speed dependence. Speed is a top-level input in
-`surfing-performance-io.md` § 4.1, and the heaviest rubric item (**25 %**) is *Validation and
+[`surfing-performance-io.md`](../../../surfing-performance-io.md) § 4.1, and the heaviest rubric item (**25 %**) is *Validation and
 engineering credibility*. `turn_radius_m` is already settled as per-board metadata — constant within
 13 of 13 scanned boards — so it cannot be a feature. **Speed is the one axis still recoverable by
 scanning**, and that is what WP3 exists to fix.
@@ -125,7 +131,7 @@ Those are scanner-panel controls, and they were reachable as children of the mai
 a live 166-control map on 2026-08-29, its extra controls are `Thruster`, `Quad`, `Twin`, `Fcs`,
 `Fcs2`, `Future 1/2 (center)`, `Us Box`, `Toe angle°`, `Cant angle°`, `Fin technology`,
 `Selected Fin Name:`, plus three `msctls_progress32` bars. It contains **zero** drift or speed
-controls, so `SWD/TODO.md` worklist item 2 cannot be completed from it. Worse: it and
+controls, so [`SWD/TODO.md`](../../TODO.md) worklist item 2 cannot be completed from it. Worse: it and
 `control-map.csv` have **identical handle sets** — the same enumeration written twice, differing only
 in `Rect`. `TODO.md:753`'s "241 with the scanner panel open, vs 165 closed" is wrong on both halves.
 
@@ -147,13 +153,13 @@ and readback-asserts either way.
 
 ## 5. Step 1 — the pre-scan snapshot
 
-`SWD/TODO.md` worklist item 8, widened. Do all four.
+[`SWD/TODO.md`](../../TODO.md) worklist item 8, widened. Do all four.
 
 | Capture | Destination | Why |
 |---|---|---|
 | `boards.csv`, `operating_points.csv`, `extract_manifest.json` | `~/.claude/qa-backups/20260827-193428-swd-phase2/pre-scan-2026-08-30/` | the data baseline |
 | **the board's own `.fynbs`** (2.1 MB) | same | `default_shortboard_Copy_1`'s unexplained geometry change is unresolvable **because no pre-scan copy exists**. Do not repeat that |
-| **`rapports_hydro/` entire** (590 MB) | `%USERPROFILE%\SWD-backup\20260830\` | outside the repo per `CLAUDE.md` § 4. This is what makes any later re-scan reversible |
+| **`rapports_hydro/` entire** (590 MB) | `%USERPROFILE%\SWD-backup\20260830\` | outside the repo per [`CLAUDE.md`](../../../CLAUDE.md) § 4. This is what makes any later re-scan reversible |
 | live geometry readback (length / volume / mass EDITs) | the run log | see below |
 
 > ### Point of note — the live app and `boards.csv` disagree
@@ -199,7 +205,7 @@ Eight conditions. Each exists because something went wrong without it.
    > counter read **0** — neither landed. The favourable case returns the identical code. Observe the
    > outcome; never infer it from the return value.
 
-6. **Record `Test-SwdOwnsForeground` before and after every send.** This closes `TODO.md` worklist
+6. **Record `Test-SwdOwnsForeground` before and after every send.** This closes [`TODO.md`](../../../TODO.md) worklist
    item 1 **for free**: if a numeric commits while SWD does not own the foreground, that is the
    unfocused-send evidence on the real application, which has only ever been an inference. Note the
    function is three-state — `$null` means *unanswerable*, not *no*.
@@ -257,14 +263,14 @@ re-bases the batch estimate; the solver may not cost the same at a different spe
 
 ## 8. On completion
 
-- Update `SWD/TODO.md` — worklist items 1 and 8 closed, item 2's premise refuted, new cost model
-- Update the status row in `CLAUDE.md` § 9
+- Update [`SWD/TODO.md`](../../TODO.md) — worklist items 1 and 8 closed, item 2's premise refuted, new cost model
+- Update the status row in [`CLAUDE.md`](../../../CLAUDE.md) § 9
 - Ledger entry in `~/.claude/qa-history/swd-phase2.md` per its § 8 append protocol
-- Then, and only then, `WP3-STEP-4-batch-driver.md`
+- Then, and only then, [`WP3-STEP-4-batch-driver.md`](WP3-STEP-4-batch-driver.md)
 
 ---
 
-## 9. Standing constraints — `CLAUDE.md` § 4, quoted not referenced
+## 9. Standing constraints — [`CLAUDE.md`](../../../CLAUDE.md) § 4, quoted not referenced
 
 - **Never write inside `C:\Program Files\ShaperWaveDynamics\`.** Read-only, always.
 - **Never modify a file in the SWD library in place** (`%OneDrive%\Documents\ShaperWaveDynamics documents\biblio\`).

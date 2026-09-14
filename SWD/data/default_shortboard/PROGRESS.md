@@ -12,7 +12,7 @@ from it and deliver ML-ready CSVs. Plan: `~/.claude/plans/could-you-do-some-purr
 | 5 | Extractor (`SWD/tools/extract_board.ps1`) → 5 CSVs | ✅ done |
 | 6 | Regression: new `elements.csv` == existing 22 cols on 467 rows | ✅ done — max\|diff\| = 0 on all 14 |
 | 7 | `alpha` derived vs `list_incidences_deg` stored | ✅ done — they differ; see finding 8 |
-| 8 | `DATA-DICTIONARY.md`, generated from the data | ✅ done — 18.9 KB, 54+ columns |
+| 8 | [`DATA-DICTIONARY.md`](DATA-DICTIONARY.md), generated from the data | ✅ done — 18.9 KB, 54+ columns |
 | 9 | Trajectory: equilibrium + `Vt(t)` at 100 Hz → `trajectory.csv` | ✅ done — `SWD/model/trajectory.py` |
 | 10 | Bounded decompile: water density literal, friction correlation | ✅ done — both recovered, see findings 10–11 |
 | 11 | **SQA loop on the `.ps1` files that need it** | ✅ **done** — see verdict progression below |
@@ -63,7 +63,7 @@ SHA-256 before/after proving the 12 library files are byte-identical.
 
 **Confirmed independently** — 36 of 101 `element_hydrodynamique` fields are
 `[NonSerialized]`; 151 of 231 on `Class_surfboard`. Both match the long-standing
-figures in `CLAUDE.md`.
+figures in [`CLAUDE.md`](../../../CLAUDE.md).
 
 **Census result** (467 elements, 51 roll cases, 11 reports, 0 failures):
 
@@ -141,7 +141,7 @@ mixture spread. On this board alone it is **20460.000 ± 0.002**.
 
 **Consequence 2 — the "second scan speed" is not a speed.** `20500/1023 = 20.0391`
 exactly. One flow speed (20.000 m/s) at two water temperatures, with the 1025-density
-scans divided by an assumed 1023. `CLAUDE.md` § 5 has been corrected.
+scans divided by an assumed 1023. [`CLAUDE.md`](../../../CLAUDE.md) § 5 has been corrected.
 
 The extractor now infers ρ per element by snapping ρ·V/V_setting to the nearest table
 value, and emits `rho_kgm3`, `rho_v_kg_m2_s` and a corrected `scan_speed_ms`

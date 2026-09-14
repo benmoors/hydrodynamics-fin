@@ -32,7 +32,7 @@ Charles, P-E., Algourdin, P., Ostre, B. et al. (2026). *A novel surfing performa
 system and multi-sensor instrumented surfboard: A proof-of-concept.* **Results in Engineering**
 29:108868. DOI [10.1016/j.rineng.2025.108868](https://doi.org/10.1016/j.rineng.2025.108868).
 CC BY 4.0. The PDF is in the repository root; the supplementary archives are in
-`SWD/data/paper-supplementary/` with `SOURCE.md`.
+`SWD/data/paper-supplementary/` with [`SOURCE.md`](../data/paper-supplementary/SOURCE.md).
 
 ### 🔹 Axes
 
@@ -50,13 +50,13 @@ indicator on the yaw axis, so mixing the two swaps the two headline indicators.
 | Surfer EMG | Cometa MiniWave Infinity, SENIAM placement | 2000 Hz |
 | Calibration reference IMU | MetaMotionS (MBientlab) | 100 Hz, Kalman gain 0.95 |
 
-The board rate is measured from `Board_Sample.txt` rather than stated in the paper — see `SOURCE.md`
+The board rate is measured from `Board_Sample.txt` rather than stated in the paper — see [`SOURCE.md`](../data/paper-supplementary/SOURCE.md)
 § 3, which also records that its time column runs **backwards** on its own epoch.
 
 > ### 💬 Aside — the board IMU has no magnetometer
 > The Arduino Nano RP2040 Connect carries a 6-DoF IMU. Every published `Ra` in § 8 was therefore
 > obtained with **no absolute heading reference at all**. That is the direct evidence behind the
-> magnetometer position in `project-io-spec.md` § 7: a magnetometer is worth having for trajectory
+> magnetometer position in [`project-io-spec.md`](project-io-spec.md) § 7: a magnetometer is worth having for trajectory
 > reconstruction, and radicality does not depend on one.
 
 ---
@@ -271,8 +271,8 @@ force model, not a kinematics model — it answers what forces act on a hull at 
 is `a_x = dV/dt`, `a_y = V²/R`, `a_z = (F_lift − mg)/m`, `R_x = dφ/dt`, `R_z = V/R`.
 
 Column-level detail — data types, units, operating ranges, invalid-value handling — lives in
-`project-io-spec.md` and is not repeated here. The archives' internals are in
-`SWD/data/paper-supplementary/SOURCE.md`.
+[`project-io-spec.md`](project-io-spec.md) and is not repeated here. The archives' internals are in
+[`SWD/data/paper-supplementary/SOURCE.md`](../data/paper-supplementary/SOURCE.md).
 
 ---
 
@@ -423,18 +423,18 @@ one is wrong:
 | Document | Definition given | Agrees with paper's equation |
 |---|---|:--:|
 | Paper, Eq 7 | double integral of acceleration, magnitude | — |
-| `surfing-performance-io.md` line 26 and its code | double integral, endpoint magnitude | ✅ |
-| `mma3001-project-spec.md` line 129 | `D = ∫₀ᵀ V(t) dt` | ❌ |
+| [`surfing-performance-io.md`](../../surfing-performance-io.md) line 26 and its code | double integral, endpoint magnitude | ✅ |
+| [`mma3001-project-spec.md`](../../mma3001-project-spec.md) line 129 | `D = ∫₀ᵀ V(t) dt` | ❌ |
 
-So the two supplied specs disagree with each other, and the paper sides with `surfing-performance-io.md`.
-`mma3001-project-spec.md`'s reading is a faithful transcription of the paper's *sentence* — which is
+So the two supplied specs disagree with each other, and the paper sides with [`surfing-performance-io.md`](../../surfing-performance-io.md).
+[`mma3001-project-spec.md`](../../mma3001-project-spec.md)'s reading is a faithful transcription of the paper's *sentence* — which is
 most likely where it came from.
 
-`D` enters `J` squared through `C = T⁵/D²`, so this is not a cosmetic difference. `CLAUDE.md` § 7
+`D` enters `J` squared through `C = T⁵/D²`, so this is not a cosmetic difference. [`CLAUDE.md`](../../CLAUDE.md) § 7
 directs following the paper's equation. **Neither spec file is edited** — both are supplied material.
 
 Minor, and in the same area: the printed Eq 7 shows a single `dt` for what the surrounding text
-describes as a double integral. `surfing-performance-io.md` writes `dt dt`, silently correcting a
+describes as a double integral. [`surfing-performance-io.md`](../../surfing-performance-io.md) writes `dt dt`, silently correcting a
 typesetting slip.
 
 ### 🔹 10.2 — Table 7's `D_MA,BJ` does not reproduce on wave 5
@@ -485,7 +485,7 @@ Semitendinosus and biceps femoris are both hamstrings, and both are plausible SE
 are not the same muscle.
 
 **The same channel is also the dead one.** `L.Semitend.` holds the single value 3299.89917 across all
-20,001 rows while every other channel has ~19,900 distinct values (`SOURCE.md` § 3). So the `A_BF` term
+20,001 rows while every other channel has ~19,900 distinct values ([`SOURCE.md`](../data/paper-supplementary/SOURCE.md) § 3). So the `A_BF` term
 of Eq 9 is both mislabelled relative to the paper and half-instrumented in the shipped sample. Any `Σ`
 or `D_MA,J` computed from this data inherits that and should say so — **seven usable channels, not
 eight.**
@@ -494,7 +494,7 @@ eight.**
 
 `EMG_Sample.txt` and `IMU_Sample.txt` share an exact 225–235 s axis at 2000 Hz. `Board_Sample.txt` does
 not: it is a board-side counter in milliseconds on its own epoch, running backwards, non-uniform at
-67–89 ms. Full detail in `SOURCE.md` § 3.
+67–89 ms. Full detail in [`SOURCE.md`](../data/paper-supplementary/SOURCE.md) § 3.
 
 Piloting Ratio needs Surfer-Jerk and Board-Jerk on one clock. **The alignment is therefore an assumption
 this project makes, not a measurement the authors published**, and every `PR` computed downstream
@@ -529,8 +529,8 @@ three in `C`.
   cause overlap between different maneuvers' data. Nose behaviour is not measured at all.
 * **Matching a published number is not validation of the physics.** Reproducing Table 8 shows the
   arithmetic is right. Whether an SWD-derived trajectory resembles a real one is a separate question
-  this document does not touch, and the single-velocity limitation in `project-io-spec.md` § 5 and
-  `what-swd-can-yield.md` § 3 applies to every SWD-derived indicator.
+  this document does not touch, and the single-velocity limitation in [`project-io-spec.md`](project-io-spec.md) § 5 and
+  [`what-swd-can-yield.md`](what-swd-can-yield.md) § 3 applies to every SWD-derived indicator.
 * **Nothing here has been checked against the authors' own implementation.** Their Arduino, Matlab and
-  Python scripts are available from the corresponding author on request (`SOURCE.md` § 1). If a
+  Python scripts are available from the corresponding author on request ([`SOURCE.md`](../data/paper-supplementary/SOURCE.md) § 1). If a
   computed indicator ever disagrees with § 8, that is the reference to ask for.

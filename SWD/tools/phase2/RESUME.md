@@ -95,7 +95,7 @@ nothing, that is the class to keep watching.
 | 6 | `BM_CLICK` probe | 🟡 **half done.** Elevated click LANDED on the real app; unelevated refused at `lastError=5`. **Unfocused case still unproven** — SWD had focus |
 | 7 | Scan driver | ⬜ Blocked — needs (a) a second control map with the scanner panel open, and
   (b) **modal-dialog handling**: the scan button raises a confirmation the driver must dismiss itself.
-  A modal is a separate top-level window that `Get-SwdControl` cannot see. See `SWD/TODO.md`. |
+  A modal is a separate top-level window that `Get-SwdControl` cannot see. See [`SWD/TODO.md`](../../TODO.md). |
 | 8 | Verification scan | ⬜ 1 unscanned board, 3 drift angles, **36 km/h** |
 | 9 | Re-approve + re-extract | ⬜ Recovered speed must read 10.000, not 20.000 |
 | 10 | Radius question; close out | ⬜ |
@@ -162,7 +162,7 @@ unfocused, settles it.
 - **A heredoc chained after `cd &&` fails in this project's Bash tool.** Use absolute paths.
 - Pin Pester to **6.1.0**. PSScriptAnalyzer 1.25.0, InjectionHunter 1.0.0 installed.
 
-## Standing safety rules — `CLAUDE.md` § 4
+## Standing safety rules — [`CLAUDE.md`](../../../CLAUDE.md) § 4
 
 Never write inside `C:\Program Files\ShaperWaveDynamics\`. Never modify a file in `biblio\` in place —
 deserialise a **copy**. Note Documents is redirected to
@@ -177,10 +177,10 @@ SWD's advertised 1.1.0.6 upgrade — it would invalidate the trust manifest and 
 |---|---|
 | Active plan | `~/.claude/plans/coudl-you-open-up-expressive-rose.md` |
 | Deferred (WP1 paper data, WP2 metrics doc) | `~/.claude/plans/do-some-research-to-atomic-sky.md` |
-| Live checklist + run history | `SWD/TODO.md` |
-| Blocker diagnosis, rewritten | `SWD/docs/phase2-hydroscan.md` |
-| Production record | `SWD/tools/phase2/BUILD-NOTES.md` |
-| Original 32 findings, verbatim | `SWD/tools/phase2/SQA-FINDINGS.md` |
+| Live checklist + run history | [`SWD/TODO.md`](../../TODO.md) |
+| Blocker diagnosis, rewritten | [`SWD/docs/phase2-hydroscan.md`](../../docs/phase2-hydroscan.md) |
+| Production record | [`SWD/tools/phase2/BUILD-NOTES.md`](BUILD-NOTES.md) |
+| Original 32 findings, verbatim | [`SWD/tools/phase2/SQA-FINDINGS.md`](SQA-FINDINGS.md) |
 | Loop staging, 5 snapshots | `~/.claude/qa-backups/20260827-193428-swd-phase2/` |
 | Ledger | `~/.claude/qa-history/swd-phase2.md` |
 

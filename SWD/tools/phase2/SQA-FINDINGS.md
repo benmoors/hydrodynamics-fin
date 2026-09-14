@@ -12,7 +12,7 @@ verified by a fresh `sqa-lead`, which returned `Critical=1 | Warning=4 | Suggest
 Critical and three regressions created by the fixes themselves. Round 2 is in progress.
 
 Treat this file as the **original worklist**, not as a status board. The live state is in
-`SWD/TODO.md`; the loop record is in `~/.claude/qa-backups/20260827-193428-swd-phase2/`.
+[`SWD/TODO.md`](../../TODO.md); the loop record is in `~/.claude/qa-backups/20260827-193428-swd-phase2/`.
 
 `[Proven]` = demonstrated by measurement. `[High]` = strong evidence, not directly demonstrated.
 Every `[Proven]` behavioural finding was reproduced against a throwaway in-process WinForms harness —
@@ -78,7 +78,7 @@ exist.
 
 **W9 — `control-map.csv` has a BOM.** `[Proven]` `swd_diagnose.ps1`
 `Export-Csv -Encoding UTF8` writes a UTF-8 BOM under 5.1; the live file begins `ef bb bf`. Violates
-`CLAUDE.md` § 5. The log was fixed for exactly this trap; the CSV — the file downstream Python
+[`CLAUDE.md`](../../../CLAUDE.md) § 5. The log was fixed for exactly this trap; the CSV — the file downstream Python
 actually parses — was missed one line away.
 
 **W10 — the two sides of the equality parse in different cultures.** `[Proven]` `swd_msg.ps1`
@@ -108,7 +108,7 @@ Two limbs. (a) Measured with `git check-ignore`: the default path is ignored, bu
 `SWD/tools/phase2/20260827-diagnose.log` matches **no rule at all** — and the log carries the account
 name, full home paths and SWD's window title (board name, surfer mass). (b) `New-Item -Force` has no
 containment check, so an elevated run will create a directory inside
-`C:\Program Files\ShaperWaveDynamics\` on request — **a `CLAUDE.md` § 4 hard rule with no code
+`C:\Program Files\ShaperWaveDynamics\` on request — **a [`CLAUDE.md`](../../../CLAUDE.md) § 4 hard rule with no code
 enforcing it.**
 
 **W16 — no `*.png` rule anywhere in `.gitignore`.** `[Proven]`
@@ -160,7 +160,7 @@ short-circuit.
 | S29 | `[High]` `Get-SwdProcess` snapshots the whole process table on every primitive call |
 | S30 | `[High]` fixed 250 ms sleep instead of poll-until-condition — the **reliability** half is the point (a false `Ok=$false` under load) |
 | S31 | `[High]` full-window `32bppArgb` bitmap ≈ **23.6 MiB** per capture, no region or scale option |
-| S32 | `[Proven]` stale figures in `BUILD-NOTES.md` — **corrected 2026-08-27**, see below |
+| S32 | `[Proven]` stale figures in [`BUILD-NOTES.md`](BUILD-NOTES.md) — **corrected 2026-08-27**, see below |
 
 ---
 
@@ -177,7 +177,7 @@ short-circuit.
 - `BlockInput($false)` cannot release another process's block, and `BlockInput($true)` appears nowhere.
 - `Set-SwdNumeric`'s clamping contract verified end to end; the "half-committed control" hypothesis
   was **refuted**.
-- The two items flagged as deliberate in `BUILD-NOTES.md` both stand: `-Activate` defaulting off is
+- The two items flagged as deliberate in [`BUILD-NOTES.md`](BUILD-NOTES.md) both stand: `-Activate` defaulting off is
   right (C4 says the *mechanism* is broken, a different claim), and `Get-SwdText` returning `$null`
   on timeout is the right contract (C6 says no *consumer* tests for it).
 
@@ -205,5 +205,5 @@ short-circuit.
 - **S32, corrected.** Re-measured 2026-08-27 after the rewrite: `swd_msg.ps1` **2108 tokens /
   496 lines**, `swd_diagnose.ps1` **1655 / 331**, `swd_ui.ps1` **626 / 102**. InjectionHunter sites
   are `swd_msg.ps1:29`, `swd_diagnose.ps1:192`, `swd_diagnose.ps1:204` (plus `swd_ui.ps1:12`, out of
-  scope). The figures in `BUILD-NOTES.md` § 4 were measured before later edits and were stale by the
+  scope). The figures in [`BUILD-NOTES.md`](BUILD-NOTES.md) § 4 were measured before later edits and were stale by the
   time they were read.

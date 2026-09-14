@@ -1,0 +1,23 @@
+filters:
+  and:
+    - file.inFolder("SWD/docs/worklist")
+    - file.ext == "md"
+    - type == "worklist"
+properties:
+  item:
+    displayName: "#"
+  blocked_by:
+    displayName: Blocked by
+views:
+  - type: table
+    name: Worklist
+    order:
+      - item
+      - file.name
+      - status
+      - effort
+      - blocked_by
+      - plan
+    sort:
+      - property: order
+        direction: ASC

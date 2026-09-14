@@ -1,4 +1,4 @@
-# SUPERSEDED — see `provenance-gate.md`
+# SUPERSEDED — see [`provenance-gate.md`](provenance-gate.md)
 
 The `BinaryFormatter` provenance gate described here was **applied on 2026-08-27**, with both
 defects in the proposed patch fixed first.

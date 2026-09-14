@@ -83,7 +83,7 @@ Each holds exactly one file, all three stamped `2025-12-23 01:51:50` in the zip 
 | `mmc3.zip` | `IMU_Sample.txt` | 14,289,795 | 20,001 | tab | `.` | CRLF | **none** |
 
 > ### ⚠️ Point of note — the French-locale trap does not apply here
-> `CLAUDE.md` § 5 records SWD's `fyn_profile_data_base.xml` using French locale conventions — comma
+> [`CLAUDE.md`](../../../CLAUDE.md) § 5 records SWD's `fyn_profile_data_base.xml` using French locale conventions — comma
 > decimal separators, semicolon list separators — and these authors are French. **Measured: there is
 > not a single comma in any of the three files.** All decimals are periods. `mmc1` does use `;` as a
 > field separator, but that is a separator choice, not a locale decimal mark. Parse with
@@ -168,7 +168,7 @@ No constant or dead columns; every one of the 91 varies across the window.
 
 ## 📂 4. Measured against what was predicted
 
-The stage plan `SWD/docs/plans/WP1-WP2-paper-data-and-metrics.md` § 2.2 described these archives
+The stage plan [`SWD/docs/plans/WP1-WP2-paper-data-and-metrics.md`](../../docs/plans/WP1-WP2-paper-data-and-metrics.md) § 2.2 described these archives
 before anyone had opened them. That description was tested rather than copied, and where the two
 disagree the disagreement is kept visible:
 

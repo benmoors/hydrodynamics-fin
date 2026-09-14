@@ -3,7 +3,7 @@
 **Status: APPLIED and verified, 2026-08-27.** Layer A only. Layer B (a `SerializationBinder`
 type allowlist) was considered and deliberately **not** applied — see §6.
 
-This replaces `pending-security-fix.md`, which described a proposed patch that itself carried two
+This replaces [`pending-security-fix.md`](pending-security-fix.md), which described a proposed patch that itself carried two
 defects. Both are fixed here, by construction rather than by adding another check.
 
 ---

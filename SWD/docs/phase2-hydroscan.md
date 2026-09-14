@@ -4,7 +4,7 @@
 elevated. This document was substantially wrong between 26 and 27 August; § 5 records what it got
 wrong and how, because the mistake is more instructive than the fix.
 
-Working record, kept in the same register as `SWD/TODO.md`.
+Working record, kept in the same register as [`SWD/TODO.md`](../TODO.md).
 
 ---
 
@@ -192,7 +192,7 @@ windowed into a child HWND). The cursor clip observed on 26 August was not SWD's
 ## 6. Resuming
 
 The tooling lives in `tools/phase2/`: `swd_msg.ps1` (message primitives), `swd_diagnose.ps1`
-(read-only diagnostic), `swd_ui.ps1` (cursor fallback), and `BUILD-NOTES.md` (the production record,
+(read-only diagnostic), `swd_ui.ps1` (cursor fallback), and [`BUILD-NOTES.md`](../tools/phase2/BUILD-NOTES.md) (the production record,
 including an explicit list of what has *not* been verified).
 
 1. **Launch SWD by hand**, then run the automation from an **elevated** shell:

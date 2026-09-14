@@ -17,7 +17,7 @@ is inference it says so.
 > 11 angles, 18:16 → 18:28 — but the recovered speed came back **20.0391 m/s on all 53 new operating
 > points**, exactly as before. `flow ms = 10` did not reach the solver.
 >
-> `WP3-STEP-0-3-verification-scan.md` § 7 states the consequence in advance: *"If it still reads ~20,
+> [`WP3-STEP-0-3-verification-scan.md`](../../docs/plans/WP3-STEP-0-3-verification-scan.md) § 7 states the consequence in advance: *"If it still reads ~20,
 > the parameter path silently did nothing and Steps 4–7 do not start."* **Step 3 fails its acceptance
 > criterion. Step 4 must not start.**
 
@@ -100,7 +100,7 @@ SWD has **30 top-level windows**. .NET picks "the first" it finds and that choic
 3. **`MainWindowTitle` can return a dialog's title.** After the scan it read `Starting HydroScan`.
 
 > ### ⚠️ Point of note — this breaks Step 4's board-identity check
-> `WP3-STEP-4-batch-driver.md` § 3 requires verifying board selection **"from the window title, not
+> [`WP3-STEP-4-batch-driver.md`](../../docs/plans/WP3-STEP-4-batch-driver.md) § 3 requires verifying board selection **"from the window title, not
 > from the call returning success"**. That rule is sound, but the *implementation* it would reach for
 > reads `MainWindowTitle`, which is demonstrably capable of returning a modal's caption instead of
 > the board title. A driver could confirm the wrong board, or fail to confirm the right one, and both
@@ -158,7 +158,7 @@ any surfing envelope. **`ConvertTo-Kmh` must not be used on this control.**
 
 ## 📂 5. `[Medium]` There are three scan-flow dialogs, with two different button vocabularies
 
-Full captures in `SCAN-FLOW.md`. Summary of what the fixtures got wrong:
+Full captures in [`SCAN-FLOW.md`](SCAN-FLOW.md). Summary of what the fixtures got wrong:
 
 | # | Title | Buttons | Covered by tests before today? |
 |---|---|---|---|
@@ -258,5 +258,5 @@ be closed only by a probe on a control whose caption changes.**
   (`Displacement (board+surfer) 80.10 Liters`). No visible control matched `50`. **Unresolved; the
   control has not been located.** Worth settling, because surfer mass enters the planing solution.
 * Whether the failed board save (§ 3) left `_vitesse_flux_relatif_ms` stale in the copy's `.fynbs`.
-  Metadata only — `CLAUDE.md` § 6 already records the stored setting is not the scan speed — but the
+  Metadata only — [`CLAUDE.md`](../../../CLAUDE.md) § 6 already records the stored setting is not the scan speed — but the
   next extraction should be read with this in mind.

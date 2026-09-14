@@ -9,7 +9,7 @@
 > phantom second speed was `20500/1023 = 20.0391` — the 1025-density scans divided by an
 > assumed 1023. Wherever this file treats 20.039 as a speed or as float noise, read it as
 > a ρ = 1025 scan instead. **The conclusion that `flow ms` does nothing is unaffected and
-> in fact strengthened**: the flow speed was 20.000 throughout. See `CLAUDE.md` § 5.
+> in fact strengthened**: the flow speed was 20.000 throughout. See [`CLAUDE.md`](../../CLAUDE.md) § 5.
 
 
 
@@ -131,7 +131,7 @@ started. All **53** resulting operating points came back at **20.0391 m/s**.
 > hardcoded constant, so this remains the best explanation rather than a proven mechanism.
 
 **If that reading is right, the speed axis was never obtainable by scanning**, and the 5–13 hour batch
-in `WP3-STEP-4-batch-driver.md` would have produced 26 boards at one speed — the corpus it already
+in [`WP3-STEP-4-batch-driver.md`](plans/WP3-STEP-4-batch-driver.md) would have produced 26 boards at one speed — the corpus it already
 has. The alternative is to treat the scan as a polar at reference velocity and obtain other speeds by
 **V² scaling downstream**, which is standard hydrodynamics and costs no machine time.
 

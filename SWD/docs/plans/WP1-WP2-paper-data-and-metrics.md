@@ -1,3 +1,9 @@
+---
+type: plan
+status: delivered
+worklist: SWD/docs/worklist/01-wp1-supplementary-data.md, SWD/docs/worklist/05-wp2-metrics-document.md
+---
+
 # WP1 + WP2 — the paper's supplementary data, and the metrics document
 
 **Stage plan. Written 2026-08-27, moved into the repo and refreshed 2026-08-30.**
@@ -6,8 +12,8 @@
 
 | | Delivered | Where |
 |---|---|---|
-| **WP1** | the three supplementary archives, unmodified and still zipped | `SWD/data/paper-supplementary/` + `SOURCE.md` |
-| **WP2** | the metrics reference, all 17 equations, audited | `SWD/docs/performance-metrics.md` |
+| **WP1** | the three supplementary archives, unmodified and still zipped | `SWD/data/paper-supplementary/` + [`SOURCE.md`](../../data/paper-supplementary/SOURCE.md) |
+| **WP2** | the metrics reference, all 17 equations, audited | [`SWD/docs/performance-metrics.md`](../performance-metrics.md) |
 
 Both delivered documents **supersede § 5 below** where they disagree with it: they were written against
 the PDF, § 5 was written from notes. Corrections are listed under each work package in § 3.
@@ -21,17 +27,17 @@ the project can and cannot be.
 
 ## 1. Where things stand
 
-**Done and verified** (see `SWD/README.md` for the full write-up):
+**Done and verified** (see [`SWD/README.md`](../../README.md) for the full write-up):
 
 | | |
 |---|---|
 | Extractor | `SWD/tools/swd_extract.ps1`, 1,195 lines, 133 Pester tests, 26/26 mutants killed |
 | Dataset | **720** operating points · **6,867** element rows · 28 boards · 680,400 fin-polar rows · 0 parse failures (refreshed after the 2026-08-31 scan; was 667 / 6,388, and 617 / 5,914 before that) |
 | Safety | 3 SQA rounds; write containment proven; provenance gate applied; licence + 627 MB library backed up to `…\SWD-backup\20260826\`, outside this repo |
-| Docs | `SWD/README.md`, `SWD/docs/provenance-gate.md`, `SWD/docs/phase2-hydroscan.md`, `SWD/data/coverage.md`, repo-root `CLAUDE.md` |
+| Docs | [`SWD/README.md`](../../README.md), [`SWD/docs/provenance-gate.md`](../provenance-gate.md), [`SWD/docs/phase2-hydroscan.md`](../phase2-hydroscan.md), [`SWD/data/coverage.md`](../../data/coverage.md), repo-root [`CLAUDE.md`](../../../CLAUDE.md) |
 
 **WP3, the speed axis, is refuted** — its premise died on 2026-08-31. Its three stage plans sit beside
-this file and each opens with the refutation; see § 3 and `SWD/tools/phase2/LIVE-RUN-FINDINGS.md`.
+this file and each opens with the refutation; see § 3 and [`SWD/tools/phase2/LIVE-RUN-FINDINGS.md`](../../tools/phase2/LIVE-RUN-FINDINGS.md).
 
 ---
 
@@ -39,7 +45,7 @@ this file and each opens with the refutation; see § 3 and `SWD/tools/phase2/LIV
 
 ### 2.1 The surrogate as specified cannot be trained — two of its three axes do not exist
 
-`mma3001-project-spec.md` specifies `X = (V_t, φ) → y = (R, F_drag)`. Tested against the real data:
+[`mma3001-project-spec.md`](../../../mma3001-project-spec.md) specifies `X = (V_t, φ) → y = (R, F_drag)`. Tested against the real data:
 
 - **`turn_radius_m` cannot be a target. SETTLED 2026-08-28, permanently.** Constant within
   **13 of 13** scanned boards, including one driven and watched end to end — so the `Single[]` that
@@ -60,7 +66,7 @@ this file and each opens with the refutation; see § 3 and `SWD/tools/phase2/LIV
 
 **Refreshed 2026-08-31 from the 720-row table** — the figures above this line date from the 617-row
 era. Full catalogue, keyed to the paper's symbols with units, domains and invalid-value handling, is
-now `SWD/docs/project-io-spec.md`; treat that as authoritative and this as a pointer.
+now [`SWD/docs/project-io-spec.md`](../project-io-spec.md); treat that as authoritative and this as a pointer.
 
 **These are candidates, not a chosen feature set.** The choice is the student's.
 
@@ -105,7 +111,7 @@ validated. Much stronger than validating a simulation against itself.
 ### WP1 — Save the supplementary data *(30 min, no risk)*
 
 Fetch the three `mmc*.zip` URLs into `SWD/data/paper-supplementary/`, keeping them zipped.
-Write `SOURCE.md` recording per file: URL, DOI `10.1016/j.rineng.2025.108868`, retrieval date, bytes,
+Write [`SOURCE.md`](../../data/paper-supplementary/SOURCE.md) recording per file: URL, DOI `10.1016/j.rineng.2025.108868`, retrieval date, bytes,
 SHA-256, inner filename, column layout, sample rate, row count — each **verified by reading the
 archive**, not from the filename. Quote both of the paper's statements verbatim: §2.4 above, and the
 end-matter `Data availability: "Data will be made available on request"` — they are not quite
@@ -113,11 +119,11 @@ consistent and a reader should see both.
 
 **Check the licence before committing.** Results in Engineering is Gold OA and Elsevier Gold OA is
 normally CC-BY, but confirm on the article page. If unconfirmable, gitignore the files and let
-`SOURCE.md` carry the URLs so the data stays reproducible without redistribution.
+[`SOURCE.md`](../../data/paper-supplementary/SOURCE.md) carry the URLs so the data stays reproducible without redistribution.
 
 ### WP2 — Metrics document ✅ **DELIVERED 2026-08-31**
 
-`SWD/docs/performance-metrics.md`, 11 sections, labelled **internal working reference** at the top —
+[`SWD/docs/performance-metrics.md`](../performance-metrics.md), 11 sections, labelled **internal working reference** at the top —
 source material for the report, not report prose, and it implements nothing.
 
 **What it added beyond this plan's scope**, none of which was anticipated here:
@@ -139,8 +145,8 @@ source material for the report, not report prose, and it implements nothing.
 **Correction to this plan's framing of `D`.** Saying "`D` is net displacement, not path length" is
 right about the equation but incomplete: the paper's own sentence introducing Eq 7 calls it *"the
 length of the overall trajectory"*. The maths and the prose describe different quantities, and that is
-where `mma3001-project-spec.md`'s reading came from. `surfing-performance-io.md` transcribes Eq 7
-**correctly** — only `mma3001-project-spec.md` disagrees. See `performance-metrics.md` § 10.1.
+where [`mma3001-project-spec.md`](../../../mma3001-project-spec.md)'s reading came from. [`surfing-performance-io.md`](../../../surfing-performance-io.md) transcribes Eq 7
+**correctly** — only [`mma3001-project-spec.md`](../../../mma3001-project-spec.md) disagrees. See [`performance-metrics.md`](../performance-metrics.md) § 10.1.
 
 ### WP3 / WP4 — the speed axis, now three stage plans beside this file
 
@@ -149,9 +155,9 @@ stage plans in this same directory, because they span days and a usage-limit bou
 
 | File | Covers | When |
 |---|---|---|
-| `WP3-STEP-0-3-verification-scan.md` | locate the scan controls · snapshot · one 36 km/h verification scan · verify by re-extraction | **2026-08-30** |
-| `WP3-STEP-4-batch-driver.md` | `swd_scan.ps1` + board switching + the mandatory SQA gate | **Monday 2026-08-31** |
-| `WP3-STEP-5-7-batch-run.md` | the ~13 h batch · dual-speed extraction · correcting the record | after Step 4 |
+| [`WP3-STEP-0-3-verification-scan.md`](WP3-STEP-0-3-verification-scan.md) | locate the scan controls · snapshot · one 36 km/h verification scan · verify by re-extraction | **2026-08-30** |
+| [`WP3-STEP-4-batch-driver.md`](WP3-STEP-4-batch-driver.md) | `swd_scan.ps1` + board switching + the mandatory SQA gate | **Monday 2026-08-31** |
+| [`WP3-STEP-5-7-batch-run.md`](WP3-STEP-5-7-batch-run.md) | the ~13 h batch · dual-speed extraction · correcting the record | after Step 4 |
 
 They carry the automation blocker's root cause, the UIPI evidence, the corrected cost model, the
 ruled-out coordinate traps and the order of work. **Nothing was lost** — this file is WP1 + WP2 plus
@@ -184,10 +190,10 @@ the reference material below, and can be picked up cold.
 
 ## 5. Reference — the paper's full metric set
 
-> **Superseded 2026-08-31 by `SWD/docs/performance-metrics.md`.** That document was written against the
+> **Superseded 2026-08-31 by [`SWD/docs/performance-metrics.md`](../performance-metrics.md).** That document was written against the
 > PDF and audited; this section was written from notes and is kept only as the record of what WP2 was
 > scoped against. **Where the two disagree, the delivered document is correct.** Known divergences: the
-> `D` framing (§ 3 above), and the availability table below, which predates `project-io-spec.md`'s
+> `D` framing (§ 3 above), and the availability table below, which predates [`project-io-spec.md`](../project-io-spec.md)'s
 > three-tier catalogue.
 
 Charles, P-E. et al. (2026). *A novel surfing performance quantification system and multi-sensor
@@ -277,7 +283,7 @@ comparable waves. Board precision **24.6 % flexion, 8.9 % torsion**. Nose behavi
 ## 8. Added 2026-08-31 — the reference-velocity check that strengthens WP2
 
 Every operating point sits at one velocity and no control in the application changes it
-(`SWD/docs/what-swd-can-yield.md` § 3). A trajectory at any other speed needs `F(V) = F_ref (V/V_ref)²`,
+([`SWD/docs/what-swd-can-yield.md`](../what-swd-can-yield.md) § 3). A trajectory at any other speed needs `F(V) = F_ref (V/V_ref)²`,
 which **this dataset cannot test**.
 
 It does pass an independent check. Solving `lift(V_eq) = (m_surfer + m_board) g` at an 80 kg surfer:

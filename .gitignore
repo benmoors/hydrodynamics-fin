@@ -1,5 +1,9 @@
 Project/
 
+# Project second-brain wiki: summaries of Monash course notebooks and the brief.
+# The repo is public, so it stays local (see wiki/CLAUDE.md).
+wiki/
+
 # --- SWD acquisition ---
 # Backups live OUTSIDE this repo (see SWD/README.md). These entries are a
 # second line of defence in case one is ever copied in by mistake.

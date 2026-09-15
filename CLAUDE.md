@@ -156,7 +156,8 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
     |- .mcp.json                    Local REST API MCP server (key from OBSIDIAN_API_KEY)
     |- .obsidian/                   shared vault config (workspace and plugin data.json ignored)
     |- tools/extract_prompts.py     regenerates AI-USE.md's prompt appendix
-    |- Project/                     unit materials (gitignored)
+    |- Project/                     unit materials (gitignored); Week NN/ = unit notebooks
+    |- wiki/                        project second-brain wiki (gitignored) -- schema in wiki/CLAUDE.md
     |- SWD/                         data acquisition
     |   |- TODO.md                  live progress checklist
     |   |- tools/swd_extract.ps1    SWD binary -> CSV
@@ -226,6 +227,7 @@ the item's full narrative in the body.
 | "the AI acknowledgement", "AI use", "the prompt log", "what did the AI get wrong" | [AI-USE.md](AI-USE.md), rules in section 3 and `.claude/rules/ai-use-requirements.md` |
 | "what is next", "what should I do now" | this section, then the [worklist notes](SWD/docs/worklist/worklist.base) |
 | "the memory", "what do you remember", "tidy the notes", "broken links" | [memory/MEMORY.md](memory/MEMORY.md) and `/obsidian-memory` |
+| "the wiki", "what does my wiki say", "ingest this", "what did the unit teach about" | `wiki/CLAUDE.md` (read it first), then `wiki/index.md` |
 
 **Never start a stage whose prerequisite has not passed.** Each file names its own in a callout at
 the top. Step 4 in particular is gated on the verification scan's recovered `scan_speed_ms` reading

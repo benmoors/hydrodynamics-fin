@@ -99,6 +99,7 @@
     partial or mixed-vintage set and must not be trusted as one dataset.
 #>
 [CmdletBinding()]
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseLiteralInitializerForHashtable', '')]
 param(
     # Documents is redirected into OneDrive on this machine, so ask the OS where it
     # actually is rather than spelling the path out: GetFolderPath is correct whether
@@ -407,6 +408,19 @@ if (Test-Path -LiteralPath $TrustManifest) {
     foreach ($e in $tmDoc.files) { [void]$script:TrustedHashes.Add([string]$e.sha256) }
 }
 
+function Test-SwdStreamTrusted {
+    <# SHA-256 of the open stream against the approved set. Hashing from the open
+       stream and seeking to 0 eliminates TOCTOU between hash check and deserialisation. #>
+    param([Parameter(Mandatory)][IO.Stream] $Stream, [Parameter(Mandatory)][string] $Path)
+    if ($AllowUntrustedFiles) { return $true }
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { $h = [BitConverter]::ToString($sha.ComputeHash($Stream)).Replace('-', '') }
+    finally { $sha.Dispose() }
+    if ($script:TrustedHashes.Contains($h)) { return $true }
+    [void]$script:UntrustedSeen.Add((Get-LibraryRelativePath -Path $Path))
+    return $false
+}
+
 function Test-SwdFileTrusted {
     <# SHA-256 of the content against the approved set. A hash, not a path: a path
        allowlist would still trust a file whose bytes changed underneath it. #>
@@ -446,6 +460,7 @@ if ($TrustCurrentLibrary) {
 # uncatchable StackOverflowException.
 $onResolve = [System.ResolveEventHandler] {
     param($src, $e)
+    $null = $src # ResolveEventHandler delegate signature
     $name = ($e.Name -split ',')[0]
     foreach ($a in [AppDomain]::CurrentDomain.GetAssemblies()) {
         if ($a.GetName().Name -eq $name) { return $a }
@@ -618,6 +633,7 @@ function Get-FieldValue {
 
 $script:SentinelHits = @{}
 $SENTINEL_LIMIT = 1e30
+$script:SENTINEL_LIMIT = 1e30
 
 function ConvertTo-Measurement {
     <# A raw field value as a MEASUREMENT, or NaN.
@@ -633,7 +649,8 @@ function ConvertTo-Measurement {
     if ($null -eq $Value) { return [double]::NaN }
     if ($Value -is [bool]) { return [double]([int]$Value) }
     $d = [double]$Value
-    if ([double]::IsNaN($d) -or [double]::IsInfinity($d) -or [Math]::Abs($d) -gt $SENTINEL_LIMIT) {
+    $limit = if ($script:SENTINEL_LIMIT) { $script:SENTINEL_LIMIT } elseif ($SENTINEL_LIMIT) { $SENTINEL_LIMIT } else { 1e30 }
+    if ([double]::IsNaN($d) -or [double]::IsInfinity($d) -or [Math]::Abs($d) -gt $limit) {
         if (-not $script:SentinelHits.ContainsKey($Name)) { $script:SentinelHits[$Name] = 0 }
         $script:SentinelHits[$Name]++
         return [double]::NaN
@@ -833,19 +850,16 @@ function Format-MessageForDisplay {
 function Read-SwdFile {
     <# Deserialise one .fyn* file. Returns $null on failure (caller counts it).
        The trust check is FIRST - BinaryFormatter must never see a stream whose
-       provenance has not been approved - and it is INSIDE the try, which is
-       load-bearing rather than tidy: Test-SwdFileTrusted hashes the file, so its
-       ReadAllBytes is the run's FIRST I/O on it. With the try around only the
-       Deserialize, a single locked or unreadable file threw out of the hash and,
-       under $ErrorActionPreference = 'Stop', took the whole run with it before
-       anything was written. Measured on the identical arrangement in
-       extract_board.ps1: one exclusively-locked report ended the run having read
-       0 of 11 files and produced no CSVs at all. #>
+       provenance has not been approved - and it runs on the open stream before
+       seeking back to 0, which eliminates TOCTOU without dropping the handle.
+       The open and hash are inside the try, so an exclusively locked or unreadable
+       file warns and returns $null rather than aborting the run. #>
     param([Parameter(Mandatory)][string] $Path)
     $fs = $null
     try {
-        if (-not (Test-SwdFileTrusted -Path $Path)) { return $null }
         $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        if (-not (Test-SwdStreamTrusted -Stream $fs -Path $Path)) { return $null }
+        $fs.Position = 0
         return $fmt.Deserialize($fs)
     } catch {
         Write-Warning "read failed, skipped: $(Format-PathForDisplay $Path) :: $(Format-MessageForDisplay $_.Exception.Message)"

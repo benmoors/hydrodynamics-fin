@@ -269,6 +269,12 @@ $OutDir = $canonOut
 # directory inside a protected tree before anything had checked it.
 if (-not (Test-Path -LiteralPath $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
 
+# census_manifest.json is the completion sentinel. Delete any stale one up
+# front so an aborted run cannot leave the previous run's manifest vouching
+# for an incomplete census.
+$censusManifestPath = Join-Path $OutDir 'census_manifest.json'
+if (Test-Path -LiteralPath $censusManifestPath) { Remove-Item -LiteralPath $censusManifestPath -Force }
+
 # --- Trust manifest ----------------------------------------------------------
 # READ-ONLY here (only swd_extract.ps1 -TrustCurrentLibrary writes it), but it is
 # still refused inside a protected tree: a manifest read from inside the library
@@ -325,6 +331,19 @@ function Get-Sha256Hex {
     finally { $sha.Dispose() }
 }
 
+function Test-SwdStreamTrusted {
+    <# SHA-256 of the open stream against the approved set. Hashing from the open
+       stream and seeking to 0 eliminates TOCTOU between hash check and deserialisation. #>
+    param([Parameter(Mandatory)][IO.Stream] $Stream, [Parameter(Mandatory)][string] $Path)
+    if ($AllowUntrustedFiles) { return $true }
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { $h = [BitConverter]::ToString($sha.ComputeHash($Stream)).Replace('-', '') }
+    finally { $sha.Dispose() }
+    if ($script:TrustedHashes.Contains($h)) { return $true }
+    [void]$script:UntrustedSeen.Add((Split-Path -Leaf $Path))
+    return $false
+}
+
 function Test-SwdFileTrusted {
     param([Parameter(Mandatory)][string] $Path)
     if ($AllowUntrustedFiles) { return $true }
@@ -339,6 +358,7 @@ function Test-SwdFileTrusted {
 # StackOverflowException. This has happened twice.
 $onResolve = [System.ResolveEventHandler] {
     param($src, $e)
+    $null = $src # ResolveEventHandler delegate signature
     $name = ($e.Name -split ',')[0]
     foreach ($a in [AppDomain]::CurrentDomain.GetAssemblies()) {
         if ($a.GetName().Name -eq $name) { return $a }
@@ -374,23 +394,22 @@ function Format-MessageForDisplay {
 }
 
 function Read-SwdFile {
-    <# The trust check is FIRST - BinaryFormatter must never see an unapproved
-       stream - and INSIDE the try, which is load-bearing rather than tidy:
-       Test-SwdFileTrusted hashes the file, so its ReadAllBytes is the run's first
-       I/O on it. With the try around only the Deserialize, one exclusively locked
-       report threw out of the hash and, under $ErrorActionPreference = 'Stop',
-       took the whole run with it - measured on extract_board.ps1's identical
-       arrangement, which died having read 0 of 11 reports. #>
+    <# Deserialise one .fyn* file. Returns $null on failure (caller counts it).
+       The trust check is FIRST - BinaryFormatter must never see a stream whose
+       provenance has not been approved - and it runs on the open stream before
+       seeking back to 0, which eliminates TOCTOU without dropping the handle.
+       The open and hash are inside the try, so an exclusively locked or unreadable
+       file warns and returns $null rather than aborting the run. #>
     param([Parameter(Mandatory)][string] $Path)
     $leaf = Split-Path -Leaf $Path
     $fs = $null
     try {
-        if (-not (Test-SwdFileTrusted -Path $Path)) {
+        $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        if (-not (Test-SwdStreamTrusted -Stream $fs -Path $Path)) {
             Write-Warning "UNTRUSTED, skipped: $leaf"
-            $script:UntrustedSeen.Add($leaf)
             return $null
         }
-        $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        $fs.Position = 0
         return $fmt.Deserialize($fs)
     } catch {
         Write-Warning "read failed, skipped: $leaf :: $(Format-MessageForDisplay $_.Exception.Message)"
@@ -500,6 +519,7 @@ function Add-CensusSample {
 }
 
 function Add-AllFields {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '')]
     param([Parameter(Mandatory)][Type] $Type, $Owner)
     foreach ($fi in $Type.GetFields($BIND)) { Add-CensusSample -Type $Type -Fi $fi -Owner $Owner }
 }
@@ -524,9 +544,14 @@ if ($boardFiles.Count -gt 1) {
     Write-Warning "$($boardFiles.Count) .fynbs files are named '$BoardName'; the census below MERGES all of them:"
     foreach ($d in $boardFiles) { Write-Warning "    $(Format-PathForDisplay $d.FullName)" }
 }
+$nFailBoards = 0
 foreach ($bf in $boardFiles) {
     $bd = Read-SwdFile -Path $bf.FullName
-    if ($bd) { Add-AllFields -Type $T_board -Owner $bd }
+    if ($bd) {
+        Add-AllFields -Type $T_board -Owner $bd
+    } else {
+        $nFailBoards++
+    }
 }
 
 $scanDir = Join-Path (Join-Path $BiblioPath 'rapports_hydro') $BoardName
@@ -628,6 +653,7 @@ if ($sentinelRows.Count -eq 0) {
         Write-Host ("    {0,-42} {1,6} of {2,-6} status={3}" -f $sr.field, $sr.n_sentinel, $sr.n_seen, $sr.status)
     }
 }
+if ($nFailBoards -gt 0) { Write-Warning "$nFailBoards board file(s) (.fynbs) were skipped (untrusted or failed to deserialise)." }
 if ($nFail -gt 0) { Write-Warning "$nFail report(s) were skipped (untrusted or failed to deserialise); the census above covers the rest." }
 
 # --- Run record --------------------------------------------------------------
@@ -639,6 +665,8 @@ $doc = [ordered]@{
     generated_utc         = (Get-Date).ToUniversalTime().ToString('o')
     board                 = $BoardName
     fields                = $rows.Count
+    boards_found          = $boardFiles.Count
+    boards_failed         = $nFailBoards
     reports_found         = $reportFiles.Count
     reports_failed        = $nFail
     roll_cases            = $nCases

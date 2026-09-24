@@ -45,7 +45,7 @@
 
 .EXAMPLE
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File swd_diagnose.ps1
-    Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','<full path>\swd_diagnose.ps1'
+    Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','"<full path>\swd_diagnose.ps1"'
 #>
 [CmdletBinding()]
 param(
@@ -182,7 +182,7 @@ try {
         Log '  NOTE: this run is NOT elevated. If SWD is elevated, sections D-F are'
         Log '  EXPECTED to fail, and that failure is the finding. Re-run from an'
         Log '  elevated shell to complete the comparison:'
-        Log "    Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','$PSCommandPath'"
+        Log "    Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','`"$PSCommandPath`"'"
     }
 } catch { Write-SectionFailure $_ 'A' }
 

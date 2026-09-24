@@ -198,9 +198,10 @@ including an explicit list of what has *not* been verified).
 1. **Launch SWD by hand**, then run the automation from an **elevated** shell:
    ```powershell
    # RunAs starts in a different working directory, so -File must be absolute.
+   # Start-Process joins -ArgumentList unquoted, so a path with spaces needs its own quotes.
    $diag = Join-Path $PWD 'SWD\tools\phase2\swd_diagnose.ps1'
    Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass',
-     '-File',$diag
+     '-File',"`"$diag`""
    ```
 2. **Open the scanner panel and re-take the control map** — the parameter controls do not exist
    before that (§ 3).

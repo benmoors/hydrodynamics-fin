@@ -34,9 +34,10 @@ install intact.
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "SWD\tools\phase2\swd_diagnose.ps1"
 # RunAs starts in a different working directory, so -File must be absolute.
+# Start-Process joins -ArgumentList unquoted, so a path with spaces needs its own quotes.
 $diag = Join-Path $PWD 'SWD\tools\phase2\swd_diagnose.ps1'
 Start-Process powershell -Verb RunAs -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass',
-  '-File',$diag
+  '-File',"`"$diag`""
 ```
 
 **✅ Run ONE `-ClickProbe` on a control you choose — under four conditions.**

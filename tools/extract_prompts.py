@@ -33,8 +33,10 @@ from datetime import datetime
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+# Claude Code names the folder after the repo path with every non-alphanumeric character
+# turned into "-". Derived rather than typed, so the default survives the repo moving.
 DEFAULT_TRANSCRIPTS = (
-    Path.home() / ".claude" / "projects" / "C--Users-moors-HYDRODYNAMICS-FIN"
+    Path.home() / ".claude" / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(REPO_ROOT))
 )
 DEFAULT_AI_USE = REPO_ROOT / "AI-USE.md"
 
@@ -66,12 +68,23 @@ def _home_pattern(home: Path) -> re.Pattern[str]:
     sep = r"[\\/]+"
     body = sep.join(parts)
     drive = r"(?:[A-Za-z]:|/[A-Za-z])"
-    return re.compile(rf"{drive}{sep}{body}|[A-Za-z]--{'-'.join(parts)}", re.I)
+    # The project-folder form turns spaces and punctuation into "-" too, not just separators.
+    dashed = "-".join(re.sub(r"[^A-Za-z0-9]", "-", p) for p in home.parts[1:])
+    return re.compile(rf"{drive}{sep}{body}|[A-Za-z]--{dashed}", re.I)
 
 
-def redact(text: str, home: Path | None = None) -> str:
-    """Replace the user's home directory, in any spelling, with ``~``."""
-    return _home_pattern(home or Path.home()).sub("~", text)
+def redact(text: str, home: Path | None = None, root: Path | None = None) -> str:
+    """Replace the user's home directory, in any spelling, with ``~``.
+
+    When the repo sits deeper under home (e.g. ``~/OneDrive - <tenant>/...``), its parent
+    folder is collapsed first, so paths render as ``~/HYDRODYNAMICS-FIN/...`` and the
+    OneDrive tenant never reaches the committed appendix (R9).
+    """
+    home = home or Path.home()
+    parent = (root or REPO_ROOT).parent
+    if home in parent.parents:
+        text = _home_pattern(parent).sub("~", text)
+    return _home_pattern(home).sub("~", text)
 
 
 def _queued_prompt(record: dict) -> dict | None:

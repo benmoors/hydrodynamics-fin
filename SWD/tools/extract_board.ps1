@@ -320,6 +320,16 @@ $trusted = New-Object 'System.Collections.Generic.HashSet[string]' ([StringCompa
 if (-not (Test-Path -LiteralPath $TrustManifest)) { throw "Trust manifest not found: $(Format-PathForDisplay $TrustManifest)" }
 foreach ($e in (Get-Content -Raw -LiteralPath $TrustManifest | ConvertFrom-Json).files) { [void]$trusted.Add([string]$e.sha256) }
 
+function Test-StreamTrusted {
+    param([Parameter(Mandatory)][IO.Stream] $Stream, [Parameter(Mandatory)][string] $Path)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { $h = [BitConverter]::ToString($sha.ComputeHash($Stream)).Replace('-','') }
+    finally { $sha.Dispose() }
+    if ($trusted.Contains($h)) { return $true }
+    [void]$script:UntrustedSeen.Add((Split-Path -Leaf $Path))
+    return $false
+}
+
 function Test-Trusted {
     param([string] $Path)
     $sha = [Security.Cryptography.SHA256]::Create()
@@ -333,6 +343,7 @@ function Test-Trusted {
 # unguarded LoadFrom here recurses into an uncatchable StackOverflowException.
 $onResolve = [System.ResolveEventHandler] {
     param($src, $e)
+    $null = $src # ResolveEventHandler delegate signature
     $n = ($e.Name -split ',')[0]
     foreach ($a in [AppDomain]::CurrentDomain.GetAssemblies()) { if ($a.GetName().Name -eq $n) { return $a } }
     return $null
@@ -540,13 +551,11 @@ $script:ParseFailures = New-Object 'System.Collections.Generic.List[string]'
 function Read-Swd {
     <# Deserialise one .fyn* file, or $null. The trust check is FIRST:
        BinaryFormatter must never see a stream whose provenance is unapproved.
+       Hashing runs on the open stream before seeking back to 0, which eliminates
+       TOCTOU without dropping the handle.
 
        EVERYTHING is inside the try, the trust check included, and that is not
-       tidiness. Test-Trusted hashes the file, so ReadAllBytes there is the run's
-       FIRST I/O on it - putting the try around only the Deserialize (which is
-       where the original defect was reported) leaves the real abort point
-       uncovered. Measured: with one report exclusively locked, the run died in
-       Test-Trusted having read 0 of 11 and written nothing, exit code 1.
+       tidiness.
 
        Skips are counted and reported at the end, because a run that read 1 of
        154 reports otherwise prints the same shape of success as one that read
@@ -555,12 +564,12 @@ function Read-Swd {
     $leaf = Split-Path -Leaf $Path
     $fs = $null
     try {
-        if (-not (Test-Trusted -Path $Path)) {
+        $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        if (-not (Test-StreamTrusted -Stream $fs -Path $Path)) {
             Write-Warning "UNTRUSTED, skipped: $leaf"
-            $script:UntrustedSeen.Add($leaf)
             return $null
         }
-        $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+        $fs.Position = 0
         return $fmt.Deserialize($fs)
     } catch {
         Write-Warning "read failed, skipped: $leaf :: $(Format-MessageForDisplay $_.Exception.Message)"

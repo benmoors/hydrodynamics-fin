@@ -78,6 +78,21 @@ def test_redacts_every_spelling_of_home(spelling: str) -> None:
     assert "someone" not in redact(spelling, home=HOME)
 
 
+@pytest.mark.parametrize(
+    "spelling",
+    [
+        "C:\\Users\\someone\\OneDrive - Tenant\\Docs\\repo\\x",
+        "C:/Users/someone/OneDrive - Tenant/Docs/repo/x",
+        "/c/Users/someone/OneDrive - Tenant/Docs/repo/x",
+        "C--Users-someone-OneDrive---Tenant-Docs-repo",
+    ],
+)
+def test_redacts_the_tenant_above_a_repo_under_home(spelling: str) -> None:
+    out = redact(spelling, home=HOME, root=Path("C:/Users/someone/OneDrive - Tenant/Docs/repo"))
+    assert "Tenant" not in out and "someone" not in out
+    assert "repo" in out
+
+
 def test_splice_replaces_only_between_markers(tmp_path: Path, transcripts: Path) -> None:
     ai_use = tmp_path / "AI-USE.md"
     ai_use.write_text(f"# Record\n\nhand-written\n\n{BEGIN}\nold\n{END}\n\ntail\n", encoding="utf-8")

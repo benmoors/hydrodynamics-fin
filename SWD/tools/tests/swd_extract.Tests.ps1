@@ -33,6 +33,23 @@ BeforeAll {
     $script:PolarBadTokens = 0
     $script:PolarTruncated = 0
 
+    # $SENTINEL_LIMIT and the tally ConvertTo-Measurement writes to.
+    $script:SENTINEL_LIMIT = 1e30
+    $script:SentinelHits   = @{}
+    $SENTINEL_LIMIT        = $script:SENTINEL_LIMIT
+
+    # SENTINEL_LIMIT is lifted too, so the test cannot drift from the script.
+    $slAssign = $ast.Find({
+        param($x)
+        $x -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+        $x.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+        $x.Left.VariablePath.UserPath -eq 'SENTINEL_LIMIT'
+    }, $true)
+    if ($slAssign) {
+        . ([scriptblock]::Create($slAssign.Extent.Text))
+        $script:SENTINEL_LIMIT = $SENTINEL_LIMIT
+    }
+
     # Top-level Add-Type blocks are lifted as well - Get-CanonicalDirectory is
     # P/Invoke and is useless without the script's own SwdPath.Native definition.
     # Lifted from the target, never re-declared here, so the tests cannot pass
@@ -542,6 +559,45 @@ public class SwdTestProbe {
     It 'the plain cast it replaced would have produced a fake zero' {
         # documents WHY the helper exists
         [double]$null | Should -Be 0.0
+    }
+}
+
+Describe 'ConvertTo-Measurement: sentinels, missing, null and valid values' {
+    BeforeEach { $script:SentinelHits = @{} }
+
+    It 'passes a valid float through' {
+        ConvertTo-Measurement -Value 12.34 -Name 'test_field' | Should -Be 12.34
+        $script:SentinelHits.Count | Should -Be 0
+    }
+    It 'preserves a genuine zero' {
+        $v = ConvertTo-Measurement -Value 0.0 -Name 'zero_field'
+        [double]::IsNaN($v) | Should -BeFalse
+        $v | Should -Be 0.0
+        $script:SentinelHits.Count | Should -Be 0
+    }
+    It 'maps null to NaN without counting as a sentinel' {
+        $v = ConvertTo-Measurement -Value $null -Name 'null_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits.Count | Should -Be 0
+    }
+    It 'maps boolean to 1.0 or 0.0' {
+        ConvertTo-Measurement -Value $true -Name 'bool_t' | Should -Be 1.0
+        ConvertTo-Measurement -Value $false -Name 'bool_f' | Should -Be 0.0
+    }
+    It 'detects Single.MaxValue as a sentinel and maps to NaN' {
+        $v = ConvertTo-Measurement -Value ([float]::MaxValue) -Name 'sentinel_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits['sentinel_field'] | Should -Be 1
+    }
+    It 'detects infinity as a sentinel' {
+        $v = ConvertTo-Measurement -Value ([double]::PositiveInfinity) -Name 'inf_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits['inf_field'] | Should -Be 1
+    }
+    It 'detects NaN as a sentinel hit' {
+        $v = ConvertTo-Measurement -Value ([double]::NaN) -Name 'nan_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits['nan_field'] | Should -Be 1
     }
 }
 

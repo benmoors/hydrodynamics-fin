@@ -30,3 +30,9 @@ parks the blocker.
 **How to apply:** run the loop to completion or to its cap, then report the routing decision,
 the verdict progression, the changelog, and the backup path. Do not ask permission between
 rounds. Still do not launch a loop *unprompted* — see [[sqa-loops-gated-by-weekly-limit]].
+
+**SUPERSEDED 2026-09-27 (loop shape).** The rounds described above no longer exist. `/sqa-loop` is
+now one unattended pass: quota gate → agy → Devin → one fresh `sqa-lead` + one `code-reviewer`,
+and that verdict is final, with no re-verification round. The core of this note still holds: run
+the fixer, don't stop at the verdict. See `AI-USE.md` § 2 (2026-09-27) and the global
+`~/.claude/skills/sqa-loop/SKILL.md`.

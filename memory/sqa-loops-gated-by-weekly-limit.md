@@ -21,3 +21,8 @@ put the loop in its own stage with its own date, rather than folding it into a l
 stage carries "the whole token cost". Cheap stages (read-only probing, running an existing script,
 document work) should be schedulable independently so they are not blocked behind the expensive one.
 Related: [[stage-plans-for-multiday-work]].
+
+**Updated 2026-09-27:** the loop is now one pass (agy → Devin → one Claude `sqa-lead` + fixer), so
+there are no longer 3 Claude rounds, but the cost rule stands. agy and Devin quotas are a second
+budget: `~/.claude/tools/cli_quota.py` leaves a CLI out when it is low, and never substitutes
+another one. See [[user-triggers-the-fixer-round]].

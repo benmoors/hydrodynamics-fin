@@ -25,6 +25,7 @@ surrogate works and where it does not.
     ├── docs/                    pdoc HTML, generated
     ├── SWD/                     DATA ACQUISITION ONLY — see section 6
     ├── AI-USE.md                the AI-use record — see section 8
+    ├── GEMINI.md                Antigravity / Gemini CLI root config & SQA protocol
     ├── tools/extract_prompts.py regenerates the prompt appendix in AI-USE.md
     └── TODO.md                  live worklist
 
@@ -293,6 +294,8 @@ says where each answer is and how the checking worked.
 | SQA-loop agents, run inside Claude Code | as installed Aug 2026 | `claude-opus-5` | reviewing and fixing that code — 15 review dispatches, 6 fix rounds |
 | humanizer plugin | 2.11.2 | `claude-opus-5` | three prose passes over this README, each followed by a fact diff |
 | graphify | 0.9.52 | none for code | a navigation graph of the repo; gitignored, not a deliverable |
+| Google Antigravity CLI (agy) | 2026-09 | Gemini | auditing and fixing the SWD extraction code (24–25 Sep 2026); since 27 Sep, the first test-and-fix stage of the SQA pass |
+| Devin CLI (Cognition) | 3000.11.3 | `swe-1-7` | drafting the second-source auditor config (24 Sep 2026); since 27 Sep, the second test-and-fix stage of the SQA pass |
 
 `pdoc`, `pytest`, `Pester` and `PSScriptAnalyzer` are not AI and are listed only so the question
 does not arise.
@@ -341,6 +344,17 @@ What that produced here, copied from the repo's own worklists:
 > puts it in one line: "Twice a fixer reported clean and a fresh verifier immediately found a
 > Critical. That is why the verifier is never the author." It is also why the loop gates on the
 > verifier's line and ignores the fixer's.
+
+> ### 🧩 Point of note — the process changed on 27 September 2026
+> Everything above describes the multi-round loop. From 2026-09-27, `/sqa-loop` is **one unattended
+> pass**. A quota check first leaves out any CLI that is low on usage (no other CLI is swapped in).
+> Then agy tests and fixes, and Devin tests and fixes the tree agy left. Both run headless through a
+> wrapper that reverts any write outside their allowed paths. Last comes one Claude `sqa-lead` with
+> its specialists and one `code-reviewer`, and that verdict is final. There is **no fresh-verifier
+> round any more**, so the fixer's edits in that last step are not re-checked, which is the
+> weakness the table above documents. No pass of this kind had been run on this repository as of
+> 2026-09-29. Details, the reasons, and three faults found in trial runs: `AI-USE.md` § 2
+> (2026-09-26/27 and 2026-09-27) and § 5 E78–E80.
 
 ### 🔹 Errors the AI made
 

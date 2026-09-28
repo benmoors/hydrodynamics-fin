@@ -88,7 +88,7 @@ points, where they must appear, and the rubric row.
 | **R1** | **`AI-USE.md` is the single AI-use record.** Sections: tools (name, version, model, access-date range, what it did); task log; approximate contribution; decisions that remained mine; errors ledger; prompt appendix. **Append-only** — an entry is corrected by a later entry, never edited away. |
 | **R2** | **Log a task entry whenever AI output ships into the repo or changes a design decision**: date, tool + version + model, the prompt verbatim, what was changed about the output, how it was verified. Tool calls, file reads and chat that produced nothing are not logged. |
 | **R3** | **Every correction, withdrawal or refuted premise gets an errors-ledger entry** — date, what was believed, what was true, how it was caught, who caught it — **in the same change that lands the correction.** Never delete one. The strikethrough convention (`~~…~~`) stays in the source documents; the ledger is the index. |
-| **R4** | **The prompt appendix is generated, never typed:** `python tools/extract_prompts.py`. Transcripts live in `~/.claude/projects/` and are pruned, so extract early and re-run before every submission. The script redacts the home directory and flags licence/registry patterns; **a human reviews the output for anything else before it is committed.** |
+| **R4** | **The prompt appendix is generated, never typed:** `python tools/extract_prompts.py`. It reads all three CLIs, each labelled with its version and model: Claude Code (`~/.claude/projects/`), agy (`~/.gemini/antigravity-cli/`) and Devin (`%APPDATA%\Devin\cli\transcripts\`). A session opened above the repo (e.g. `UNIVERSITY/`) contributes only the turns whose prompt or tool calls named HYDRODYNAMICS-FIN. All three stores are pruned, so extract early and re-run before every submission. The script redacts the home directory and flags licence/registry patterns; **a human reviews the output for anything else before it is committed.** |
 | **R5** | **The README `## 🤖 AI Acknowledgment` and the report's reflection are written from `AI-USE.md`, never from memory.** All eight brief bullets must be answerable from the log. |
 | **R6** | **State the approximate AI contribution per component**, as a rough share plus who made the decision (`AI-USE.md` § 3). The brief asks for "approximate"; a number, however rough, beats prose. |
 | **R7** | **Interview rule: nothing in the repo the student cannot explain unaided.** AI-written code or analysis the student cannot explain is learned or removed before submission (p. 6 bans AI in the interview; p. 8 says the mark rests on answering questions). Every module gets an explicit "can I explain this" pass, recorded in `AI-USE.md` § 4. |
@@ -150,6 +150,7 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
 
     HYDRODYNAMICS-FIN/              also the Obsidian vault root
     |- CLAUDE.md                    this file
+    |- GEMINI.md                    Antigravity / Gemini CLI root config & SQA protocol
     |- AI-USE.md                    the AI-use record -- section 3
     |- memory/                      Claude Code auto memory, committed and shared
     |- .claude/

@@ -9,11 +9,21 @@ exact set that survives.
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
 
-from tools.extract_prompts import BEGIN, END, load_sessions, redact, render, splice
+from tools.extract_prompts import (
+    BEGIN,
+    END,
+    load_agy_sessions,
+    load_devin_sessions,
+    load_sessions,
+    redact,
+    render,
+    splice,
+)
 
 HOME = Path("C:/Users/someone")
 
@@ -93,6 +103,20 @@ def test_redacts_the_tenant_above_a_repo_under_home(spelling: str) -> None:
     assert "repo" in out
 
 
+@pytest.mark.parametrize(
+    "spelling",
+    [
+        "C:\\Users\\someone\\OneDrive - Tenant Uni\\Documents\\Library\\Boards",
+        "C:\\\\Users\\\\someone\\\\OneDrive - Tenant Uni\\\\Documents\\\\Library",  # JSON-escaped
+        "C:/Users/someone/OneDrive - Tenant Uni/Other/x",
+    ],
+)
+def test_redacts_the_tenant_outside_the_repo(spelling: str) -> None:
+    out = redact(spelling, home=HOME, root=Path("C:/Users/someone/OneDrive - Tenant Uni/Docs/repo"))
+    assert "Tenant" not in out and "someone" not in out
+    assert "OneDrive" in out
+
+
 def test_splice_replaces_only_between_markers(tmp_path: Path, transcripts: Path) -> None:
     ai_use = tmp_path / "AI-USE.md"
     ai_use.write_text(f"# Record\n\nhand-written\n\n{BEGIN}\nold\n{END}\n\ntail\n", encoding="utf-8")
@@ -110,3 +134,122 @@ def test_splice_refuses_a_file_without_markers(tmp_path: Path) -> None:
     ai_use.write_text("no markers here\n", encoding="utf-8")
     with pytest.raises(SystemExit):
         splice(ai_use, "body")
+
+
+# --- sessions opened above the repo, agy and Devin -------------------------------------
+
+REPO = Path("C:/Users/someone/UNI/HYDRODYNAMICS-FIN")
+HFIN_PATH = "C:\\Users\\someone\\UNI\\HYDRODYNAMICS-FIN\\src\\splits.py"
+CAREER_PATH = "C:\\Users\\someone\\UNI\\Career\\scripts\\fetch.py"
+
+
+def test_heading_names_cli_version_and_model(transcripts: Path) -> None:
+    text = render(load_sessions(transcripts, home=HOME))
+    assert "### 2026-08-30 02:35 · Claude Code 2.1.250 · claude-opus-5 · `abcdef12`" in text
+    assert "| `abcdef12` | Claude Code | 2.1.250 | claude-opus-5 | repo |" in text
+
+
+def test_claude_session_above_the_repo_keeps_only_repo_turns(tmp_path: Path) -> None:
+    def tool(path: str) -> dict:
+        return {"model": "claude-opus-5",
+                "content": [{"type": "tool_use", "name": "Read", "input": {"file_path": path}}]}
+
+    rows = [
+        # injected context names the repo: must not count as work on it
+        _record(type="user", timestamp="2026-09-20T01:00:00Z",
+                message={"content": "<system-reminder>HYDRODYNAMICS-FIN is a repo</system-reminder>"}),
+        _record(type="user", timestamp="2026-09-20T01:01:00Z", message={"content": "Fix fetch"}),
+        _record(type="assistant", timestamp="2026-09-20T01:02:00Z", message=tool(CAREER_PATH)),
+        _record(type="user", timestamp="2026-09-20T02:00:00Z", message={"content": "Fix splits"}),
+        _record(type="assistant", timestamp="2026-09-20T02:01:00Z", message=tool(HFIN_PATH)),
+        # dropped: a subagent's hand-back is delivered as a user record, never typed
+        _record(type="user", timestamp="2026-09-20T02:30:00Z",
+                message={"content": '<agent-message from="a1">HYDRODYNAMICS-FIN done</agent-message>'}),
+        _record(type="user", timestamp="2026-09-20T03:00:00Z",
+                message={"content": "Now the hydrodynamics fin README"}),
+    ]
+    (tmp_path / "11111111.jsonl").write_text("\n".join(rows), encoding="utf-8")
+    sessions = load_sessions(tmp_path, home=HOME, scope="via UNI")
+    assert [p.text for p in sessions[0].prompts] == ["Fix splits", "Now the hydrodynamics fin README"]
+    assert sessions[0].prompts[0].model == "claude-opus-5"
+
+
+def _agy_root(tmp_path: Path, workspace: str) -> Path:
+    conv = "9b3bc2ea-0000-0000-0000-000000000000"
+    logs = tmp_path / "brain" / conv / ".system_generated" / "logs"
+    logs.mkdir(parents=True)
+
+    def user(ts: str, text: str, extra: str = "") -> str:
+        return _record(type="USER_INPUT", source="USER_EXPLICIT", created_at=ts,
+                       content=f"<USER_REQUEST>\n{text}\n</USER_REQUEST>{extra}"
+                               "<ADDITIONAL_METADATA>time</ADDITIONAL_METADATA>")
+
+    def plan(ts: str, path: str) -> str:
+        return _record(type="PLANNER_RESPONSE", source="MODEL", created_at=ts,
+                       tool_calls=[{"name": "view_file", "args": {"AbsolutePath": path}}])
+
+    switch = ("<USER_SETTINGS_CHANGE>The user changed setting `Model Selection` from None to "
+              "Gemini 3.8 Flash (High). No need to comment.</USER_SETTINGS_CHANGE>")
+    rows = [
+        user("2026-09-24T01:00:00Z", "/model"),                   # dropped: bare command
+        user("2026-09-24T01:01:00Z", "Audit fetch"),              # Career only
+        plan("2026-09-24T01:02:00Z", CAREER_PATH),
+        user("2026-09-24T02:00:00Z", "/plan Audit splits", switch),
+        plan("2026-09-24T02:01:00Z", HFIN_PATH),
+        _record(type="SYSTEM_MESSAGE", source="SYSTEM", created_at="2026-09-24T02:02:00Z",
+                content="HYDRODYNAMICS-FIN"),
+    ]
+    (logs / "transcript.jsonl").write_text("\n".join(rows), encoding="utf-8")
+    (tmp_path / "history.jsonl").write_text(
+        _record(display="x", workspace=workspace, conversationId=conv), encoding="utf-8")
+    (tmp_path / "conversations").mkdir()
+    con = sqlite3.connect(tmp_path / "conversations" / f"{conv}.db")
+    con.execute("CREATE TABLE gen_metadata (idx integer, data blob)")
+    con.execute("INSERT INTO gen_metadata VALUES (0, ?)",
+                (b"\x0a\x10gemini-3.8-flash\x12\x20we asked gemini-x about it here",))
+    con.commit()
+    con.close()
+    return tmp_path
+
+
+def test_agy_session_above_the_repo(tmp_path: Path) -> None:
+    root = _agy_root(tmp_path, "C:\\Users\\someone\\UNI")
+    [session] = load_agy_sessions(root, repo=REPO, home=HOME)
+    assert session.scope == "via UNI"
+    assert [p.text for p in session.prompts] == ["/plan Audit splits"]
+    assert session.prompts[0].cli == "agy"
+    assert session.prompts[0].model == "Gemini 3.8 Flash (High)"
+
+
+def test_agy_session_inside_the_repo_keeps_every_prompt(tmp_path: Path) -> None:
+    root = _agy_root(tmp_path, str(REPO))
+    [session] = load_agy_sessions(root, repo=REPO, home=HOME)
+    assert session.scope == "repo"
+    assert [p.text for p in session.prompts] == ["Audit fetch", "/plan Audit splits"]
+    # before any model switch, the model comes from the generation metadata, whole ids only
+    assert session.prompts[0].model == "gemini-3.8-flash"
+
+
+def test_devin_keeps_repo_turns_with_cli_version_and_model(tmp_path: Path) -> None:
+    def agent(ts: str, path: str) -> dict:
+        return {"source": "agent", "timestamp": ts, "model_name": "swe-1-7",
+                "tool_calls": [{"function_name": "read_file", "arguments": {"path": path}}]}
+
+    data = {
+        "session_id": "star-water",
+        "agent": {"name": "devin", "version": "3000.11.3", "model_name": "SWE-1.7 Max"},
+        "steps": [
+            {"source": "system", "timestamp": "2026-09-24T00:00:00Z", "message": "HYDRODYNAMICS-FIN"},
+            {"source": "user", "timestamp": "2026-09-24T00:01:00.123456789+00:00", "message": "/context"},
+            {"source": "user", "timestamp": "2026-09-24T00:02:00+00:00", "message": "Audit Career"},
+            agent("2026-09-24T00:03:00+00:00", CAREER_PATH),
+            {"source": "user", "timestamp": "2026-09-24T00:04:00+00:00", "message": "Audit splits"},
+            agent("2026-09-24T00:05:00+00:00", HFIN_PATH),
+        ],
+    }
+    (tmp_path / "star-water.json").write_text(json.dumps(data), encoding="utf-8")
+    [session] = load_devin_sessions(tmp_path, home=HOME)
+    [prompt] = session.prompts
+    assert (prompt.text, prompt.cli, prompt.version, prompt.model) == (
+        "Audit splits", "Devin", "3000.11.3", "swe-1-7")
+    assert "### 2026-09-24 00:04 · Devin 3000.11.3 · swe-1-7 · `star-water`" in render([session])

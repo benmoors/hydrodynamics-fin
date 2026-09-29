@@ -94,6 +94,223 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-09-29    | Claude Code (`claude-opus-5-5`), session `69d0bedf`, opened from `UNIVERSITY/`: a question-led hand run of SWD. Benjamin drove the app and answered four rounds of questions; Claude Code recorded the answers and ran the checks. **Findings:** the library is on the My Library tab; loading is right-click → `Open` (a click only highlights); `Lock_` = has a hydroscan; an unlocked board scans without save-as-copy; the surfer is changed by drag-and-drop. **Decisive test:** Benjamin scanned the unlocked `blueTreck_Copy_2` with `flow ms` = 10 (stored 10, displayed "Relative Speed 10 m/s"). Claude Code re-approved the trust manifest (413 files) and extracted to a scratch folder: ρV = 20,500.000 on all 11 angles → **V = 20.000 m/s**. So the single-speed conclusion (E7, E10) stands, now on a test without the save-as-copy confound. Written to the local wiki (new source page, `ShaperWaveDynamics` updated), `SWD/TODO.md`, `TODO.md` L.5 and `LIVE-RUN-FINDINGS.md` § 11. | Benjamin wanted to settle what the app can and cannot yield before automating it, by asking rather than assuming | Speed recovered two independent ways: mass balance (ρV exactly 1025 × 20.000) and SWD's decompiled friction law against SWD's own friction (median ratio 0.942 at 20 m/s vs 0.244 at 10). Wiki lint 149 pages, 0 problems. The deleted sentinel (E84) was restored from git; the CSVs were unchanged (mtimes 2026-09-01) | Prompts 2026-09-29 (§ 6); answers verbatim in `wiki/raw/SWD hand-run observations 2026-09-29.md` (local, gitignored); plan `~/.claude/plans/ancient-stirring-kite.md` |
 | 2026-09-29    | Claude Code (`claude-opus-5-5`), same session (`69d0bedf`), rounds 5–10 of the hand run. **Surfer-mass test (item 2b):** Benjamin scanned `blueTreck_Copy_3` with a 65 kg surfer; Claude Code extracted it to scratch, and all 53 operating points equal `blueTreck_Copy_2` (80 kg) to the last digit, with a different stored speed and radius too. **The hydroscan depends on hull geometry and water density only.** **Roll:** measured against `pos_y` in 13 per-board element tables, `roll_case` is SWD's Position-Y index (5 equal lateral steps), and the index shifts at 60–90° drift. **Also found:** yaw moment shows on screen but not in files; Apply Length/Width/Volume give scale/width/thickness; `File → Open Board` / `Open Surfer` use the Windows file picker; a resize is saved by the scan. Recorded in the local wiki and `SWD/TODO.md`. | Benjamin asked for continued questioning until what SWD can and cannot yield was settled | Row-by-row comparison of the two scratch extractions (max abs difference 0 on lift, drag, roll, area); `pos_y` = k × Y_max/4 on all 13 boards; homothety checked by volume ratio 1.1574 vs (2106.6/2006.6)³ = 1.1570. Trust step pointed at a scratch `-OutDir` so E84 could not recur | Prompts 2026-09-29 (§ 6); answers verbatim in `wiki/raw/SWD hand-run observations 2026-09-29.md` |
 
+### Answers given to Claude Code's questions, 2026-09-29
+
+These answers were given through Claude Code's question tool, which `tools/extract_prompts.py`
+does not read, so they do not appear in § 6 (§ 5 E85). They are copied here verbatim from the
+session record. One shaper name is redacted (R9), and bracketed notes are Claude Code's. Questions
+are paraphrased; the answers are word for word.
+
+#### Roll as a model input
+Q: How do you want roll treated as a model input?
+A: Decompile first (Recommended)   [the decompile was later paused, not run]
+
+#### Round 1
+
+Q: Which tab is the board library tree on?
+A: My Library tab, next to Project tab, while I am in the Shape room. It requires the expansion of
+"Boards", underneath Waves and Surfers. Then there are ~6 boards that I have accidently produced, then
+a selection of boards under each tab, like "BodyBoards", "Eggs", etc.
+
+Q: How is the library organised when you open it?
+A: Project tab is open, with Wave, Surfer: Surfer Pro, then Board: default_shortboard_Copy_1, which is
+usually the first to open, depending on how i exit the app. Under board there is Custom Outline,
+Custom tail, etc.
+
+Q: When you click a different board in the library, what happens?
+A: Press once highlights it, you need to Right Click it, then press Open <boardname>.fynbs (Double
+Click) for some reason double click doesnt work, there are other options in there if you would like
+me to list them. The highlighting provides a large number of dimension data which could be used
+however. Further, when you first get on the Board, if the board is selected by your cursor, you have
+the ability to change the dynamics. Which included these, where anything labelled in as bold is
+something YOU can edit, and the non-bold are what is changed by the bold:
+Dynamics: Angle_drift_deg 0 (not bold); Angle_drift_deg_hyd 0 (not bold); Angle_drift_deg_plar 0
+(not bold); Angle_drift_deg_sing 0 (not bold); angle_drift_rad 0 (not bold); angle_incidence_pla 20
+(bold); angle_incidence_pla 0.34906584 (not bold); angle_ligne_contact_ 0 (not bold);
+angle_ligne_contact_ 0 (not bold); centre_appui_x 0.4 (not bold); centre_appui_y -0.01 (not bold);
+centre_appui_Z 0.0195334572 (not bold); cumul_rotation_yaw_ 0 (bold); direction_horizontale 0 (bold);
+fins_global_drag_n 0 (bold); Fins_global_efficienc 0 (bold); Fins_global_lift_n 0 (bold);
+fins_global_moment_ 0 (bold) x3; Fins_global_vertical_ 0 (bold); Foiling_state False (bold);
+horizontal_relative_fl 0 (bold); Immersion_m 0 (bold); Moment_inertie_yaw 1.02333629 (bold);
+Moment_inertie_yaw 1.52633309 (bold); moment_pitch_nm 0 (bold); Moment_roll_nm 0 (bold);
+Pente_flux_relatif_de 0 (bold); Quantité_mouvemen 0 (bold); Rayon_centrifuge_m -3.04394937 (bold);
+Shape_moment_yaw 0 (bold); Total_Horizontal_thr 0 (bold); Total_shape_and_fir 0 (bold);
+Vecteur_acceleratior 0,0,0 (bold); Vecteur_normal_surf 0,0,-1 (not bold); Vecteur_vitesse_flux 0,0,0
+(not bold); Vecteur_vitesse_gec 0,0,0 (not bold); Vecteur_Vitesse_Sui 0,0,0 (not bold);
+vertical_force_n 0 (bold); vitesse_flux_relatif_m 21 (not bold); Vitesse_flux_relatif_n 0 (bold);
+Vitesse_geographiqu 21 (bold); Vitesse_rotation_yaw 0 (bold).
+general: infos [blank] (not bold); Lock_ False (not bold); Nom blueTreck (bold); Shaper_name_
+[redacted] (not bold).
+hydrodynamics: Facteur_moderation_ 1 (not bold); Froude_number 0 (not bold); Ra_micron 0 (bold).
+Outline: polynome_roulis [blank] (not bold).
+Static: Epaisseur_relative_a 0.0213364214 (not bold); volume_litre 40.6939926 (not bold).
+After that you need to press No Hydroscan to swap to the hydroscan, which you can then activate.
+
+Q: When you start a HydroScan on a board you haven't scanned before, what do you see?
+A: Save_as_copy, then confirmation, then new board loaded, then you need to press the Hydrodynamics
+Scanner button again, then details may take more than 60mn, which you press OK to, and it begins.
+
+#### Round 2
+
+Q: Right-click menu items?
+A: Open, Create, Rename, Delete | Creer un sous-dossier | Share ... on SurfCommunity
+
+Q: Lock_ on an original vs a copy?
+A: Originals True, copies False   [corrected in round 4, below]
+
+Q: Where does the highlight data appear?
+A: The same panel that both the property grid and Hydrodynamics Scanner show up, but for the
+different board in My Library that you highlighted.
+
+Q: Changing Vitesse_geographiqu - what else changes?
+A: So the surfing situation that we were applying before, with a changing flow ms (seemingly was
+stuck at 20), and a slope, as well as surfer kg, this changes all the values in the Dynamics grid.
+flow ms completely controls vitesse_geographiqu'. For example, if i put in 20 to flow ms, then press
+apply situation, vitesse_geographiqu will change to 20 too. However, when I changed vitesse
+geographiqu, flow ms did NOT change, only the other way around.
+
+#### Round 3
+
+Q: On an unlocked copy, flow ms = 10 + Apply situation: what do the speed fields read?
+A: I believe that Lock_ referes to whether there is a hydroscan. In this case, there is no hydroscan,
+(thus all forces read 0) but you can edit the drift angle however you want, and get values from
+that. When I swapped flow ms to 10, vitesse_geographique read 10 and vitesse_flux_relatif_m read
+10,0,0. Something to note is that this change for flow ms and vitesse_georgraphique is the same in a
+Lock_ true board. Another diff bw True and False lock, is that True means that you can only access
+the 11 Drift Angles they provide (0,2,5...90), whereas without it you can access any 5 deg step
+between 0 and 90, just without force data. The only way to access this is to ensure in the shape
+room that Board Dynamics is ON.
+
+Q: Scanning an unlocked copy - save-as-copy or straight to confirmation?
+A: Straight to confirmation
+
+Q: Does the save-as-copy keep the applied speed?
+A: Keeps my value
+
+Q: How do you change surfer?
+A: Same way as surfer does NOT work, I had to drag the surfer onto the Shape Room screen, (GUI) so
+that it would edit the surfer
+
+#### Round 4
+
+Q: Lock_ on (a) a never-scanned original, (b) a scanned copy?
+A: (a) False, (b) True
+
+Q: On an unlocked board, stepping drift in 5 deg increments: which values change?
+A: Only angle_drift_deg and angle_drift_deg_single, (2/4), the other two
+angle_drift_deg_planing_deviation and angle_drift_def_hydrostatic_deviation do not change (stay on 0)
+
+Q: Run the decisive speed test (unlocked copy, flow ms = 10)?
+A: I have just run it   [board blueTreck_Copy_2, 11 reports 19:24-19:36]
+
+Q: Does the scanner show a speed during the scan?
+A: Shows my applied speed. ("Relative Speed Measures at 10 m/s")
+
+#### Round 5
+
+Q: Does Rayon_centrifuge_m change by itself (Apply situation, drift)?
+A: Does not seem to change anything
+
+Q: Radius test - set Rayon_centrifuge_m to 20 on blueTreck_Copy_1 and scan?
+A: Won't hold / can't edit
+
+Q: Can you see or choose the ~5 roll cases in the scanner view?
+A: If you expand the Hydroscans, you get Analysis Positions drift 0deg (for each of the 11 angles we
+are given, but you need to swap in the main HydroScan angle toggle), then expanded Positions Y
+0-0.108 show (split into 5, i.e., 0, 0.027), then Positions X 0.017-0.467 (about 12). They give back
+these: [field list: Dimension (largeur_B_element_mm, longueur_element_m, longueur_mouillee_e,
+longueur_calcul_larg, surface_max_elemer, surface_contact_m2, surface_coupe_parti); general (nom_,
+infos_planing_, infos_, index_point_decroch, index_point_contact, point_attack_on_out,
+inclinaison_deg_lign, index_); hydrodynamics (tableau_points_grap, array_vector3_norma,
+array_vector2_norma, p_elements_intemes, delta_plan_horizonta, Deviation_rail_deg,
+section_frontale_flux, masse_flux_devie_k, pression_dynamique, Cv_Savitsky, lamda_Savitsky,
+Cl0_Savitsky, Cl0_theorique, Fx_planing, Fx_rocker, Fx_rail_n, Fx_friction_n, Fz_planing_n,
+boundary layer mm, laminar_boundary_layer_mm, laminar_turbulent_tra, point_application_gl,
+portance_globale_ve, trainee_globale_hori, portance_projete_n, volume_litres, volume_deplacemen,
+Section_deplacemer, Fx_deplacement_hy x2, Vecteur_flottaison_e, Vecteur_flottaison_n,
+angle_initial_deg, angle_planing_effec, debitm3_sec_veine, Cz_effectif, list_pressions_ligne_,
+list_sections_ligne_f, list_epaisseurs_veine, list_directions_ligne_, list_angles_veine_de,
+list_vitesse_moyenne, list_rapport_elargisse x2, projection_fx_vertica, projection_fx_horizor,
+projection_ponderee, projection_fz_vertica, projection_fz_horizor, Projection_Fx_rail_v,
+Projection_Fx_rail_h, Projection_friction_v, Projection_friction_h); Torques (Moment_yaw_hydro,
+Moment yaw total)]. I am not sure whether this applies to your question or not.
+
+Q: Dynamic mode 'Save instant'?
+A: It locks in that as a point of ref, so i can "Go to Instant" and put it back to that time point
+when needed.
+
+#### Round 6
+
+Q: What does selecting a Position Y show in the 3D view?
+A: Pressing different X values rotates it up the pitch axis, seems to rotate about yaw axis with
+changes in Y
+
+Q: Moment_yaw_hydro / Moment yaw total on a scanned board?
+A: Non-zero values, -65.8947144 for both
+
+Q: list_ and projection_ fields?
+A: Empty / zero
+
+Q: Can values be copied or exported from the grid?
+A: No copy/export
+
+#### Round 7
+
+Q: Apply Length on an unlocked copy - what else moves; Homothety checkbox?
+A: Scales everything
+
+Q: Switching boards after an edit - save prompt?
+A: No prompt, edit lost
+
+Q: File menu items?
+A: Open project (Board+Wave+Surfer) / Save project (Board+Wave+Surfer) / Open Board / Load basic
+Board / Load new board copy / Export...STL / Import STL Board / Open Wave / Load basic wave / New Wave
+/ Export SurfSpace STL / Export Swell STL / Open Surfer
+
+Q: After dragging 'Surfer 65 kg' - title and Surfer Kg box?
+A: Both show 65
+
+#### Round 8
+
+Q: File > Open Board / Open Surfer - what opens?
+A: Windows file picker
+
+Q: Load new board copy?
+A: Copies current board
+
+Q: Apply Width / Apply Volume?
+A: Apply Width affects Width Vol and Thickness, "Set __ liters volume to board" i.e., Apply Volume,
+affects Vol and thickness
+
+Q: Export...STL?
+A: These are the options: Export Board STL / Export Nose STL / Export Tail STL / Export wood kit
+Sections STL / Export wood kit Ribs STL / Export wood kit Rail Tribord STL / Export wood kit Rail
+Babord STL / Export wood kit Planks STL. Saved the STL to downloads, in binary form (not a choice STL
+is only option), auto went to [OneDrive Desktop], still does
+
+#### Round 9
+
+Q: Surfer-mass test (copy of blueTreck_Copy_2 via Load new board copy, Surfer 65 kg, scan)?
+A: blueTreck_Copy_3
+
+Q: Does a resize survive a scan?
+A: Ive edited DanielThomson_ModernPlaningHull_copy_1 from 2006.6 to 2106.6, I saved 0deg angle, that
+is all. Was taking too long, will need to restart my laptop later
+
+Q: Where are water temperature and salt set?
+A: User Setting, under General, under Water Parameters
+
+Q: Anything else?
+A: Nothing more
+
+#### Round 10
+
+Q: blueTreck_Copy_2 / Copy_1 reports are gone - what happened around 19:50-20:20?
+A: i deleted them
+
+Q: Does SWD warn before re-running a hydroscan on a scanned board?
+A: Runs it again, not sure what changes
+
 ---
 
 ## 📂 3. Approximate level of AI contribution `[REVIEW]`
@@ -251,6 +468,7 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E82 | 2026-09-29 | § 1 (SQA-loop row), § 2 2026-09-27 and E78–E80: the failed unattended trial runs were "on a Career target (not this repository)" | The two failed trials on 2026-09-27 (00:32 and 00:58 UTC) ran on a scratch copy of this repo's `src/geometry.py` and `tests/test_geometry.py` in `%TEMP%\sqa-trial`, and agy (Gemini) audited and edited that copy. Nothing reached the repo. Only the later trial that completed was on Career | Tracing why agy conversation `cc808f5b`, which names `src/geometry.py`, was absent from § 6: its workspace was the scratch folder (this session) | § 1 agy later-entry row |
 | E83 | 2026-09-02 | `verify_2b.ps1`'s HALT on 0 tree items: "A folder was almost certainly left collapsed … Expand all 11 folders and re-run", which `TODO.md` L.5 repeated | The tree is on SWD's **My Library** tab and the runs sat on Project. Collapsed folders would still appear as TreeItems. And `SelectionItemPattern.Select()` only highlights; loading needs right-click → `Open` | Benjamin, running SWD by hand when asked (2026-09-29) | `TODO.md` L.5; `SWD/TODO.md` "Hand-run fact-finding" |
 | E84 | 2026-09-29 | `swd_extract.ps1 -TrustCurrentLibrary` records the library "and exits without extracting", touching nothing else | With no `-OutDir` it first deletes `SWD/data/extract_manifest.json` (`:337-338`, before the trust-only exit), leaving the committed dataset without its completion sentinel | `git status` after the run showed the file deleted (self-caught, Claude Code) | `SWD/TODO.md` "Hand-run fact-finding"; restored from git; fix owed (needs SQA) |
+| E85 | 2026-09-29 | § 6 holds "every prompt given to Claude Code for this repository, verbatim" | Answers given through Claude Code's question tool (AskUserQuestion) are stored as tool results, not prompts, and `tools/extract_prompts.py` never reads them. The 2026-09-29 hand-run answers — the source of every finding in that day's § 2 entries — were missing | Benjamin asked for his answers to be listed here, and a check found no handling for them in the extractor | § 2 "Answers given to Claude Code's questions, 2026-09-29" (copied in by hand); an extractor fix is owed |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn

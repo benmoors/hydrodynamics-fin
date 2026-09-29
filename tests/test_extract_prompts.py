@@ -20,6 +20,8 @@ from tools.extract_prompts import (
     load_agy_sessions,
     load_devin_sessions,
     load_sessions,
+    main,
+    parse_appendix,
     redact,
     render,
     splice,
@@ -253,3 +255,66 @@ def test_devin_keeps_repo_turns_with_cli_version_and_model(tmp_path: Path) -> No
     assert (prompt.text, prompt.cli, prompt.version, prompt.model) == (
         "Audit splits", "Devin", "3000.11.3", "swe-1-7")
     assert "### 2026-09-24 00:04 · Devin 3000.11.3 · swe-1-7 · `star-water`" in render([session])
+
+
+# --- the committed appendix is a source: carry forward, never shrink --------------------
+
+
+def _stores(tmp_path: Path, transcripts: Path) -> list[str]:
+    empty = tmp_path / "empty"
+    empty.mkdir(exist_ok=True)
+    return ["--transcripts", str(transcripts), "--claude-projects", str(empty),
+            "--agy-dir", str(empty), "--devin-dir", str(empty)]
+
+
+def _pruned_session() -> str:
+    return (
+        "| `deadbeef` | Claude Code | 2.1.246 | claude-opus-5 | repo "
+        "| 2026-08-26 12:38 | 2026-08-26 12:39 | 2 |\n\n"
+        "### 2026-08-26 12:38 · Claude Code 2.1.246 · claude-opus-5 · `deadbeef` · `main`\n\n"
+        "> First line\n>\n> second paragraph\n\n"
+        "### 2026-08-26 12:39 · Claude Code 2.1.246 · ? · `deadbeef` · `main`\n\n"
+        "> Only line\n"
+    )
+
+
+def test_parse_appendix_inverts_render(transcripts: Path) -> None:
+    rendered = render(load_sessions(transcripts, home=HOME))
+    assert render(parse_appendix(rendered)) == rendered
+    [session] = parse_appendix(_pruned_session())
+    assert [p.text for p in session.prompts] == ["First line\n\nsecond paragraph", "Only line"]
+    assert session.prompts[1].model == ""
+
+
+def test_pruned_session_is_carried_forward(tmp_path: Path, transcripts: Path) -> None:
+    ai_use = tmp_path / "AI-USE.md"
+    ai_use.write_text(f"head\n{BEGIN}\n{_pruned_session()}\n{END}\n", encoding="utf-8")
+    assert main([*_stores(tmp_path, transcripts), "--ai-use", str(ai_use)]) == 0
+    text = ai_use.read_text(encoding="utf-8")
+    assert "> First line\n>\n> second paragraph" in text  # carried verbatim
+    assert "> Fix the failing test" in text  # live prompts still added
+    assert "5 prompts across 2 sessions" in text
+
+
+def test_refuses_to_shrink_the_committed_appendix(tmp_path: Path, transcripts: Path) -> None:
+    ai_use = tmp_path / "AI-USE.md"
+    committed = render(load_sessions(transcripts, home=HOME)).replace(
+        "### 2026-08-30 01:00", "### 2026-08-29 01:00")  # a prompt the live store lacks
+    extra = "### 2026-08-30 04:00 · Claude Code 2.1.250 · ? · `abcdef12` · `main`\n\n> Gone\n"
+    original = f"{BEGIN}\n{committed}\n{extra}\n{END}\n"
+    ai_use.write_text(original, encoding="utf-8")
+    args = [*_stores(tmp_path, transcripts), "--ai-use", str(ai_use)]
+    assert main(args) == 2
+    assert ai_use.read_text(encoding="utf-8") == original
+    assert main([*args, "--allow-shrink"]) == 0
+    assert "Gone" not in ai_use.read_text(encoding="utf-8")
+
+
+def test_excluded_session_is_named_not_rendered(tmp_path: Path, transcripts: Path) -> None:
+    ai_use = tmp_path / "AI-USE.md"
+    ai_use.write_text(f"{BEGIN}\n{_pruned_session().replace('deadbeef', '64368e17')}\n{END}\n",
+                      encoding="utf-8")
+    assert main([*_stores(tmp_path, transcripts), "--ai-use", str(ai_use)]) == 0
+    text = ai_use.read_text(encoding="utf-8")
+    assert "`64368e17` (" in text  # named, with its reason, in the header
+    assert "· `64368e17` ·" not in text and "First line" not in text

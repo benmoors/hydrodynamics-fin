@@ -40,6 +40,7 @@ repository and indexes what that section records.
 | **Google Antigravity / Gemini CLI** | 2026-09 | `gemini-2.5-pro` / `gemini-3.8-flash` | 2026-09-24 → 2026-09-25 | Audited and repaired SWD extraction codebase; authored root configuration `GEMINI.md` establishing Antigravity as an SQA Code Auditor with tiered protocol and verdict schema. |
 | **Devin CLI** (Cognition) — later entry | 3000.11.3 | `swe-1-7` (selected as "SWE-1.7 Max") | 2026-09-24 | 2 prompts in one session opened from `UNIVERSITY/` (§ 6, session `foam-quince`): drafted the second-source auditor configuration alongside agy. From 2026-09-25 agy and Devin are configured to audit **and fix** (see § 2); every fix they land is logged here. |
 | **SQA-loop** — later entry | `ad036d8` → `df830f8` in `~/SQA-loop` (2026-09-27) | Claude check: `claude-opus-5-5`; agy: Gemini (model as selected in agy); Devin: `swe-1-7` | from 2026-09-27 | Rebuilt as **one unattended pass** (§ 2, 2026-09-26/27 and 2026-09-27): `cli_quota.py` gate → agy test-and-fix → Devin test-and-fix → one Claude `sqa-lead` (with specialists) + one `code-reviewer`, whose verdict is final. agy and Devin run headless through `sqa_cli_pass.py`, which reverts out-of-scope writes. **Not yet run on this repository** as of 2026-09-29; its only runs so far were trials on a Career target. |
+| **Google Antigravity (agy)**: later entry | as installed 2026-09-27 | `gemini-3.8-flash` / `gemini-3.8-flash-high` (read from the conversation's generation metadata) | 2026-09-27 00:34 → 00:40 UTC | One headless `sqa-pass` audit-and-fix (conversation `cc808f5b`) on a **scratch copy** of this repo's `src/geometry.py` and `tests/test_geometry.py` in `%TEMP%\sqa-trial`, launched by an SQA-loop trial. It changed the scratch `src/geometry.py` (removed `np.abs` from the spans in `aspect_ratio`) and took the tests from 21 to 39. The scratch copy was reset with `git checkout` afterwards; nothing reached this repository. It does mean this repo's geometry code was sent to Gemini. Corrects the row above (§ 5 E82). |
 
 Not AI, listed to pre-empt the question: `pdoc` 16 (deterministic HTML from docstrings), `pytest`,
 `PSScriptAnalyzer`, `Pester`, `pypdf`.
@@ -87,6 +88,7 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-09-26/27 | Claude Code 2.1.283 (`claude-opus-5-5`), in a session opened from `UNIVERSITY/`, changed the SQA process this repository is reviewed with (outside the repo, in `~/.claude/`): (1) `sqa-loop` is now **one unattended pass**, not a loop of rounds: a quota check, then agy test-and-fix, then Devin test-and-fix on the post-agy tree, then one Claude `sqa-lead` (with its specialists) and one `code-reviewer`, whose verdict is final. The metric/hill-climb loop and the fresh-verifier rounds were removed, and it asks no questions mid-run. (2) New `~/.agents/skills/sqa-pass/SKILL.md` (39 lines: testing toolbox + 4 hard rules) for agy and Devin. New `~/.claude/tools/cli_quota.py`, which reads the remaining agy/Devin quota and leaves a CLI out of a run when it is too low. New `~/.claude/tools/sqa_cli_pass.py`, which runs a CLI headless with its permission prompts off and then restores any file changed outside the allowed paths, or the whole diff if the guard went from pass to fail. **Consequence for this record:** from 2026-09-27, SQA passes on this repo are no longer verified by fresh re-review rounds. agy and Devin now edit code before a single Claude check, and the Claude fixer's own edits are not re-checked by anyone. A reflection must not claim multi-round independent verification for passes after this date. | The author wants SQA to run overnight with no input, using agy and Devin as cheaper second sources, while spending as few of their tokens as possible | `cli_quota.py --check` and `sqa_cli_pass.py --check` self-tests pass (the latter plants out-of-scope edits in a temp repo and confirms they are restored); live quota read: Devin weekly 2% remaining (so it would be left out), agy unknown (no quota in its saved statusline payload); `devin skills list` shows `sqa-pass`; skill copies byte-identical to `~/SQA-loop/`. Not yet run end to end on this repository | Prompts 2026-09-26 23:51 → 2026-09-27 00:26 UTC (§ 6), verbatim: "Edit the sqa-loop skill to only be one loop, so there is now just the sqa-lead which is spawned (and its subagents), gives the verdict, then the fixer comes in." / answer "Single pass, then stop" / "Then make this a skill for devin and agy cli to use" / "Depending on how their infrastructure works." / "Check if it is possible for you to activate devin and agy cli through claude code, so if you i get you to use sqa, you can run it with these clis yourself, and it is completely hands off for me" / "Make sure** that you dont waste their tokens, as they are much more valuable, give them short instructions, short reading (in md form for sqa loop for example, not too many subagents to read), so as to not waste their token usage." / "Also make sure you include this conversation into HYDRODYNAMICS FIN AI use, as it will affect that" / answers "Whole pass on their side" and "agy always first, Devin second, use both when you do it, but Devin should be second as it will then require less fixes" / "The point of integrating the sqa-loop skill and sqa-lead for them is SOLELY so then they know what tools are available to them, and can test the code better, do not give them hard rules to follow and anything that will waste their usage, I want it to be a relatively cheap process for their tokens" / "Sorry, on the "No hard rules", that does seem a little dangerous, especially when the content of the code is important, still give them some important hard rules, depending on the project, but make sure not to clog up their context, and not overdo their usage." / "All the hard rules are good, except for that on fixing security issues. Also, give yourself some ability to check what the usage is for the other AI CLIs I have, for example through accessing the status bars' usage values, such that you can check whether to use their CLI now, or to leave it out as a choice. Like if there is 6% usage left on devin for the week, and there is a lot of code to get through, leave devin out of that round. No extra run should be done with a different agent, just that agent should be left out. Further make sure there is always a Claude check afterwards, that has the context (from both wiki and memory) to make sure the goal is still carried out, through one sqa-lead (and subs) and one fixer again, then that final verdict should be treated as final" / "Make sure there are also no questions to ask me on it, so if i run it at night, it will be completely finished in the morning" / "Allow it" / "Go for it (on accept edits)"; plan `~/.claude/plans/edit-the-sqa-loop-skill-woolly-shell.md` |
 | 2026-09-27    | Claude Code 2.1.283 (`claude-opus-5-5`), same session as the entry above (`1d4adb88`, opened from `UNIVERSITY/`), fixed the new single pass after two unattended **trial runs on a Career target** (not this repository) failed: (1) the Claude check now runs in the foreground, and the launch line sets `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`, because `claude -p` killed the background `sqa-lead` after 600 s and the run ended with no verdict (§ 5 E78); (2) every run writes its report, ledger entry, brief and backup to `%LOCALAPPDATA%\sqa-loop\runs\<target>-<date>\`, and an interactive session later files them into `~/.claude/qa-history/`, because a headless Claude Code refuses writes under `~/.claude/` in every mode, `--add-dir` included (§ 5 E79); (3) `sqa_cli_pass.py` ignores its own `--out`/`--prompt` files, and the skill keeps them outside the target repo, because the wrapper had reverted (deleted) agy's own report as an out-of-scope write (§ 5 E80); (4) `sqa-lead` must wait for every specialist before handing back, because an early hand-back made each specialist run twice; (5) overnight runs launch with `--permission-mode bypassPermissions` so the reviewers' probes can run. `PreToolUse` hooks still apply in that mode, so the SQA Bash guard and the fixer scope guard still bind. **Consequence for this record:** an unattended pass runs Claude with permission prompts off, and the hooks are then the only enforced boundary. agy and Devin are bounded by the wrapper's revert-on-exit, not by prompts. | The trial runs showed the pass could not finish unattended as built | Commits `38c3e63`, `4134125`, `df830f8` in `~/SQA-loop`, each message recording the measured failure it fixes; a later trial run completed and was filed (`career-resume-workbook-wam-2026-09-27.filed`). Still not run on this repository | Prompts 2026-09-27 UTC, verbatim: "Have all the changes been made to the sqa loop repo?" / "yes package it all and commit" / "yes re-run the trial, obsidian plugin is on Exchange Wiki i believe" / "Try the bypassPermissions change again". Not yet in § 6 (see the next entry) |
 | 2026-09-29    | Claude Code (`claude-opus-5-5`), in a session opened from `UNIVERSITY/`: added the § 1 SQA-loop row, the entry above and § 5 E78–E80; added a dated note to README § 8 saying the verification table predates the single pass; added a line to `memory/sqa-loops-gated-by-weekly-limit.md`. **§ 6 was deliberately not regenerated.** `extract_prompts.py --dry-run` now finds 250 prompts from 2026-08-27, against the 265 from 2026-08-26 already committed, because the CLIs have pruned their oldest transcripts. The script replaces everything between the markers, so re-running it would delete prompts that no longer exist anywhere else. The 2026-09-26/27 prompts are quoted verbatim in the two entries above instead | The author asked for the SQA changes made with the agy and Devin CLIs to be recorded in the AI-use docs, then committed | Dates and commit hashes read from `git -C ~/SQA-loop log`; prompts read from session `1d4adb88`'s transcript; run folder listed under `%LOCALAPPDATA%\sqa-loop\runs\`; `~/.claude/qa-history/` grepped: no single-pass run on this repo. Extractor defect (appendix shrinks when stores are pruned) is open, not fixed | Prompt 2026-09-29: "Could you add to the relevant docs (AI-USE.md etc.) any changes we've made to the SQA process through incorporating devin and agy clis?" / "then commit" |
+| 2026-09-29    | Claude Code 2.1.284 (`claude-opus-5-5`), session `90afee07`, opened from `UNIVERSITY/`: (1) `tools/extract_prompts.py` now reads the committed appendix back (`parse_appendix`, the inverse of `render`) and **carries forward any session whose transcript the CLI has deleted**. It refuses to write a shorter appendix than the committed one unless `--allow-shrink` is passed. (2) Five sessions opened above the repo, which the filter admitted only because a tool call named the repo folder in passing, are listed in `_EXCLUDED` with a reason each: `64368e17`, `3ec3aba3`, `9bdca7c3`, `b95c1da1`, `34012d20` (7 prompts about Career, resume and the degree wiki). The appendix header names them. (3) § 6 regenerated: 265 → 284 prompts, up to 2026-09-29; `c253c200` (34 prompts, 2026-08-26) carried forward from the old appendix. (4) `cleanupPeriodDays: 365` set in `~/.claude/settings.json`, so Claude Code keeps transcripts for a year instead of 30 days. (5) The § 1 agy row above and § 5 E81–E82 | § 6 had been frozen at 2026-09-25 02:28 because regenerating it would have deleted pruned prompts (E81), and the author noticed it was behind | Parsing the committed appendix and re-rendering it reproduced all 265 prompts byte-for-byte (only the header sentence changed); 4 new tests, each failing on the previous extractor, full suite 108 passed; after regeneration, nothing above the begin marker or below the end marker changed, and every heading and quoted line of the old appendix is present in the new one; § 6 grepped for the OneDrive tenant, `HKLM`, `swdy` and `.reg`: none; no sensitive-pattern warnings. The 5 exclusions were checked by listing every tool call in each session that named the repo: read-only, or edits to the gitignored `wiki/` only. Trial evidence for E82: agy transcript `cc808f5b`, `%TEMP%\sqa-trial-run.log`, `sqa-trial-run2.log`, and session `1d4adb88`'s tool calls copying the two files | Prompt 2026-09-29 (§ 6), verbatim: "Can you update the AI-USE file in HYDRODYNAMICS-FIN, it seems to be very behind. CHeck why that is, what the issue is, which prompts would have been missed, and fix the issue." / answer "Exclude, listed"; plan `~/.claude/plans/can-you-update-the-noble-charm.md` |
 
 ---
 
@@ -240,6 +242,8 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E78 | 2026-09-27 | The single-pass design (§ 2, 2026-09-26/27): a headless `claude -p` run would wait for its background `sqa-lead` and return a final verdict | `claude -p` killed the background agent after 600 s; the run ended with no verdict | First unattended trial run, on a Career target (live run) | `~/SQA-loop` `38c3e63`; § 2 2026-09-27 |
 | E79 | 2026-09-27 | The same design: a headless run could write its report, ledger, brief and backup under `~/.claude/` once the folders were added with `--add-dir` | Claude Code refuses writes under `~/.claude/` in every mode, `--add-dir` included; all four artefacts were lost, and agy never ran because its prompt file had nowhere to go | Second trial run (live run) | `~/SQA-loop` `4134125`; § 2 2026-09-27 |
 | E80 | 2026-09-27 | `sqa_cli_pass.py` restores only files the CLI changed outside its allowed paths | With the run's scratch folder inside the target repo, it also reverted (deleted) agy's own report as an out-of-scope write | First trial run (live run) | `~/SQA-loop` `38c3e63`; § 2 2026-09-27 |
+| E81 | 2026-09-29 | § 6 can be regenerated at any time; `CLAUDE.md` R4 says "extract early and re-run before every submission" | `splice()` replaced the whole appendix with what was still on disk, and Claude Code deletes transcripts after 30 days by default. Re-running would have deleted the 34 prompts of `c253c200` (2026-08-26), so § 6 was left frozen at 2026-09-25 02:28 and 26 later prompts were missing. The 2026-09-29 entry in § 2 recorded the defect but left it open | The author noticing § 6 was behind; `--dry-run` found 257 prompts against 265 committed, with `c253c200` absent (this session) | `tools/extract_prompts.py` `parse_appendix` + shrink guard; tests `test_pruned_session_is_carried_forward`, `test_refuses_to_shrink_the_committed_appendix`; § 6 regenerated |
+| E82 | 2026-09-29 | § 1 (SQA-loop row), § 2 2026-09-27 and E78–E80: the failed unattended trial runs were "on a Career target (not this repository)" | The two failed trials on 2026-09-27 (00:32 and 00:58 UTC) ran on a scratch copy of this repo's `src/geometry.py` and `tests/test_geometry.py` in `%TEMP%\sqa-trial`, and agy (Gemini) audited and edited that copy. Nothing reached the repo. Only the later trial that completed was on Career | Tracing why agy conversation `cc808f5b`, which names `src/geometry.py`, was absent from § 6: its workspace was the scratch folder (this session) | § 1 agy later-entry row |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn
@@ -258,7 +262,7 @@ transcripts Claude Code keeps outside the repo. Regenerate with `python tools/ex
 the home directory is redacted to `~`. Nothing between the markers is edited by hand.
 
 <!-- prompts:begin -->
-265 prompts across 26 sessions (Claude Code 255, Devin 2, agy 8), 2026-08-26 to 2026-09-25. Timestamps are UTC, as recorded by each CLI. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. Generated by `tools/extract_prompts.py`; do not edit by hand.
+284 prompts across 29 sessions (Claude Code 274, Devin 2, agy 8), 2026-08-26 to 2026-09-29. Timestamps are UTC, as recorded by each CLI. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only). Generated by `tools/extract_prompts.py`; do not edit by hand.
 
 | Session | CLI | Version | Model | Scope | First | Last | Prompts |
 |---|---|---|---|---|---|---|---:|
@@ -288,6 +292,9 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 | `9b3bc2ea` | agy | ? | Gemini 3.8 Flash (High) | via UNIVERSITY | 2026-09-24 22:27 | 2026-09-24 22:35 | 6 |
 | `foam-quince` | Devin | 3000.11.3 | swe-1-7 | via ? | 2026-09-24 22:28 | 2026-09-24 22:36 | 2 |
 | `3e63d930` | Claude Code | 2.1.282 | claude-opus-5-5 | via UNIVERSITY | 2026-09-25 02:25 | 2026-09-25 02:28 | 3 |
+| `1d4adb88` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-26 23:56 | 2026-09-27 00:36 | 7 |
+| `69d0bedf` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-28 23:00 | 2026-09-28 23:45 | 11 |
+| `90afee07` | Claude Code | 2.1.284 | claude-opus-5-5 | via UNIVERSITY | 2026-09-29 06:46 | 2026-09-29 06:46 | 1 |
 
 ### 2026-08-26 12:38 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
@@ -1892,5 +1899,81 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 ### 2026-09-25 02:28 · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
 
 > Make sure, that even if I have opened the UNIVERSITY directory, if they are working on HYDRODYNAMICS-FIN, they are included
+
+### 2026-09-26 23:56 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> Also make sure you include this conversation into HYDRODYNAMICS FIN AI use, as it will affect that
+
+### 2026-09-26 23:59 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> The point of integrating the sqa-loop skill and sqa-lead for them is SOLELY so then they know what tools are available to them, and can test the code better, do not give them hard rules to follow and anything that will waste their usage, I want it to be a relatively cheap process for their tokens
+
+### 2026-09-27 00:11 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> Make sure there are also no questions to ask me on it, so if i run it at night, it will be completely finished in the morning
+
+### 2026-09-27 00:25 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> Allow it
+
+### 2026-09-27 00:26 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> Go for it (on accept edits)
+
+### 2026-09-27 00:34 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> Can yu check the dates that you have put into the AI-USE, some of them seem off,
+
+### 2026-09-27 00:36 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+
+> So is it in UTC not local?
+
+### 2026-09-28 23:00 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> Could you give me a summary of how the last MMA3001 ingest was done?
+
+### 2026-09-28 23:01 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> We used the colab agy extension correct?
+
+### 2026-09-28 23:03 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> Where were we with the extract of data from SWD, what had we done? and what needed to be done?
+
+### 2026-09-28 23:06 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> What was the plan for the input and output of the project?
+
+### 2026-09-28 23:09 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> Could you add to the relevant docs (AI-USE.md etc.) any changes we've made to the SQA process through incorporating devin and agy clis?
+
+### 2026-09-28 23:10 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> then commit
+
+### 2026-09-28 23:13 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> What are the current issues with the batch driver Item 3?
+
+### 2026-09-28 23:29 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> The plan was to essentially be able to predict a boards response to the surface at any drift angle and at any roll angle correct? Where were we with this process
+
+### 2026-09-28 23:38 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> So would Roll angle count as an independent variable?
+
+### 2026-09-28 23:42 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> Does the project allow for computed data as an input? Is it stated or should I check?
+
+### 2026-09-28 23:45 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+
+> Does SWD state a no-computed data rule in its docs?
+
+### 2026-09-29 06:46 · Claude Code 2.1.284 · claude-opus-5-5 · `90afee07` · `master`
+
+> Can you update the AI-USE file in HYDRODYNAMICS-FIN, it seems to be very behind. CHeck why that is, what the issue is, which prompts would have been missed, and fix the issue.
 
 <!-- prompts:end -->

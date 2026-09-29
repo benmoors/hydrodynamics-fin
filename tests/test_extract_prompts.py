@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
 
 from tools.extract_prompts import (
     BEGIN,
+    Prompt,
+    Session,
     END,
     load_agy_sessions,
     load_devin_sessions,
@@ -127,7 +130,7 @@ def test_splice_replaces_only_between_markers(tmp_path: Path, transcripts: Path)
     assert text.startswith("# Record\n\nhand-written\n")
     assert text.endswith(f"{END}\n\ntail\n")
     assert "old" not in text
-    assert "### 2026-08-30 01:00" in text
+    assert "### 2026-08-30 11:00 AEST" in text
     assert "> Fix the failing test" in text
 
 
@@ -147,7 +150,7 @@ CAREER_PATH = "C:\\Users\\someone\\UNI\\Career\\scripts\\fetch.py"
 
 def test_heading_names_cli_version_and_model(transcripts: Path) -> None:
     text = render(load_sessions(transcripts, home=HOME))
-    assert "### 2026-08-30 02:35 · Claude Code 2.1.250 · claude-opus-5 · `abcdef12`" in text
+    assert "### 2026-08-30 12:35 AEST · Claude Code 2.1.250 · claude-opus-5 · `abcdef12`" in text
     assert "| `abcdef12` | Claude Code | 2.1.250 | claude-opus-5 | repo |" in text
 
 
@@ -254,7 +257,7 @@ def test_devin_keeps_repo_turns_with_cli_version_and_model(tmp_path: Path) -> No
     [prompt] = session.prompts
     assert (prompt.text, prompt.cli, prompt.version, prompt.model) == (
         "Audit splits", "Devin", "3000.11.3", "swe-1-7")
-    assert "### 2026-09-24 00:04 · Devin 3000.11.3 · swe-1-7 · `star-water`" in render([session])
+    assert "### 2026-09-24 10:04 AEST · Devin 3000.11.3 · swe-1-7 · `star-water`" in render([session])
 
 
 # --- the committed appendix is a source: carry forward, never shrink --------------------
@@ -299,7 +302,7 @@ def test_pruned_session_is_carried_forward(tmp_path: Path, transcripts: Path) ->
 def test_refuses_to_shrink_the_committed_appendix(tmp_path: Path, transcripts: Path) -> None:
     ai_use = tmp_path / "AI-USE.md"
     committed = render(load_sessions(transcripts, home=HOME)).replace(
-        "### 2026-08-30 01:00", "### 2026-08-29 01:00")  # a prompt the live store lacks
+        "### 2026-08-30 11:00 AEST", "### 2026-08-29 11:00 AEST")  # a prompt the live store lacks
     extra = "### 2026-08-30 04:00 · Claude Code 2.1.250 · ? · `abcdef12` · `main`\n\n> Gone\n"
     original = f"{BEGIN}\n{committed}\n{extra}\n{END}\n"
     ai_use.write_text(original, encoding="utf-8")
@@ -318,3 +321,17 @@ def test_excluded_session_is_named_not_rendered(tmp_path: Path, transcripts: Pat
     text = ai_use.read_text(encoding="utf-8")
     assert "`64368e17` (" in text  # named, with its reason, in the header
     assert "· `64368e17` ·" not in text and "First line" not in text
+
+
+def test_times_render_in_melbourne_and_old_utc_headings_convert() -> None:
+    # A heading from before the switch has no zone label and is UTC: 12:38 UTC = 22:38 AEST.
+    [old] = parse_appendix(_pruned_session())
+    assert "### 2026-08-26 22:38 AEST · Claude Code 2.1.246" in render([old])
+    # The hour repeated when daylight saving ends round-trips on its label.
+    utc = [datetime(2027, 4, 3, 15, 30, tzinfo=timezone.utc),  # 02:30 AEDT
+           datetime(2027, 4, 3, 16, 30, tzinfo=timezone.utc)]  # 02:30 AEST
+    session = Session(id="dst", cli="Claude Code", prompts=[
+        Prompt(when=w, session="dst", branch="", text=f"p{i}") for i, w in enumerate(utc)])
+    rendered = render([session])
+    assert "02:30 AEDT" in rendered and "02:30 AEST" in rendered
+    assert [p.when for p in parse_appendix(rendered)[0].prompts] == utc

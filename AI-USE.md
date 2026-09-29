@@ -89,6 +89,7 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-09-27    | Claude Code 2.1.283 (`claude-opus-5-5`), same session as the entry above (`1d4adb88`, opened from `UNIVERSITY/`), fixed the new single pass after two unattended **trial runs on a Career target** (not this repository) failed: (1) the Claude check now runs in the foreground, and the launch line sets `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0`, because `claude -p` killed the background `sqa-lead` after 600 s and the run ended with no verdict (§ 5 E78); (2) every run writes its report, ledger entry, brief and backup to `%LOCALAPPDATA%\sqa-loop\runs\<target>-<date>\`, and an interactive session later files them into `~/.claude/qa-history/`, because a headless Claude Code refuses writes under `~/.claude/` in every mode, `--add-dir` included (§ 5 E79); (3) `sqa_cli_pass.py` ignores its own `--out`/`--prompt` files, and the skill keeps them outside the target repo, because the wrapper had reverted (deleted) agy's own report as an out-of-scope write (§ 5 E80); (4) `sqa-lead` must wait for every specialist before handing back, because an early hand-back made each specialist run twice; (5) overnight runs launch with `--permission-mode bypassPermissions` so the reviewers' probes can run. `PreToolUse` hooks still apply in that mode, so the SQA Bash guard and the fixer scope guard still bind. **Consequence for this record:** an unattended pass runs Claude with permission prompts off, and the hooks are then the only enforced boundary. agy and Devin are bounded by the wrapper's revert-on-exit, not by prompts. | The trial runs showed the pass could not finish unattended as built | Commits `38c3e63`, `4134125`, `df830f8` in `~/SQA-loop`, each message recording the measured failure it fixes; a later trial run completed and was filed (`career-resume-workbook-wam-2026-09-27.filed`). Still not run on this repository | Prompts 2026-09-27 UTC, verbatim: "Have all the changes been made to the sqa loop repo?" / "yes package it all and commit" / "yes re-run the trial, obsidian plugin is on Exchange Wiki i believe" / "Try the bypassPermissions change again". Not yet in § 6 (see the next entry) |
 | 2026-09-29    | Claude Code (`claude-opus-5-5`), in a session opened from `UNIVERSITY/`: added the § 1 SQA-loop row, the entry above and § 5 E78–E80; added a dated note to README § 8 saying the verification table predates the single pass; added a line to `memory/sqa-loops-gated-by-weekly-limit.md`. **§ 6 was deliberately not regenerated.** `extract_prompts.py --dry-run` now finds 250 prompts from 2026-08-27, against the 265 from 2026-08-26 already committed, because the CLIs have pruned their oldest transcripts. The script replaces everything between the markers, so re-running it would delete prompts that no longer exist anywhere else. The 2026-09-26/27 prompts are quoted verbatim in the two entries above instead | The author asked for the SQA changes made with the agy and Devin CLIs to be recorded in the AI-use docs, then committed | Dates and commit hashes read from `git -C ~/SQA-loop log`; prompts read from session `1d4adb88`'s transcript; run folder listed under `%LOCALAPPDATA%\sqa-loop\runs\`; `~/.claude/qa-history/` grepped: no single-pass run on this repo. Extractor defect (appendix shrinks when stores are pruned) is open, not fixed | Prompt 2026-09-29: "Could you add to the relevant docs (AI-USE.md etc.) any changes we've made to the SQA process through incorporating devin and agy clis?" / "then commit" |
 | 2026-09-29    | Claude Code 2.1.284 (`claude-opus-5-5`), session `90afee07`, opened from `UNIVERSITY/`: (1) `tools/extract_prompts.py` now reads the committed appendix back (`parse_appendix`, the inverse of `render`) and **carries forward any session whose transcript the CLI has deleted**. It refuses to write a shorter appendix than the committed one unless `--allow-shrink` is passed. (2) Five sessions opened above the repo, which the filter admitted only because a tool call named the repo folder in passing, are listed in `_EXCLUDED` with a reason each: `64368e17`, `3ec3aba3`, `9bdca7c3`, `b95c1da1`, `34012d20` (7 prompts about Career, resume and the degree wiki). The appendix header names them. (3) § 6 regenerated: 265 → 284 prompts, up to 2026-09-29; `c253c200` (34 prompts, 2026-08-26) carried forward from the old appendix. (4) `cleanupPeriodDays: 365` set in `~/.claude/settings.json`, so Claude Code keeps transcripts for a year instead of 30 days. (5) The § 1 agy row above and § 5 E81–E82 | § 6 had been frozen at 2026-09-25 02:28 because regenerating it would have deleted pruned prompts (E81), and the author noticed it was behind | Parsing the committed appendix and re-rendering it reproduced all 265 prompts byte-for-byte (only the header sentence changed); 4 new tests, each failing on the previous extractor, full suite 108 passed; after regeneration, nothing above the begin marker or below the end marker changed, and every heading and quoted line of the old appendix is present in the new one; § 6 grepped for the OneDrive tenant, `HKLM`, `swdy` and `.reg`: none; no sensitive-pattern warnings. The 5 exclusions were checked by listing every tool call in each session that named the repo: read-only, or edits to the gitignored `wiki/` only. Trial evidence for E82: agy transcript `cc808f5b`, `%TEMP%\sqa-trial-run.log`, `sqa-trial-run2.log`, and session `1d4adb88`'s tool calls copying the two files | Prompt 2026-09-29 (§ 6), verbatim: "Can you update the AI-USE file in HYDRODYNAMICS-FIN, it seems to be very behind. CHeck why that is, what the issue is, which prompts would have been missed, and fix the issue." / answer "Exclude, listed"; plan `~/.claude/plans/can-you-update-the-noble-charm.md` |
+| 2026-09-29    | Claude Code 2.1.284 (`claude-opus-5-5`), same session (`90afee07`): § 6 timestamps now show **Melbourne local time, labelled AEST or AEDT on every timestamp** (`Australia/Melbourne`; AEDT from 2026-10-04). They were UTC. `tools/extract_prompts.py` converts at render time and still reads the older unlabelled UTC headings, so carried-forward sessions convert too. The label on the repeated hour at the end of daylight saving tells the parser which of the two it was. **Reading earlier entries:** every date and time in §§ 1–5 written before this row is UTC unless it says otherwise, including the § 4 prompt times. Add 10 h to find the prompt in § 6 (for example, § 4's "2026-08-31 11:42" is 21:42 AEST) | UTC timestamps did not map to the author's own day, so a prompt could not be placed without converting it by hand | New test `test_times_render_in_melbourne_and_old_utc_headings_convert` (old UTC heading 12:38 → 22:38 AEST; the repeated 02:30 at the end of daylight saving round-trips on its AEDT/AEST label) fails on the previous extractor; full suite 109 passed. After regeneration all 284 earlier prompts parse back to the same UTC instant and the same text, one prompt was added (this one), and nothing above the begin marker changed | Prompt 2026-09-29 17:02 AEST (§ 6), verbatim: "Can we convert the time to AEST, it does not mean much if in UTC" |
 
 ---
 
@@ -262,636 +263,636 @@ transcripts Claude Code keeps outside the repo. Regenerate with `python tools/ex
 the home directory is redacted to `~`. Nothing between the markers is edited by hand.
 
 <!-- prompts:begin -->
-284 prompts across 29 sessions (Claude Code 274, Devin 2, agy 8), 2026-08-26 to 2026-09-29. Timestamps are UTC, as recorded by each CLI. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only). Generated by `tools/extract_prompts.py`; do not edit by hand.
+285 prompts across 29 sessions (Claude Code 275, Devin 2, agy 8), 2026-08-26 to 2026-09-29. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only). Generated by `tools/extract_prompts.py`; do not edit by hand.
 
 | Session | CLI | Version | Model | Scope | First | Last | Prompts |
 |---|---|---|---|---|---|---|---:|
-| `c253c200` | Claude Code | 2.1.246 | claude-opus-5 | repo | 2026-08-26 12:38 | 2026-08-26 23:45 | 34 |
-| `d5967321` | Claude Code | 2.1.247, 2.1.250 | claude-opus-5 | repo | 2026-08-27 01:21 | 2026-08-29 07:43 | 43 |
-| `5fa83184` | Claude Code | 2.1.251 | claude-opus-5 | repo | 2026-08-30 11:08 | 2026-08-30 11:08 | 1 |
-| `9865a2c3` | Claude Code | 2.1.251 | claude-opus-5 | repo | 2026-08-30 11:09 | 2026-08-30 11:41 | 5 |
-| `ffb0c7d3` | Claude Code | 2.1.251 | claude-opus-5 | repo | 2026-08-31 07:15 | 2026-08-31 11:24 | 50 |
-| `50a19d62` | Claude Code | 2.1.251, 2.1.252, 2.1.258 | claude-opus-5 | repo | 2026-08-31 11:29 | 2026-09-02 12:08 | 49 |
-| `abc4f67c` | Claude Code | 2.1.258 | claude-opus-5 | repo | 2026-09-02 00:03 | 2026-09-02 00:15 | 6 |
-| `850bae7d` | Claude Code | 2.1.267 | claude-opus-5 | via UNIVERSITY | 2026-09-10 05:54 | 2026-09-10 05:54 | 1 |
-| `daa5cecd` | Claude Code | 2.1.270 | claude-opus-5 | repo | 2026-09-14 07:07 | 2026-09-14 07:25 | 7 |
-| `ba6bb561` | Claude Code | 2.1.270 | claude-opus-5 | repo | 2026-09-14 08:17 | 2026-09-14 08:17 | 1 |
-| `dba2871b` | Claude Code | 2.1.270 | claude-opus-5 | repo | 2026-09-14 08:27 | 2026-09-14 08:31 | 4 |
-| `b5b5927c` | Claude Code | 2.1.272 | claude-opus-5 | via UNIVERSITY | 2026-09-15 03:49 | 2026-09-15 03:49 | 1 |
-| `bca74321` | Claude Code | 2.1.272 | claude-opus-5 | repo | 2026-09-15 06:24 | 2026-09-15 12:19 | 21 |
-| `69cb61d0` | Claude Code | 2.1.272 | claude-opus-5 | repo | 2026-09-16 06:31 | 2026-09-16 06:31 | 1 |
-| `de8866fe` | Claude Code | 2.1.273 | claude-opus-5 | via UNIVERSITY | 2026-09-16 10:59 | 2026-09-16 11:12 | 2 |
-| `bba4e47f` | Claude Code | 2.1.274 | claude-opus-5 | via UNIVERSITY | 2026-09-17 10:11 | 2026-09-17 12:40 | 5 |
-| `9e623b09` | Claude Code | 2.1.274, 2.1.275 | claude-opus-5 | via UNIVERSITY | 2026-09-17 13:12 | 2026-09-18 00:03 | 3 |
-| `5ad37aac` | Claude Code | 2.1.275 | claude-opus-5 | via UNIVERSITY | 2026-09-18 03:34 | 2026-09-18 03:34 | 2 |
-| `bb0b648e` | Claude Code | 2.1.277, 2.1.278 | claude-opus-5 | via UNIVERSITY | 2026-09-21 03:52 | 2026-09-21 11:04 | 10 |
-| `06fb70dc` | Claude Code | 2.1.280 | claude-opus-5-5 | via UNIVERSITY | 2026-09-23 06:24 | 2026-09-23 06:26 | 2 |
-| `1d057afe` | Claude Code | 2.1.280 | claude-opus-5-5 | via UNIVERSITY | 2026-09-23 08:02 | 2026-09-23 08:02 | 1 |
-| `50be3378` | agy | ? | Gemini 3.8 Flash (High) | via UNIVERSITY | 2026-09-24 10:14 | 2026-09-24 10:17 | 2 |
-| `50ab8ea9` | Claude Code | 2.1.281 | claude-opus-5-5 | via UNIVERSITY | 2026-09-24 22:21 | 2026-09-24 22:46 | 3 |
-| `9b3bc2ea` | agy | ? | Gemini 3.8 Flash (High) | via UNIVERSITY | 2026-09-24 22:27 | 2026-09-24 22:35 | 6 |
-| `foam-quince` | Devin | 3000.11.3 | swe-1-7 | via ? | 2026-09-24 22:28 | 2026-09-24 22:36 | 2 |
-| `3e63d930` | Claude Code | 2.1.282 | claude-opus-5-5 | via UNIVERSITY | 2026-09-25 02:25 | 2026-09-25 02:28 | 3 |
-| `1d4adb88` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-26 23:56 | 2026-09-27 00:36 | 7 |
-| `69d0bedf` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-28 23:00 | 2026-09-28 23:45 | 11 |
-| `90afee07` | Claude Code | 2.1.284 | claude-opus-5-5 | via UNIVERSITY | 2026-09-29 06:46 | 2026-09-29 06:46 | 1 |
+| `c253c200` | Claude Code | 2.1.246 | claude-opus-5 | repo | 2026-08-26 22:38 AEST | 2026-08-27 09:45 AEST | 34 |
+| `d5967321` | Claude Code | 2.1.247, 2.1.250 | claude-opus-5 | repo | 2026-08-27 11:21 AEST | 2026-08-29 17:43 AEST | 43 |
+| `5fa83184` | Claude Code | 2.1.251 | claude-opus-5 | repo | 2026-08-30 21:08 AEST | 2026-08-30 21:08 AEST | 1 |
+| `9865a2c3` | Claude Code | 2.1.251 | claude-opus-5 | repo | 2026-08-30 21:09 AEST | 2026-08-30 21:41 AEST | 5 |
+| `ffb0c7d3` | Claude Code | 2.1.251 | claude-opus-5 | repo | 2026-08-31 17:15 AEST | 2026-08-31 21:24 AEST | 50 |
+| `50a19d62` | Claude Code | 2.1.251, 2.1.252, 2.1.258 | claude-opus-5 | repo | 2026-08-31 21:29 AEST | 2026-09-02 22:08 AEST | 49 |
+| `abc4f67c` | Claude Code | 2.1.258 | claude-opus-5 | repo | 2026-09-02 10:03 AEST | 2026-09-02 10:15 AEST | 6 |
+| `850bae7d` | Claude Code | 2.1.267 | claude-opus-5 | via UNIVERSITY | 2026-09-10 15:54 AEST | 2026-09-10 15:54 AEST | 1 |
+| `daa5cecd` | Claude Code | 2.1.270 | claude-opus-5 | repo | 2026-09-14 17:07 AEST | 2026-09-14 17:25 AEST | 7 |
+| `ba6bb561` | Claude Code | 2.1.270 | claude-opus-5 | repo | 2026-09-14 18:17 AEST | 2026-09-14 18:17 AEST | 1 |
+| `dba2871b` | Claude Code | 2.1.270 | claude-opus-5 | repo | 2026-09-14 18:27 AEST | 2026-09-14 18:31 AEST | 4 |
+| `b5b5927c` | Claude Code | 2.1.272 | claude-opus-5 | via UNIVERSITY | 2026-09-15 13:49 AEST | 2026-09-15 13:49 AEST | 1 |
+| `bca74321` | Claude Code | 2.1.272 | claude-opus-5 | repo | 2026-09-15 16:24 AEST | 2026-09-15 22:19 AEST | 21 |
+| `69cb61d0` | Claude Code | 2.1.272 | claude-opus-5 | repo | 2026-09-16 16:31 AEST | 2026-09-16 16:31 AEST | 1 |
+| `de8866fe` | Claude Code | 2.1.273 | claude-opus-5 | via UNIVERSITY | 2026-09-16 20:59 AEST | 2026-09-16 21:12 AEST | 2 |
+| `bba4e47f` | Claude Code | 2.1.274 | claude-opus-5 | via UNIVERSITY | 2026-09-17 20:11 AEST | 2026-09-17 22:40 AEST | 5 |
+| `9e623b09` | Claude Code | 2.1.274, 2.1.275 | claude-opus-5 | via UNIVERSITY | 2026-09-17 23:12 AEST | 2026-09-18 10:03 AEST | 3 |
+| `5ad37aac` | Claude Code | 2.1.275 | claude-opus-5 | via UNIVERSITY | 2026-09-18 13:34 AEST | 2026-09-18 13:34 AEST | 2 |
+| `bb0b648e` | Claude Code | 2.1.277, 2.1.278 | claude-opus-5 | via UNIVERSITY | 2026-09-21 13:52 AEST | 2026-09-21 21:04 AEST | 10 |
+| `06fb70dc` | Claude Code | 2.1.280 | claude-opus-5-5 | via UNIVERSITY | 2026-09-23 16:24 AEST | 2026-09-23 16:26 AEST | 2 |
+| `1d057afe` | Claude Code | 2.1.280 | claude-opus-5-5 | via UNIVERSITY | 2026-09-23 18:02 AEST | 2026-09-23 18:02 AEST | 1 |
+| `50be3378` | agy | ? | Gemini 3.8 Flash (High) | via UNIVERSITY | 2026-09-24 20:14 AEST | 2026-09-24 20:17 AEST | 2 |
+| `50ab8ea9` | Claude Code | 2.1.281 | claude-opus-5-5 | via UNIVERSITY | 2026-09-25 08:21 AEST | 2026-09-25 08:46 AEST | 3 |
+| `9b3bc2ea` | agy | ? | Gemini 3.8 Flash (High) | via UNIVERSITY | 2026-09-25 08:27 AEST | 2026-09-25 08:35 AEST | 6 |
+| `foam-quince` | Devin | 3000.11.3 | swe-1-7 | via ? | 2026-09-25 08:28 AEST | 2026-09-25 08:36 AEST | 2 |
+| `3e63d930` | Claude Code | 2.1.282 | claude-opus-5-5 | via UNIVERSITY | 2026-09-25 12:25 AEST | 2026-09-25 12:28 AEST | 3 |
+| `1d4adb88` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-27 09:56 AEST | 2026-09-27 10:36 AEST | 7 |
+| `69d0bedf` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-29 09:00 AEST | 2026-09-29 09:45 AEST | 11 |
+| `90afee07` | Claude Code | 2.1.284 | claude-opus-5-5 | via UNIVERSITY | 2026-09-29 16:46 AEST | 2026-09-29 17:02 AEST | 2 |
 
-### 2026-08-26 12:38 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:38 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Do some research to find out whether the MCP: https://www.mecaflux.com/suite/en/pass_mcp.php, can be used for ShaperWaveDynamics software already purchased on my laptop, if it helps, you can access the files.
 
-### 2026-08-26 12:39 · Claude Code 2.1.246 · ? · `c253c200` · `main`
+### 2026-08-26 22:39 AEST · Claude Code 2.1.246 · ? · `c253c200` · `main`
 
 > Mecaflux has https://www.mecaflux.com/hydrodynamique.htm SWD as a branch of its products I believe
 
-### 2026-08-26 12:39 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:39 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > This is the website: https://surfhydrodynamics.com/
 
-### 2026-08-26 12:40 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:40 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > The goal is for an output of csv / array that can be used for machine learning
 
-### 2026-08-26 12:40 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:40 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > They should include information on: Trajectory speed, Float64 array, m/s, domain [0.0, 10.0m/s]
 > Roll angle: Float64 array, radians [-pi/3,pi/3]
 > Tabulated discrete reference coordinates from SWD, inc. mapping velocity, roll and curve radius and drag forces
 > Trajectory curve radius, all provided by SWD
 
-### 2026-08-26 12:42 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:42 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Using these into this report: https://www.sciencedirect.com/science/article/pii/S2590123025049114, to calculate Board-Jerk index, and 'Radicality'
 
-### 2026-08-26 12:45 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:45 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > I have also included a file with the end goal of fin sensor pcb using IMU ICM-20948. The data will be modelled then used for simplifying this pcb code much later on, but the focus for now is the machine learning
 
-### 2026-08-26 12:54 · Claude Code 2.1.246 · ? · `c253c200` · `main`
+### 2026-08-26 22:54 AEST · Claude Code 2.1.246 · ? · `c253c200` · `main`
 
 > I have supplied the pdf
 
-### 2026-08-26 12:54 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:54 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > + 2 markdown files giving context to my unit and to the project specifically
 
-### 2026-08-26 12:55 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:55 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Make sure that there would actually be enough data points to use for machine learning, do some research on how machine learning works to figure this out
 
-### 2026-08-26 12:57 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:57 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Further, it may be difficult to carry out the process of synthesising data manually, so do some research on how the software actually works, what it runs on, and how you can utilise that for this process.
 
-### 2026-08-26 12:58 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:58 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > The priority should be making sure this process does not corrupt the software, as it is expensive
 
-### 2026-08-26 12:58 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:58 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > But this has been my only found use for it so far so don't sacrifice efficacy for this to be the case.
 
-### 2026-08-26 12:59 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 22:59 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Just carry out deep research to see if anything is possible in extracting the required data points we have discussed into enough data for machine learning in the project brief
 
-### 2026-08-26 13:01 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:01 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Find out how the storage files work and if you would be able to sample data and create you own ones, or if they have equations that are readable that you could use their existing data to make the required inputs
 
-### 2026-08-26 13:04 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:04 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > It is not necessarily a correction, just a possible direction you could go in carrying out the goal
 
-### 2026-08-26 13:19 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:19 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Also, there are certain boards that the app has saved, with hydroscans already available, if these are not what you have already found, have a look at them , because they may have extra information on what could be used, and what data is available
 
-### 2026-08-26 13:28 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:28 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Also, have a look at the folder just added to this directory labelled Project, which includes the project overview, and what the unit requires for AI documentation and reporting, make sure you adhere to these when you explain the processes that occurred here, in the SWD folder you make, have it in the form they like
 
-### 2026-08-26 13:30 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:30 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Also make a CLAUDE.md file for this directory explaining the requirements for the project, so claude will adhere to it throughout
 
-### 2026-08-26 13:31 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:31 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > This pplan will have a lot of steps so ensure you incorporate the use of a todo list too
 
-### 2026-08-26 13:42 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-26 23:42 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Make sure not to have any questions, if there are any, just go with recommended option, as you describe it, I will be sleeping
 
-### 2026-08-26 22:11 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 08:11 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Fix the problem with the Binary Formatter gate
 
-### 2026-08-26 22:33 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 08:33 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Reapprove then carry out phase 2
 
-### 2026-08-26 22:45 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 08:45 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Try the input mechanisms again, I have stopped controlling screen myself
 
-### 2026-08-26 22:52 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 08:52 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > As in should I close the app?
 
-### 2026-08-26 22:53 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 08:53 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > done, rerun it
 
-### 2026-08-26 22:56 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 08:56 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Well carry out the rest of the process (phases 3 and 4) and we can work on this bit later then.
 
-### 2026-08-26 23:10 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 09:10 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Do some research on what could have gon wrong in the automation of the SWD software, inclduing what it runs on, how it works, explore may also be useful for this. Also try and figure out some other options on how to acquire the rest of the data required
 
-### 2026-08-26 23:17 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 09:17 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > The ideal would be the ability to extract these rol angles, and traj radii, and drag forces, over a large number of speeds
 
-### 2026-08-26 23:19 · Claude Code 2.1.246 · ? · `c253c200` · `main`
+### 2026-08-27 09:19 AEST · Claude Code 2.1.246 · ? · `c253c200` · `main`
 
 > Make a md file for SWD that extracts all possible metrics for surf performance from the articvle in this directory, that we could use for the project,
 
-### 2026-08-26 23:19 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 09:19 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > There should be more than the two i meantioned
 
-### 2026-08-26 23:27 · Claude Code 2.1.246 · ? · `c253c200` · `main`
+### 2026-08-27 09:27 AEST · Claude Code 2.1.246 · ? · `c253c200` · `main`
 
 > Download everything needed and place into the SWD folder
 
-### 2026-08-26 23:27 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 09:27 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > on this directory
 
-### 2026-08-26 23:45 · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
+### 2026-08-27 09:45 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
 > Im going to save this plan for later use, as I need to study, can you put everythkng into the plan, and I can work on thsi later. The plan will include getting phase 2 data out
 
-### 2026-08-27 01:21 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 11:21 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Coudl you open up the most recent plan we had created?
 
-### 2026-08-27 01:24 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 11:24 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Also remove it from the original plan so i can pick up the wp1 and wp2 at a later date
 
-### 2026-08-27 01:25 · Claude Code 2.1.247 · ? · `d5967321` · `main`
+### 2026-08-27 11:25 AEST · Claude Code 2.1.247 · ? · `d5967321` · `main`
 
 > Do some deep research and exploration to see if there are available headless operatives for a software of this type
 
-### 2026-08-27 01:26 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 11:26 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > And how they could be harnessed.
 
-### 2026-08-27 01:26 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 11:26 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Only use if these last processes are not working
 
-### 2026-08-27 01:30 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 11:30 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > If you find out it works better, this should be the first option
 
-### 2026-08-27 01:48 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 11:48 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Note down the process in producing any code so that I can run through sqa later (ps1 and py)
 
-### 2026-08-27 02:00 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 12:00 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Create a todo list for these processes, include when to do sqa run (only one run not a full loop)
 
-### 2026-08-27 02:09 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 12:09 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > How should the UAC prompt appear?
 
-### 2026-08-27 02:11 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 12:11 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > I did not see a uac, should i try again?
 
-### 2026-08-27 02:13 · Claude Code 2.1.247 · ? · `d5967321` · `main`
+### 2026-08-27 12:13 AEST · Claude Code 2.1.247 · ? · `d5967321` · `main`
 
 > A prompt surfaced
 
-### 2026-08-27 02:13 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 12:13 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > I clicked allow
 
-### 2026-08-27 03:00 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 13:00 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Why are you not using code-reviewer for this?
 
-### 2026-08-27 03:06 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 13:06 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Actually, I need to begin a test soon, so cancel the code-reviewer, and I will return later to carry out the rest of the process. Make sure everything is easily picked up from a fresh context
 
-### 2026-08-27 09:18 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 19:18 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Continue it please! I used claude --resume, so can now access the exact chats
 
-### 2026-08-27 09:33 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 19:33 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Make this a full SQA-loop, then we can carry out the rest
 
-### 2026-08-27 09:36 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 19:36 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Yes the goal class is functionality, but make it so the sqa-functional is the only subagent spawned by sqa-lead for this process, I just want this to work, and be done asap
 
-### 2026-08-27 10:16 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 20:16 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Also for this SQA, when code-reviewer is spawned, can the fixes be split up among three separate code-reviewers each time?
 
-### 2026-08-27 10:18 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 20:18 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > ok stick with one fixer per round
 
-### 2026-08-27 12:57 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-27 22:57 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Can you check that auto-restart for claude code with a usage limit hit will work in this session, I have just updated settings json
 
-### 2026-08-27 19:03 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:03 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > SWD is open now
 
-### 2026-08-27 19:07 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:07 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > I was not looking, try again and I can watch SWD
 
-### 2026-08-27 19:10 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:10 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > There is a check before the hydroscan completes, it is now running bc I clicked agree
 
-### 2026-08-27 19:10 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:10 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > It says "it takes more than 60 nm do you want to proceed" or something, and you need to press ok
 
-### 2026-08-27 19:11 · Claude Code 2.1.247 · ? · `d5967321` · `main`
+### 2026-08-28 05:11 AEST · Claude Code 2.1.247 · ? · `d5967321` · `main`
 
 > Not now
 
-### 2026-08-27 19:11 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:11 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > It did
 
-### 2026-08-27 19:11 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:11 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Thats for future so you can click it yourself not me
 
-### 2026-08-27 19:46 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:46 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Hydroscan done, what steps are there to do and how long will it take?
 
-### 2026-08-27 19:57 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:57 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Go for it
 
-### 2026-08-27 19:57 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 05:57 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Make a todo list to stay on track
 
-### 2026-08-27 22:08 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 08:08 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Did this get done?
 
-### 2026-08-27 23:00 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 09:00 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Closed!
 
-### 2026-08-28 00:33 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 10:33 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Yep do the verification scan at 36 km/h once SQA clears
 
-### 2026-08-28 00:42 · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 10:42 AEST · Claude Code 2.1.247 · claude-opus-5 · `d5967321` · `main`
 
 > Sounds good, lay out for me what I would need to do
 
-### 2026-08-28 10:01 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-28 20:01 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > After that is corrected, dont run a fresh pass. Carry out all else you described
 
-### 2026-08-29 07:12 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:12 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > I have opened 2003 Taylor knox channel island boardm there is no hydroscan for this board.
 
-### 2026-08-29 07:26 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:26 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > Have a look at the plan and todos to see exactly what needs to be done
 
-### 2026-08-29 07:33 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:33 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > The plan is to have a look at all boards, and for you to run this, I believe it is step 7 in todo.md
 
-### 2026-08-29 07:34 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:34 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > You first wanted me to opemn this board
 
-### 2026-08-29 07:35 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:35 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > We have been building this so that it would be safe
 
-### 2026-08-29 07:36 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:36 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > Make sure you are getting all required information from the boards for the project
 
-### 2026-08-29 07:41 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:41 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > Will this use a lot of tokens or is it mostly hands off?
 
-### 2026-08-29 07:43 · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
+### 2026-08-29 17:43 AEST · Claude Code 2.1.250 · claude-opus-5 · `d5967321` · `main`
 
 > Board automation has been produced i believe but not atempted, the plan was to try it on this board
 
-### 2026-08-30 11:08 · Claude Code 2.1.251 · claude-opus-5 · `5fa83184` · `main`
+### 2026-08-30 21:08 AEST · Claude Code 2.1.251 · claude-opus-5 · `5fa83184` · `main`
 
 > Have a look at the repo to ensure you make use of all aspects: https://github.com/Graphify-Labs/graphify
 
-### 2026-08-30 11:09 · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
+### 2026-08-30 21:09 AEST · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
 
 > Have a look at the github here: https://github.com/Graphify-Labs/graphify, to help figure out how it works
 
-### 2026-08-30 11:10 · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
+### 2026-08-30 21:10 AEST · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
 
 > Also do a little research on how it can be used, including last30days, to see what creative ways it has been adopted in
 
-### 2026-08-30 11:11 · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
+### 2026-08-30 21:11 AEST · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
 
 > Put the findings of how it can be used well into global CLAUDE.md so for other directories I can do the same
 
-### 2026-08-30 11:39 · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
+### 2026-08-30 21:39 AEST · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
 
 > Does this automatically update?
 
-### 2026-08-30 11:41 · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
+### 2026-08-30 21:41 AEST · Claude Code 2.1.251 · claude-opus-5 · `9865a2c3` · `main`
 
 > As in does the graphify automatically update as i use the directory given its main function is for memory
 
-### 2026-08-31 07:15 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:15 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > What needs to be done next for this?
 
-### 2026-08-31 07:16 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:16 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > claude.md in this project should have some idea
 
-### 2026-08-31 07:17 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:17 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Use the graphify to understand where the code sits
 
-### 2026-08-31 07:31 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:31 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Move on to the next item
 
-### 2026-08-31 07:35 · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
+### 2026-08-31 17:35 AEST · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
 
 > Was there another headless ps1 file that was needing to be made too?
 
-### 2026-08-31 07:35 · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
+### 2026-08-31 17:35 AEST · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
 
 > That would switch between boards?
 
-### 2026-08-31 07:35 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:35 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Or was this to be done later?
 
-### 2026-08-31 07:42 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:42 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > And the board
 
-### 2026-08-31 07:45 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:45 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > it's up, the dialog is showing
 
-### 2026-08-31 07:48 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:48 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Clicked yes, read what it says now
 
-### 2026-08-31 07:50 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:50 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Clicked yes, it said that a new one was made, and now has it in a new file, somewhere in OneDrrive it said
 
-### 2026-08-31 07:50 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:50 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Now I am back onto the original screen
 
-### 2026-08-31 07:51 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:51 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > And will be able to press Hydrodynamics scanner again
 
-### 2026-08-31 07:52 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:52 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Before I do this, note this down for the headless process to understand as a part of the process
 
-### 2026-08-31 07:53 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 17:53 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > I have pressed hydrodynamics scanner again, and now have the message you expected before
 
-### 2026-08-31 08:00 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 18:00 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > cancelled it, set the speed
 
-### 2026-08-31 08:11 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 18:11 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > You can click it
 
-### 2026-08-31 08:20 · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
+### 2026-08-31 18:20 AEST · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
 
 > Surfer mass is at 50kg, was this on purpose?
 
-### 2026-08-31 08:21 · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
+### 2026-08-31 18:21 AEST · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
 
 > Also, the starting hydroscan tab is still showing up
 
-### 2026-08-31 08:21 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 18:21 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Note down any errors you find witht he running that you can use for sqa later
 
-### 2026-08-31 08:39 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 18:39 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > load a wave and check the speed then
 
-### 2026-08-31 08:43 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 18:43 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > loaded a wave, check it now
 
-### 2026-08-31 08:56 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 18:56 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Keep testing until you have a full understanding of all the data that can be extracted from this software
 
-### 2026-08-31 09:03 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:03 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > It was already on that screen
 
-### 2026-08-31 09:03 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:03 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Wait nvm
 
-### 2026-08-31 09:04 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:04 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > I am now on the Test Position view on the right, with the Dialog showing up again
 
-### 2026-08-31 09:06 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:06 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > I dont know how to unload a wave
 
-### 2026-08-31 09:10 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:10 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Now you know exactly what you can extract from this, use this to figure out what inputs I can use for the project, and how this relates to the equations mentioned in the article (these have all been summarised by various md files.
 
-### 2026-08-31 09:10 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:10 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > The goal is a wide range of values, with something applicable to my icm 20948
 
-### 2026-08-31 09:10 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:10 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > you could also use the research paper as a background to what you'd need
 
-### 2026-08-31 09:11 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:11 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > as in the research paper data they gave
 
-### 2026-08-31 09:12 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:12 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Also do some research on magnetometer this should be truseted as it is very important for understanding movement
 
-### 2026-08-31 09:13 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:13 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Have a look at various pressure sensors too, there may be one mentioned in the pcb sheet I gave, do deep research on how they work and see if the data from this SWD could be integrated into it
 
-### 2026-08-31 09:13 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:13 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > The primary goal though is to ensure that it fits into the requirements for the assignment
 
-### 2026-08-31 09:14 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:14 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > When this is all done, update the plans to include this process
 
-### 2026-08-31 09:14 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:14 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Update the plans to include the individual data that we need I mean, as well as the previously decided data**
 
-### 2026-08-31 09:16 · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
+### 2026-08-31 19:16 AEST · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
 
 > Dont make this decided data the only data, these ar ejust ideas you are making
 
-### 2026-08-31 09:17 · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
+### 2026-08-31 19:17 AEST · Claude Code 2.1.251 · ? · `ffb0c7d3` · `main`
 
 > I want to be able to decided myself
 
-### 2026-08-31 09:17 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:17 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Put them in the terms of the paper (so can be carried over relatively easily)
 
-### 2026-08-31 09:19 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:19 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Also, work with your newfound understanding of the app, to see if it can be manipulated in any other way to other data sources
 
-### 2026-08-31 09:32 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:32 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Now what needs to be done?
 
-### 2026-08-31 09:35 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:35 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > What is WP2?
 
-### 2026-08-31 09:37 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 19:37 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Is it purely for CLAUDE to use? Or are you suggesting i would submit it?
 
-### 2026-08-31 10:21 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 20:21 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Write it as an internal reference with the label
 
-### 2026-08-31 10:23 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 20:23 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Plan the whole WP2 out and all required aspects of it
 
-### 2026-08-31 10:41 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 20:41 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Fix the hardcoded test paths and the remaining leaks
 
-### 2026-08-31 10:53 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 20:53 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Make the switch
 
-### 2026-08-31 10:58 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 20:58 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Lets start with WP3
 
-### 2026-08-31 10:58 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 20:58 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Do a full audit to figure out what needs to be dine
 
-### 2026-08-31 11:24 · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
+### 2026-08-31 21:24 AEST · Claude Code 2.1.251 · claude-opus-5 · `ffb0c7d3` · `main`
 
 > Ive closed it
 
-### 2026-08-31 11:29 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:29 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > Could you do some deep research on how exe files work, use this info to figure out what the SWD uses to actually calculate planing, and trajectory velocity, hopefully we could use their equations to output our own data. It should include board shape, and weight of surfer for example, do afull audit on the application
 
-### 2026-08-31 11:37 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:37 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > Would you be able to extract if the information was not uploaded to github?
 
-### 2026-08-31 11:40 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:40 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > Use what the project needs
 
-### 2026-08-31 11:42 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:42 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > Actually no
 
-### 2026-08-31 11:42 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:42 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > Use what the article equations are
 
-### 2026-08-31 11:42 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:42 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > That should act as the scope for what you should be extracting
 
-### 2026-08-31 11:43 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:43 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > No, i need to reword it, I think you misunderstood
 
-### 2026-08-31 11:44 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 21:44 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > Use the equations we got from the scieintific article to narrow down the equations SWD uses to only those which can be used in the performance context.
 
-### 2026-08-31 12:13 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 22:13 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > make a todo list to keep on track
 
-### 2026-08-31 12:22 · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
+### 2026-08-31 22:22 AEST · Claude Code 2.1.251 · claude-opus-5 · `50a19d62` · `main`
 
 > When this is all done, and the ps1 files have been built, for any that require it run SQA loop on them, add this to the todo
 
-### 2026-09-01 09:43 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 19:43 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > So, during this whole process, I have begun to become a bit lost in what it is we have actually been able to do. Could you explain to me, what we have be able to extract, and what we have been able to compute for the default shortboard. Also what we have been able to extract and what we have been able to compute (or would be able to) from the SWD app itself
 
-### 2026-09-01 09:44 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 19:44 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Just procure an explanation for me that would reside in this chat
 
-### 2026-09-01 09:51 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 19:51 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Great, from the data we have found. Again firstly from default shortboard, then overall SWD, what can I use for my PCB?
 
-### 2026-09-01 09:51 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 19:51 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Again make it into a response in the chat as an output
 
-### 2026-09-01 11:14 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 21:14 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Sort all data not extracted, and instead computed, into a folder (in its current folder), labelled computer data
 
-### 2026-09-01 12:16 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:16 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > This was produced by claude so raise any questions you have if necessary:# Task: Board-Geometry ML Surrogate — Data Generation + Model Pipeline
 >
@@ -1044,147 +1045,147 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 > 4. Scan the 13 unscanned library boards.
 > 5. Batch the designed geometry sweep, extract, retrain, compare against step 2.
 
-### 2026-09-01 12:17 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:17 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > This should be the main idea for the project, it has been worked on to ensure that the goals are possible.
 
-### 2026-09-01 12:17 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:17 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Make sure the processes are extract only, no more computed data should be made
 
-### 2026-09-01 12:18 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:18 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > This process would require you to hydroscan the remaining 14
 
-### 2026-09-01 12:19 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:19 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Sparingly scrap the older plans
 
-### 2026-09-01 12:21 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:21 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Also part of this process should be integrating use of the discussed (in the plan i gave) added data points, through editing flow speed, etc. to each board.
 
-### 2026-09-01 12:21 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:21 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > If you do this after completing a hydroscan, that would add significant amount of data points with less required time
 
-### 2026-09-01 12:22 · Claude Code 2.1.252 · ? · `50a19d62` · `main`
+### 2026-09-01 22:22 AEST · Claude Code 2.1.252 · ? · `50a19d62` · `main`
 
 > AHhh yes apologies you are correct
 
-### 2026-09-01 12:22 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:22 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Flow ms is dead for now, and not important in this
 
-### 2026-09-01 12:23 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:23 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > I mean tto say you could involve a change to the dimensions of the board each time you conduct a hydroscan to that board.
 
-### 2026-09-01 12:23 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:23 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Maybe in 1% increments each way (+-20%) to gain as many data points as possible for each board
 
-### 2026-09-01 12:24 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:24 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Think about what would need to be created for this
 
-### 2026-09-01 12:26 · Claude Code 2.1.252 · ? · `50a19d62` · `main`
+### 2026-09-01 22:26 AEST · Claude Code 2.1.252 · ? · `50a19d62` · `main`
 
 > Capturing it with 5 points rather than 41 would be very beneficial
 
-### 2026-09-01 12:26 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:26 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > That sounds better, mine was just an idea
 
-### 2026-09-01 12:38 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 22:38 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Can you edit the plan, such that you produce a way for SWD to switch boards on its own? This is necessary in the headless aspect of it, run SQA before using
 
-### 2026-09-01 13:12 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 23:12 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > keep going with physics_baseline and predict
 
-### 2026-09-01 13:14 · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-01 23:14 AEST · Claude Code 2.1.252 · claude-opus-5 · `50a19d62` · `main`
 
 > Then write the .ps1 files you described, then run SQA on them, make a todolist to remember each step
 
-### 2026-09-01 23:31 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-02 09:31 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `main`
 
 > So give me a brief rundown of what you got done from the todolist
 
-### 2026-09-01 23:33 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `main`
+### 2026-09-02 09:33 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `main`
 
 > Can we carry out 2b.5 and 2b.6?
 
-### 2026-09-02 00:03 · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
+### 2026-09-02 10:03 AEST · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
 
 > Can you add to the gitignore, any files that were computed
 
-### 2026-09-02 00:09 · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
+### 2026-09-02 10:09 AEST · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
 
 > Could you also have a look at the project brief, as well as the AI documentation rules, and include in the claude md of this file, any requirements they include for the documentation around AI use. For example whether every prompt needs to be recorded, then if that were a requirement you would start noting down every prompt into a document. Also anything you find, make it a rule in CLAUDE.md for this project
 
-### 2026-09-02 00:09 · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
+### 2026-09-02 10:09 AEST · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
 
 > Rules for mma3001 that is
 
-### 2026-09-02 00:14 · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
+### 2026-09-02 10:14 AEST · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
 
 > Also explain all this in the README
 
-### 2026-09-02 00:14 · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
+### 2026-09-02 10:14 AEST · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
 
 > Is it possible for you to extract past prompts too?
 
-### 2026-09-02 00:15 · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
+### 2026-09-02 10:15 AEST · Claude Code 2.1.258 · claude-opus-5 · `abc4f67c` · `furtherSWDextract`
 
 > Link the github repo: https://github.com/bennmoors/SQA-loop, to explain the basic process of how agentic ai has been used for code verification
 
-### 2026-09-02 00:54 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 10:54 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > I did not mean to stop it, continue it.
 
-### 2026-09-02 00:54 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 10:54 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > When it is done, do not automaticall yrun code-reviewer, I will run that later
 
-### 2026-09-02 00:56 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 10:56 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > Actually cancel this new one
 
-### 2026-09-02 05:01 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 15:01 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > continue SQA loop
 
-### 2026-09-02 05:01 · Claude Code 2.1.258 · ? · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 15:01 AEST · Claude Code 2.1.258 · ? · `50a19d62` · `furtherSWDextract`
 
 > No do the full loop,
 
-### 2026-09-02 05:01 · Claude Code 2.1.258 · ? · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 15:01 AEST · Claude Code 2.1.258 · ? · `50a19d62` · `furtherSWDextract`
 
 > With the fixer
 
-### 2026-09-02 05:01 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 15:01 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > Until loop is finished as in global CLAUDE.md
 
-### 2026-09-02 10:22 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 20:22 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > Continue
 
-### 2026-09-02 10:48 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 20:48 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > So the session would have rest by now?
 
-### 2026-09-02 11:31 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 21:31 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > A fourth fix round, then what would be next?
 
-### 2026-09-02 11:56 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 21:56 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > I have opened SWD, and expanded the folders
 
-### 2026-09-02 11:59 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 21:59 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > Finished, response was:verify_2b.ps1  -  live verification of TODO 2b.5 / 2b.6
 > started        : 2026-09-02T21:58:21.6511962+10:00
@@ -1267,11 +1268,11 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 >   ~\HYDRODYNAMICS-FIN\SWD\tools\phase2\logs\20260902-215821-644-2b-hashes.csv
 > finished       : 2026-09-02T21:58:22.3870788+10:00
 
-### 2026-09-02 12:02 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 22:02 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > I have unminimised it
 
-### 2026-09-02 12:06 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 22:06 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > Ran it: powershell.exe -NoProfile -ExecutionPolicy Bypass -File "~\HYDRODYNAMICS-FIN\SWD\tools\phase2\verify_2b.ps1"
 > verify_2b.ps1  -  live verification of TODO 2b.5 / 2b.6
@@ -1355,7 +1356,7 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 >   ~\HYDRODYNAMICS-FIN\SWD\tools\phase2\logs\20260902-220530-580-2b-hashes.csv
 > finished       : 2026-09-02T22:05:31.5955968+10:00
 
-### 2026-09-02 12:08 · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
+### 2026-09-02 22:08 AEST · Claude Code 2.1.258 · claude-opus-5 · `50a19d62` · `furtherSWDextract`
 
 > integrity us  :
 > visual state  : Maximized
@@ -1394,59 +1395,59 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 >   elements whose class is a SysTreeView32, and what they expose:
 >     type=Pane name='' children=0 SelectionPattern=False
 
-### 2026-09-10 05:54 · Claude Code 2.1.267 · claude-opus-5 · `850bae7d` · `HEAD`
+### 2026-09-10 15:54 AEST · Claude Code 2.1.267 · claude-opus-5 · `850bae7d` · `HEAD`
 
 > Separate from claude.md that is
 
-### 2026-09-14 07:07 · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:07 AEST · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
 
 > I have just downloaded Obsidian CLI, and want to integrate it into this project, to ensure efficiency, and memory of the project. Do some deep research of the obsidian cli, repos integrating its use, how other people have used it, and its biggest gains overall. Figure out some directions that I could integrate it into my claude code directory for gains in efficiency (token and time) and overall effectiveness of output. Keep in mind this is a github repository too, so anyway I could make the whole thing accessible to my friend too to use would be beneficial. I have one vault, which is currently 1GB size, can upgrade if necessary, but would prefer to save money.
 
-### 2026-09-14 07:08 · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:08 AEST · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
 
 > I also gave this prompt to gemini and fable and they came back with FABLE-RES and GEM-RES files
 
-### 2026-09-14 07:08 · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:08 AEST · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
 
 > I have a vault integrated into this project
 
-### 2026-09-14 07:12 · Claude Code 2.1.270 · ? · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:12 AEST · Claude Code 2.1.270 · ? · `daa5cecd` · `furtherSWDextract`
 
 > Make it so in future all projects use obisidan integration, but as efficiencytly as possible, just for memory.
 
-### 2026-09-14 07:12 · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:12 AEST · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
 
 > Replace graphify with this
 
-### 2026-09-14 07:23 · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:23 AEST · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
 
 > Have a lookat mcp-obsidian too
 
-### 2026-09-14 07:25 · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
+### 2026-09-14 17:25 AEST · Claude Code 2.1.270 · claude-opus-5 · `daa5cecd` · `furtherSWDextract`
 
 > If it would not was too many tokens, also have a look at using it for a whole project, then give me pros and cons in the question form
 
-### 2026-09-14 08:17 · Claude Code 2.1.270 · claude-opus-5 · `ba6bb561` · `furtherSWDextract`
+### 2026-09-14 18:17 AEST · Claude Code 2.1.270 · claude-opus-5 · `ba6bb561` · `furtherSWDextract`
 
 > The /memory should be in the new folder
 
-### 2026-09-14 08:27 · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
+### 2026-09-14 18:27 AEST · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
 
 > Obsidian MCP should now be connected and working
 
-### 2026-09-14 08:28 · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
+### 2026-09-14 18:28 AEST · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
 
 > I have set the API key
 
-### 2026-09-14 08:29 · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
+### 2026-09-14 18:29 AEST · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
 
 > Commit everything
 
-### 2026-09-14 08:31 · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
+### 2026-09-14 18:31 AEST · Claude Code 2.1.270 · claude-opus-5 · `dba2871b` · `furtherSWDextract`
 
 > push it (not as claude)
 
-### 2026-09-15 03:49 · Claude Code 2.1.272 · claude-opus-5 · `b5b5927c` · `HEAD`
+### 2026-09-15 13:49 AEST · Claude Code 2.1.272 · claude-opus-5 · `b5b5927c` · `HEAD`
 
 > LLM Wiki
 > A pattern for building personal knowledge bases using LLMs.
@@ -1512,123 +1513,123 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 > Note
 > This document is intentionally abstract. It describes the idea, not a specific implementation. The exact directory structure, the schema conventions, the page formats, the tooling — all of that will depend on your domain, your preferences, and your LLM of choice. Everything mentioned above is optional and modular — pick what's useful, ignore what isn't. For example: your sources might be text-only, so you don't need image handling at all. Your wiki might be small enough that the index file is all you need, no search engine required. You might not care about slide decks and just want markdown pages. You might want a completely different set of output formats. The right way to use this is to share it with your LLM agent and work together to instantiate a version that fits your needs. The document's only job is to communicate the pattern. Your LLM can figure out the rest.: You are now my LLM Wiki agent. Implement this exact idea file as my complete second brain. Guide me step-bystep: create the CLAUDE.md schema file with full rules, set up index.md and log.md, define folder conventions, and show me the first ingest example. From now on, every interaction follows this schema. Check with me if there are any questions or uncertainties that I can answer
 
-### 2026-09-15 06:24 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:24 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Could you use the installed colab extension and the unit spreadsheet for mma3001 avaialable from the drive, to extract all the available ipynb files from mma3001 into week folders on here. Then use the ingest from obsidian to make a web for the subject that i can use later?
 
-### 2026-09-15 06:25 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:25 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > I would rather you use the py files directly, as it would be cheeper than pdfs
 
-### 2026-09-15 06:26 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:26 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > as in the colabs as ipynb
 
-### 2026-09-15 06:26 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:26 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Do you have access to the unit spreadsheet through the drive connecter?
 
-### 2026-09-15 06:27 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:27 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Do any extra research where required, but most of the information should be sourced from the unit, as it has the most paplicable terminology for the assignment
 
-### 2026-09-15 06:29 · Claude Code 2.1.272 · ? · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:29 AEST · Claude Code 2.1.272 · ? · `bca74321` · `furtherSWDextract`
 
 > Keep in mind that some of the colab is ran through the google colab kernel, thus will either require that for the code to be used, or will need to be modified to find a native equivalent
 
-### 2026-09-15 06:30 · Claude Code 2.1.272 · ? · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:30 AEST · Claude Code 2.1.272 · ? · `bca74321` · `furtherSWDextract`
 
 > Note this down for each md file you include
 
-### 2026-09-15 06:30 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:30 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > This should act like a second brain for the unit
 
-### 2026-09-15 06:32 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 16:32 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > for the project*, editing that last prompt
 
-### 2026-09-15 07:20 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 17:20 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Pages look good! COntinue with the next steps, i am happy for you to finish it all off
 
-### 2026-09-15 07:59 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 17:59 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Make sure there is a way for these to save, as my session is nearly done
 
-### 2026-09-15 10:51 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 20:51 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Resume
 
-### 2026-09-15 11:24 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 21:24 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > commit the gitignore and CLAUDE.md changes
 
-### 2026-09-15 11:25 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 21:25 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Could you have a look at how you can use this new memory/second brain as efficiently as possible for future work with the project, to reduce token usage?
 
-### 2026-09-15 11:25 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 21:25 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Check if we need to install the mcp for this to work better
 
-### 2026-09-15 11:30 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 21:30 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > edit the claude.md to show these changes made, as well as the integration of obsidian with mma3001 content, such that if asked about, these protocol are used
 
-### 2026-09-15 11:32 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 21:32 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Given at the moment this is primarily to be used for the mma3001 project, make sure that claude.md notes this down, and uses the obsidian base to understand how the new direction i have would work for the goal & rubric of the project (the rubric is pat of the obsidian too)
 
-### 2026-09-15 11:32 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 21:32 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > fold this into the plan
 
-### 2026-09-15 12:11 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 22:11 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > Ensure that there are efficient, and effective (specifically at updating and linking key concepts together) protocols in introducing new ideas to the project. Where if research is conducted, and the ideas are brought in, or if I bring my own ideas in, these can easily be integrated into the already existing brain. But would require validation before being inputted (validation that they work, not overt valid.n from me). Do some research of techniques of efficiently adding to these kinds of ides (repos/mcps/apis)
 
-### 2026-09-15 12:11 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 22:11 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > If one already exists and is being used, weigh it up against researched ideas to see what works best.
 
-### 2026-09-15 12:19 · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
+### 2026-09-15 22:19 AEST · Claude Code 2.1.272 · claude-opus-5 · `bca74321` · `furtherSWDextract`
 
 > No actually leave this
 
-### 2026-09-16 06:31 · Claude Code 2.1.272 · claude-opus-5 · `69cb61d0` · `furtherSWDextract`
+### 2026-09-16 16:31 AEST · Claude Code 2.1.272 · claude-opus-5 · `69cb61d0` · `furtherSWDextract`
 
 > Whats the next step?
 
-### 2026-09-16 10:59 · Claude Code 2.1.273 · claude-opus-5 · `de8866fe` · `HEAD`
+### 2026-09-16 20:59 AEST · Claude Code 2.1.273 · claude-opus-5 · `de8866fe` · `HEAD`
 
 > Could we delete all the files in the old wiki, then make this act as a memory file simply for (at the moment) the tools we have integrated for the probes, how they work, and how they work together, research the documentation for each. This should act as an updating process where eveytime a new probe/api/mcp is added, they are included into this web. CHeck what we have about obsidian so you know how to use it the way inteded for a wiki.
 
-### 2026-09-16 11:12 · Claude Code 2.1.273 · claude-opus-5 · `de8866fe` · `HEAD`
+### 2026-09-16 21:12 AEST · Claude Code 2.1.273 · claude-opus-5 · `de8866fe` · `HEAD`
 
 > Or have the product be the same is if were ingest
 
-### 2026-09-17 10:11 · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
+### 2026-09-17 20:11 AEST · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
 
 > I want to make a full migration of my Hydrodynamics directory (including its git, and the git rule that made that directory exclusively used by my other github account benmoors) into this folder. Check everything that would need to be changed for this to work. I would move it into my Mechanical Engineering folder in this folder
 
-### 2026-09-17 10:25 · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
+### 2026-09-17 20:25 AEST · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
 
 > Check the ps1 files in the SWD folder in that directory too
 
-### 2026-09-17 11:07 · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
+### 2026-09-17 21:07 AEST · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
 
 > Could you remove all MMA3001 obsidian files, and unignore the mma3001 files from HYDRODYNAMICS fin into the obsidian vault
 
-### 2026-09-17 11:47 · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
+### 2026-09-17 21:47 AEST · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
 
 > Change that line
 
-### 2026-09-17 12:40 · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
+### 2026-09-17 22:40 AEST · Claude Code 2.1.274 · claude-opus-5 · `bba4e47f` · `HEAD`
 
 > Have a look at this for converting my pdfs to md, try to make it headless to reduce any excess token usage
 
-### 2026-09-17 13:12 · Claude Code 2.1.274 · claude-opus-5 · `9e623b09` · `HEAD`
+### 2026-09-17 23:12 AEST · Claude Code 2.1.274 · claude-opus-5 · `9e623b09` · `HEAD`
 
 > I'm building a pipeline that adds study notes to my Obsidian vault automatically, and I need you to write the skill that tells another agent how my vault is organised. You already have context on my vaults. If you know of more than one, ask me which one this is for before you start.
 >
@@ -1656,7 +1657,7 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 > ## What the skill should look like
 > A cheat sheet, not a manual: the rules, one complete example note modelled on a real note of mine, and a common-mistakes section listing the ways an outside agent would most likely break my conventions. About a page. No general Obsidian advice, and nothing the agent would get right anyway. Where a rule has a reason that isn't obvious (a Dataview query depends on a field, for example), give the reason in a few words so the agent can handle cases the rule doesn't name.
 
-### 2026-09-17 14:12 · Claude Code 2.1.274 · claude-opus-5 · `9e623b09` · `master`
+### 2026-09-18 00:12 AEST · Claude Code 2.1.274 · claude-opus-5 · `9e623b09` · `master`
 
 > I need you to adapt a draft agent skill to my Obsidian vault. You already have context on the vault. Before anything else, read `.agents/skills/obsidian-vault-conventions/SKILL.md` in the vault root. It is the approved description of my conventions. If it doesn't exist, stop and tell me.
 >
@@ -1768,212 +1769,216 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 > 3. A dry run: the full path and file content of the note this skill would produce from the sample report and sample master-list entry above, plus the edited master-list line. Show it to me. Don't write it to the vault.
 > 4. After I approve: write `.agents/skills/file-topic-into-vault/SKILL.md`, and create `_inbox/` and `_inbox/done/` if they don't exist. Nothing else.
 
-### 2026-09-18 00:03 · Claude Code 2.1.275 · claude-opus-5 · `9e623b09` · `master`
+### 2026-09-18 10:03 AEST · Claude Code 2.1.275 · claude-opus-5 · `9e623b09` · `master`
 
 > Could you fold into the two made skills, the act of colouring the obsidian nodes. When the first list is given, they will all be pastel red, then as I insert them into the second skill, they become pastel green for learned
 
-### 2026-09-18 03:34 · Claude Code 2.1.275 · claude-opus-5 · `5ad37aac` · `master`
+### 2026-09-18 13:34 AEST · Claude Code 2.1.275 · claude-opus-5 · `5ad37aac` · `master`
 
 > Dont use the plugin, there should be a skill we have used in the past
 
-### 2026-09-18 03:34 · Claude Code 2.1.275 · claude-opus-5 · `5ad37aac` · `master`
+### 2026-09-18 13:34 AEST · Claude Code 2.1.275 · claude-opus-5 · `5ad37aac` · `master`
 
 > The plugin utilises gemini api I believe
 
-### 2026-09-21 03:52 · Claude Code 2.1.277 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 13:52 AEST · Claude Code 2.1.277 · claude-opus-5 · `bb0b648e` · `master`
 
 > Ingest 1005 md files
 
-### 2026-09-21 03:57 · Claude Code 2.1.277 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 13:57 AEST · Claude Code 2.1.277 · claude-opus-5 · `bb0b648e` · `master`
 
 > in HYDRODYNAMICS folder
 
-### 2026-09-21 07:17 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 17:17 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > Continue from where you were, "sync at 39"
 
-### 2026-09-21 07:52 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 17:52 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > Dont separate by unit, if Taylor series exists in both, connec tthe two, I hope you have done this throughout
 
-### 2026-09-21 08:21 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 18:21 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > Can we have a look at doing this for eng2005 too? This should be a similar process to eng1005
 
-### 2026-09-21 08:39 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 18:39 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > Are you using notebooklm cli or notebookl-py?
 
-### 2026-09-21 10:29 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 20:29 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > Could we make the process in future a mix of this markitdown + notebooklm-py instead of gemini api? Where gemini api is only used later on
 
-### 2026-09-21 10:58 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 20:58 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > COuld we include into the study-whats-next a process of it asking the wiki what material in mathematics is already known, and possibly what gemini spark could include that relates to the topic, which may require a little bit of research for it to carry out. The goal of this is to have a smart form of learning. Where knowledge I have already gained from either uni, or from this Study process, is aimed to be included into my new learnings, to both reinforce older learnings and apply them, and also to make the new learnings more embdedded for me. Do some research on antigravity, its available connections, and gemini spark, and its connections, and give me some options of workflows that could do this
 
-### 2026-09-21 11:02 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 21:02 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > I have just added the Spark agents to the study folder, this should act as an updating base for what the spark agents prompts are, so you have an up-to-date version, and so you can edit these for me to add to gemini spark
 
-### 2026-09-21 11:04 · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
+### 2026-09-21 21:04 AEST · Claude Code 2.1.278 · claude-opus-5 · `bb0b648e` · `master`
 
 > I have completed 3 years of biomedical science, and 2 years of mechanical engineering
 
-### 2026-09-23 06:24 · Claude Code 2.1.280 · claude-opus-5-5 · `06fb70dc` · `master`
+### 2026-09-23 16:24 AEST · Claude Code 2.1.280 · claude-opus-5-5 · `06fb70dc` · `master`
 
 > Can we do a full wiki ingest of ENG1014 according to the current ingest process, similar to what we conducted with mma3001, but without the added protocol of colab.
 
-### 2026-09-23 06:26 · Claude Code 2.1.280 · claude-opus-5-5 · `06fb70dc` · `master`
+### 2026-09-23 16:26 AEST · Claude Code 2.1.280 · claude-opus-5-5 · `06fb70dc` · `master`
 
 > This should have many links to mma3001 too, as eng1014 was a prereq to that subject
 
-### 2026-09-23 08:02 · Claude Code 2.1.280 · claude-opus-5-5 · `1d057afe` · `master`
+### 2026-09-23 18:02 AEST · Claude Code 2.1.280 · claude-opus-5-5 · `1d057afe` · `master`
 
 > Include most required coding languages and integrations we have used
 
-### 2026-09-24 10:14 · agy · Gemini 3.8 Flash (High) · `50be3378`
+### 2026-09-24 20:14 AEST · agy · Gemini 3.8 Flash (High) · `50be3378`
 
 > /plan Can you familiarise yourself with hydrodynamics fin swd extract files, mostly documented through claude files, then carry out an audit and fix on the code
 
-### 2026-09-24 10:17 · agy · Gemini 3.8 Flash (High) · `50be3378`
+### 2026-09-24 20:17 AEST · agy · Gemini 3.8 Flash (High) · `50be3378`
 
 > have a look at the wiki too
 
-### 2026-09-24 22:21 · Claude Code 2.1.281 · claude-opus-5-5 · `50ab8ea9` · `main`
+### 2026-09-25 08:21 AEST · Claude Code 2.1.281 · claude-opus-5-5 · `50ab8ea9` · `main`
 
 > Can you then commit all changes in the UNIVERSITY directory
 
-### 2026-09-24 22:27 · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
+### 2026-09-25 08:27 AEST · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
 
 > Can you make a root configuration file for HYDRODYNAMICS-FIN, using CLAUDE.MD as a base for understanding the wiki, as well as a base for understanding the content of the project. Then taking note that the main function of this agent will be as an auditor of code, so develop an efficient protocol, returning initial Critical X | Warning X | Suggestions X, and the same after it has been fixed. Have a look at the already existing SQA loop in the wiki to see what tools you can use
 
-### 2026-09-24 22:28 · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
+### 2026-09-25 08:28 AEST · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
 
 > /plan Can you make a root configuration file for HYDRODYNAMICS-FIN, using CLAUDE.MD as a base for understanding the wiki, as well as a base for understanding the content of the project. Then
 >   taking note that the main function of this agent will be as an auditor of code, so develop an efficient protocol, returning initial Critical X | Warning X | Suggestions X, and the same   
 >   after it has been fixed. Have a look at the already existing SQA loop in the wiki to see what tools you can use
 
-### 2026-09-24 22:28 · Devin 3000.11.3 · swe-1-7 · `foam-quince`
+### 2026-09-25 08:28 AEST · Devin 3000.11.3 · swe-1-7 · `foam-quince`
 
 > Can you make a root configuration file for HYDRODYNAMICS-FIN, using CLAUDE.MD as a base for understanding the wiki, as well as a base for understanding the content of the project. Then
 >   taking note that the main function of this agent will be as an auditor of code, so develop an efficient protocol, returning initial Critical X | Warning X | Suggestions X, and the same   
 >   after it has been fixed. Have a look at the already existing SQA loop in the wiki to see what tools you can use
 
-### 2026-09-24 22:31 · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
+### 2026-09-25 08:31 AEST · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
 
 > Go for it
 
-### 2026-09-24 22:31 · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
+### 2026-09-25 08:31 AEST · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
 
 > Carry out the plan
 
-### 2026-09-24 22:35 · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
+### 2026-09-25 08:35 AEST · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
 
 > Do no run an aduti now
 
-### 2026-09-24 22:35 · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
+### 2026-09-25 08:35 AEST · agy · Gemini 3.8 Flash (High) · `9b3bc2ea`
 
 > Just make the required documents around this gemini
 
-### 2026-09-24 22:36 · Devin 3000.11.3 · swe-1-7 · `foam-quince`
+### 2026-09-25 08:36 AEST · Devin 3000.11.3 · swe-1-7 · `foam-quince`
 
 > Do not run an audit now
 
-### 2026-09-24 22:42 · Claude Code 2.1.281 · claude-opus-5-5 · `50ab8ea9` · `main`
+### 2026-09-25 08:42 AEST · Claude Code 2.1.281 · claude-opus-5-5 · `50ab8ea9` · `main`
 
 > Have a look at the new AGENTS.md and GEMINI.md, understand what agy cli and devin cli require in the config files through research, then edit these. Add any necessary information not already included. These will act as a second source for testing my code produced, but have less tokens. Ensure they can do this process as efficiently as possible. Make the same infrastructure for Career Directory
 
-### 2026-09-24 22:46 · Claude Code 2.1.281 · claude-opus-5-5 · `50ab8ea9` · `main`
+### 2026-09-25 08:46 AEST · Claude Code 2.1.281 · claude-opus-5-5 · `50ab8ea9` · `main`
 
 > Have a look at the new AGENTS.md and GEMINI.md, understand what agy cli and devin cli require in the config files through research, then edit these. Add any necessary information not already included. These will act as a second source for testing my code produced, but have less tokens. Ensure they can do this process as efficiently as possible. Make the same infrastructure for Career Directory.
 
-### 2026-09-25 02:25 · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
+### 2026-09-25 12:25 AEST · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
 
 > Can you edit the AGENTS.md and GEMINI.md such that they can also edit my files, they should carry out the audit AND the fix
 
-### 2026-09-25 02:27 · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
+### 2026-09-25 12:27 AEST · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
 
 > Include similar to what we use for Claude, a prompt extractor for both agy cli and devin, that extracts the prompts i give each. And include the model and cli used next to each
 
-### 2026-09-25 02:28 · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
+### 2026-09-25 12:28 AEST · Claude Code 2.1.282 · claude-opus-5-5 · `3e63d930` · `master`
 
 > Make sure, that even if I have opened the UNIVERSITY directory, if they are working on HYDRODYNAMICS-FIN, they are included
 
-### 2026-09-26 23:56 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 09:56 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > Also make sure you include this conversation into HYDRODYNAMICS FIN AI use, as it will affect that
 
-### 2026-09-26 23:59 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 09:59 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > The point of integrating the sqa-loop skill and sqa-lead for them is SOLELY so then they know what tools are available to them, and can test the code better, do not give them hard rules to follow and anything that will waste their usage, I want it to be a relatively cheap process for their tokens
 
-### 2026-09-27 00:11 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 10:11 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > Make sure there are also no questions to ask me on it, so if i run it at night, it will be completely finished in the morning
 
-### 2026-09-27 00:25 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 10:25 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > Allow it
 
-### 2026-09-27 00:26 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 10:26 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > Go for it (on accept edits)
 
-### 2026-09-27 00:34 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 10:34 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > Can yu check the dates that you have put into the AI-USE, some of them seem off,
 
-### 2026-09-27 00:36 · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
+### 2026-09-27 10:36 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `1d4adb88` · `master`
 
 > So is it in UTC not local?
 
-### 2026-09-28 23:00 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:00 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > Could you give me a summary of how the last MMA3001 ingest was done?
 
-### 2026-09-28 23:01 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:01 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > We used the colab agy extension correct?
 
-### 2026-09-28 23:03 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:03 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > Where were we with the extract of data from SWD, what had we done? and what needed to be done?
 
-### 2026-09-28 23:06 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:06 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > What was the plan for the input and output of the project?
 
-### 2026-09-28 23:09 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:09 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > Could you add to the relevant docs (AI-USE.md etc.) any changes we've made to the SQA process through incorporating devin and agy clis?
 
-### 2026-09-28 23:10 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:10 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > then commit
 
-### 2026-09-28 23:13 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:13 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > What are the current issues with the batch driver Item 3?
 
-### 2026-09-28 23:29 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:29 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > The plan was to essentially be able to predict a boards response to the surface at any drift angle and at any roll angle correct? Where were we with this process
 
-### 2026-09-28 23:38 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:38 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > So would Roll angle count as an independent variable?
 
-### 2026-09-28 23:42 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:42 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > Does the project allow for computed data as an input? Is it stated or should I check?
 
-### 2026-09-28 23:45 · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
+### 2026-09-29 09:45 AEST · Claude Code 2.1.283 · claude-opus-5-5 · `69d0bedf` · `master`
 
 > Does SWD state a no-computed data rule in its docs?
 
-### 2026-09-29 06:46 · Claude Code 2.1.284 · claude-opus-5-5 · `90afee07` · `master`
+### 2026-09-29 16:46 AEST · Claude Code 2.1.284 · claude-opus-5-5 · `90afee07` · `master`
 
 > Can you update the AI-USE file in HYDRODYNAMICS-FIN, it seems to be very behind. CHeck why that is, what the issue is, which prompts would have been missed, and fix the issue.
+
+### 2026-09-29 17:02 AEST · Claude Code 2.1.284 · claude-opus-5-5 · `90afee07` · `master`
+
+> Can we convert the time to AEST, it does not mean much if in UTC
 
 <!-- prompts:end -->

@@ -56,6 +56,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CLAUDE_PROJECTS = Path.home() / ".claude" / "projects"
@@ -82,6 +83,11 @@ _BARE_COMMAND = re.compile(r"^/[\w:-]+\s*$")
 _AGY_REQUEST = re.compile(r"<USER_REQUEST>(.*?)</USER_REQUEST>", re.S)
 _AGY_MODEL_SWITCH = re.compile(r"`Model Selection` from .+? to (.+?)\.\s+No need", re.S)
 _AGY_MODEL_ID = re.compile(rb"(?:gemini|claude|gpt)-[a-z0-9][\w.-]*")
+
+# Every CLI records UTC; the appendix shows Melbourne wall-clock time (Monash Clayton),
+# labelled AEST or AEDT per timestamp so daylight saving is never ambiguous.
+LOCAL = ZoneInfo("Australia/Melbourne")
+_FMT = "%Y-%m-%d %H:%M %Z"
 
 BEGIN = "<!-- prompts:begin -->"
 END = "<!-- prompts:end -->"
@@ -254,7 +260,7 @@ def _finish(session: Session, turns: list[_Turn], home: Path | None) -> Session:
         prompt.text = redact(prompt.text, home)
         if _SENSITIVE.search(prompt.text):
             print(
-                f"WARNING: {prompt.cli} prompt at {prompt.when:%Y-%m-%d %H:%M} in {session.id} "
+                f"WARNING: {prompt.cli} prompt at {prompt.when.astimezone(LOCAL):{_FMT}} in {session.id} "
                 f"matches a sensitive pattern -- review before committing",
                 file=sys.stderr,
             )
@@ -418,13 +424,13 @@ def render(sessions: list[Session]) -> str:
     prompts = sorted((p for s in sessions for p in s.prompts), key=lambda p: p.when)
     if not prompts:
         return "_No prompts found._\n"
-    fmt = "%Y-%m-%d %H:%M"
     per_cli = Counter(p.cli for p in prompts)
     out = [
         f"{len(prompts)} prompts across {len(sessions)} sessions "
         f"({', '.join(f'{cli} {n}' for cli, n in sorted(per_cli.items()))}), "
-        f"{prompts[0].when:%Y-%m-%d} to {prompts[-1].when:%Y-%m-%d}. "
-        "Timestamps are UTC, as recorded by each CLI. A session opened outside the repo "
+        f"{prompts[0].when.astimezone(LOCAL):%Y-%m-%d} to {prompts[-1].when.astimezone(LOCAL):%Y-%m-%d}. "
+        "Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight "
+        "saving), converted from the UTC each CLI records. A session opened outside the repo "
         "contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. "
         "A session whose transcript the CLI has since deleted is carried forward from the "
         "previous appendix. Excluded as not about this repo: "
@@ -439,13 +445,13 @@ def render(sessions: list[Session]) -> str:
         out.append(
             f"| `{s.id}` | {s.cli} | {', '.join(sorted(s.versions)) or '?'} "
             f"| {', '.join(sorted(s.models)) or '?'} | {s.scope} "
-            f"| {first.when:{fmt}} | {last.when:{fmt}} | {len(s.prompts)} |"
+            f"| {first.when.astimezone(LOCAL):{_FMT}} | {last.when.astimezone(LOCAL):{_FMT}} | {len(s.prompts)} |"
         )
     out.append("")
     for p in prompts:
         branch = f" · `{p.branch}`" if p.branch else ""
         cli = f"{p.cli} {p.version}" if p.version else p.cli
-        out.append(f"### {p.when:{fmt}} · {cli} · {p.model or '?'} · `{p.session}`{branch}")
+        out.append(f"### {p.when.astimezone(LOCAL):{_FMT}} · {cli} · {p.model or '?'} · `{p.session}`{branch}")
         out.append("")
         out.extend(f"> {line}" if line else ">" for line in p.text.splitlines())
         out.append("")
@@ -454,15 +460,26 @@ def render(sessions: list[Session]) -> str:
 
 _ROW = re.compile(r"^\| `([^`]+)` \| ([^|]+) \| ([^|]+) \| ([^|]+) \| ([^|]+) \|")
 _HEADING = re.compile(
-    r"^### (\d{4}-\d\d-\d\d \d\d:\d\d) · (.+?) · (.+?) · `([^`]+)`(?: · `([^`]*)`)?$"
+    r"^### (\d{4}-\d\d-\d\d \d\d:\d\d)(?: (AEST|AEDT))? · (.+?) · (.+?) · `([^`]+)`(?: · `([^`]*)`)?$"
 )
+
+
+def _parse_heading_time(when: str, zone: str | None) -> datetime:
+    naive = datetime.strptime(when, "%Y-%m-%d %H:%M")
+    if zone is None:
+        return naive.replace(tzinfo=timezone.utc)
+    local = naive.replace(tzinfo=LOCAL)
+    # The hour repeated when daylight saving ends: the label says which of the two it was.
+    local = local if local.tzname() == zone else local.replace(fold=1)
+    # Normalised to UTC: an ambiguous local time never compares equal across zones (PEP 495).
+    return local.astimezone(timezone.utc)
 
 
 def parse_appendix(text: str) -> list[Session]:
     """Read a rendered appendix back into sessions -- the inverse of :func:`render`.
 
-    Only the text between the markers is read. Times come back at minute resolution in
-    UTC, which is all the appendix records.
+    Only the text between the markers is read. Times come back at minute resolution. A
+    heading labelled AEST/AEDT is Melbourne time; an unlabelled one predates that and is UTC.
     """
     start, stop = text.find(BEGIN), text.find(END)
     block = text[start + len(BEGIN): stop] if 0 <= start < stop else text
@@ -488,10 +505,10 @@ def parse_appendix(text: str) -> list[Session]:
         heading = _HEADING.match(line)
         if heading:
             close()
-            when, cli_version, model, sid, branch = heading.groups()
+            when, zone, cli_version, model, sid, branch = heading.groups()
             cli = next(c for c in _CLIS if cli_version == c or cli_version.startswith(c + " "))
             current = Prompt(
-                when=datetime.strptime(when, "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc),
+                when=_parse_heading_time(when, zone),
                 session=sid, branch=branch or "", text="", cli=cli,
                 version=cli_version[len(cli):].strip(), model="" if model == "?" else model,
             )

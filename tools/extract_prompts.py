@@ -490,7 +490,9 @@ def parse_appendix(text: str) -> list[Session]:
     def close() -> None:
         if current is not None:
             current.text = "\n".join(body)
-            sessions[current.session].prompts.append(current)
+            sessions.setdefault(
+                current.session, Session(id=current.session, cli=current.cli)
+            ).prompts.append(current)
 
     for line in block.splitlines():
         row = _ROW.match(line)

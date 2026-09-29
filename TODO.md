@@ -81,7 +81,7 @@ expansion is manual** (no `Expand-SwdTreeItem`, so no new SQA gate on the UIA la
 | L.4g | **Round 4 — one-token S28 fix, no fixer/verifier round** (user-approved; all 3 Warnings measured inert under a no-arg run) | ✅ subset **103/103**, directory **447/447**, PSSA+IH **0**, mutant killed by exactly the new test |
 | L.4e | QA ledger entry (`~/.claude/qa-history/swd-phase2.md` RUN 3) | ✅ 405 → 528 lines; § 5 lessons + suspects 21–25 added, 19 annotated |
 | L.4f | Efficiency Learning Brief | ✅ `~/.claude/qa-history/briefs/verify_2b-2026-09-02.md` |
-| L.5 | **USER: launch SWD, expand all 11 folders, stay on the Shape Room tab** | ⬜ blocking |
+| L.5 | **USER: launch SWD, expand all 11 folders, stay on the Shape Room tab** | ❌ **Attempted 2026-09-02, three runs (21:56 census-only, unelevated; 21:58 and 22:05 elevated), all HALTED at section B: 0 tree items.** Cause found 2026-09-29: the library tree is on the **My Library** tab, not Project, so its HALT message "folder left collapsed" was wrong. And `Select()` only **highlights**: loading needs right-click → `Open`. Both need code changes before a re-run; see [SWD/TODO.md](SWD/TODO.md) "Hand-run fact-finding" |
 | L.5b | `-CensusOnly` from the main session's Medium-integrity shell — answers **2b.6** + V1 if UIA reads cross the boundary | ⬜ needs L.5 |
 | L.6 | The sweep — **user runs it elevated**, no arguments (`-LogDir` default keeps W1/W2/W3 inert) | ⬜ needs L.5 |
 | L.7 | Write `LIVE-RUN-2b-FINDINGS.md`, update this file and [`CLAUDE.md`](CLAUDE.md) § 9 | ⬜ |

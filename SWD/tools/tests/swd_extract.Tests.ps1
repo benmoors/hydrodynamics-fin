@@ -198,6 +198,24 @@ Describe 'the script under test' {
         }, $true)
         $calls.Count | Should -Be 0
     }
+    It 'deletes the completion sentinel only AFTER the -TrustCurrentLibrary exit (E84)' {
+        # Above the exit, a trust-only run deleted SWD/data/extract_manifest.json.
+        $errs = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($script:Target, [ref]$null, [ref]$errs)
+        $trustExit = $ast.FindAll({
+            param($x)
+            $x -is [System.Management.Automation.Language.IfStatementAst] -and
+            $x.Clauses[0].Item1.Extent.Text -match '^\$TrustCurrentLibrary$'
+        }, $true)
+        $trustExit.Count | Should -Be 1
+        $deletes = $ast.FindAll({
+            param($x)
+            $x -is [System.Management.Automation.Language.CommandAst] -and
+            $x.GetCommandName() -eq 'Remove-Item' -and $x.Extent.Text -match '\$manifestPath'
+        }, $true)
+        $deletes.Count | Should -Be 1
+        $deletes[0].Extent.StartOffset | Should -BeGreaterThan $trustExit[0].Extent.EndOffset
+    }
     It 'does not export shaper_name' {
         $src = Get-Content -Raw -LiteralPath $script:Target
         ([regex]::Matches($src, 'shaper_name')).Count | Should -BeGreaterThan 0   # the header explains why

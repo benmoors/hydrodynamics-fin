@@ -1230,3 +1230,49 @@ The 2026-09-29 hand-test scans were for testing only; Benjamin's decision is tha
 them in (778 rows instead of 720). Before regenerating `SWD/data/`, either exclude these two by name
 or move their reports out of the library by hand. The library is Benjamin's, so Claude never deletes
 from it.
+
+---
+
+## Fact-finding round 2, 2026-09-30 — fins are not a scan input
+
+- **Test:** `blueTreck_Copy_4` (all fins removed; `.fynbs` 631,847 B) against `blueTreck_Copy_3`
+  (quad, 1,576,313 B), same hull. Scratch extraction: all 53 operating points and all 470 element
+  rows are identical in every physical column; only `board_speed_setting_ms` differs.
+  **Fins do not enter the static hydroscan.** This matches the file structure: reports carry only
+  hull elements, and every `_fins_global_*` field is `[NonSerialized]`.
+- **Where fins do appear:** only in SWD's runtime solver. With Board Dynamics ON and a fin selected,
+  the Fins tab shows per-fin L/D at the *set* flow speed (e.g. 10 m/s, drift 15°, attack 14°,
+  L/D 4.27); `fins_global_*` appear while a wave plays. Nothing is saved, and fins are locked during
+  a wave.
+- **So fin forces could only ever be computed data:** `fin_polars.csv` + each fin's geometry
+  (`ailerons`) + SWD's fin model (a decompile). That is Benjamin's decision.
+  `SWD/tools/probe_fins.ps1` (read-only `ailerons` dump) is written but not SQA'd or run, and stays
+  off `SQA-LOG.md` unless that route is chosen.
+- **Test boards to keep out of the corpus:** add `blueTreck_Copy_4`.
+- **Fixed today:** E84. `swd_extract.ps1` now deletes the sentinel only after the
+  `-TrustCurrentLibrary` exit. A new regression test fails on the old order and passes on the new.
+  Not yet SQA'd (`SQA-LOG.md`).
+
+## Part B, 2026-09-30 — STL export is a sound geometry source; import is not
+
+- **Export is repeatable and consistent.**
+  - A repeat export is byte-identical.
+  - Board meshes are closed once zero-area triangles are dropped; all have 18,388 triangles, in
+    metres.
+  - `default_fish` STL volume = SWD's 44.913 L exactly.
+  - Exact point-for-point correspondence between boards is **not** established (welded vertex counts
+    differ), so any STL features have to be computed per mesh (rocker, outline, thickness), not taken
+    as vertex vectors.
+  - Fin STL works for **static fins only**.
+- **Import is lossy.** Re-importing `default_fish`'s STL and scanning it gave 37.0 L vs 44.9 L,
+  with 0 of 49 rows identical.
+  - The scan kept asking for a new board file until the board was saved inside `biblio/Boards`.
+  - **Test boards to exclude:** `Fyn_STL_board_default_fish`, `Fyn_STL_board_default_fish_5deg`,
+    `Fyn_STL_board_default_fish_10deg`, plus `blueTreck_Copy_4`.
+- **Data-integrity findings (AI-USE E86, E87):**
+  - `default_shortboard`'s stored `volume_shape_l` (24.009 L, used in training) is stale; the app
+    and its STL show 24.86 L. It is unknown which volume its scan used.
+  - The repo's reconstructed absolute dimensions for `default_fish` are 1.7% long (2171 vs 2134 mm),
+    beyond the 1.56% bound stated in `README.md` § 5 and `src/geometry.py`.
+  - STL gives exact absolute dimensions, but it describes the board *as it is now*, which need not
+    be what was scanned.

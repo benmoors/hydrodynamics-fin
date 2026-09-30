@@ -310,6 +310,148 @@ A: i deleted them
 
 Q: Does SWD warn before re-running a hydroscan on a scanned board?
 A: Runs it again, not sure what changes
+| 2026-09-30    | Claude Code (`claude-opus-5-5`), session `69d0bedf`, opened from `UNIVERSITY/`: fact-finding round 2, following a written plan (Part A fins, Part B STL) with explicit troubleshoot and change-focus rules. **Fins:** Benjamin scanned `blueTreck_Copy_4` with all fins removed; its scratch extraction equals `blueTreck_Copy_3` (quad) in all 53 operating points and 470 element rows. Fins are not a hydroscan input; they exist only in SWD's runtime solver. **STL:** export is repeatable (byte-identical) and closed once zero-area triangles are dropped, and `default_fish` volume matches SWD exactly. Import is lossy (37.0 vs 44.9 L; 0 of 49 rows identical). **Code:** fixed E84 in `SWD/tools/swd_extract.ps1` (sentinel deletion moved below the `-TrustCurrentLibrary` exit) with an AST regression test in `SWD/tools/tests/swd_extract.Tests.ps1`; wrote `SWD/tools/probe_fins.ps1` (read-only `ailerons` dump, **not run**: CLAUDE.md § 4); created `SQA-LOG.md` listing both for Benjamin's SQA pass. Recorded in the local wiki (*SWD Fin and STL Observations 2026-09-30*) and `SWD/TODO.md`. | Benjamin wanted to know whether fins and full 3D shape could be further inputs before automating | Fin effect: row-by-row comparison of two scratch extractions (every physical column identical), with the fin removal confirmed by the board file shrinking from 1,576,313 to 631,847 B. STL: SHA-256 of repeat exports; edge-manifold count; volumes against `boards.csv`. E84 test fails on the pre-fix script and passes after; the 12 sentinel-related tests pass, including an end-to-end run on an empty library; the probe parses under 5.1 and 7 and PSScriptAnalyzer reports nothing. | Prompts 2026-09-30 (§ 6); answers verbatim in the subsection below; plan `~/.claude/plans/ancient-stirring-kite.md` |
+
+### Answers given to Claude Code's questions, 2026-09-30
+
+Same handling as the 2026-09-29 subsection (§ 5 E85). Questions are paraphrased and answers are word for word; bracketed notes are Claude Code's checks.
+
+#### Round F1 — where fins live
+
+Q: How do you change a board's fins?
+A: Fins tab buttons, My Library > Fins
+
+Q: With blueTreck_Copy_3 loaded, what does the Fins tab show?
+A: [Benjamin's caveat, verbatim: "Keep in mind that this whole thing was produced by Gemini Pro with
+only 2 screenshots, thus will lack a lot of the required context. Where it says set to 0 or 1, is not
+necessarily correct at all, treat that as a step, I only press a lot of them once. You can also seem
+to import and export STLs in this tab."] The Gemini description he pasted:
+Toggleable: Fin technology radio buttons "Static" / "Dynamic ADAC System"; Dynamic ADAC size
+"Standard" / "Long Board" (greyed out when Static); Fin Base type radio buttons Fcs, Fcs2, Us Box,
+Future 1/2 (center), Future 3/4 (side), No base; Fin Base type offsets "X offset mm", "Y offset mm";
+"W mm stringer distance" (e.g. 214.99, 145.99, -10); "foil Pitch angle°"; "Toe angle°"; "Cant angle°";
+Longitudinal Position (unlabelled box below the fin diagram, e.g. 470, 360, 200); "Selected Fin
+Name" (editable, e.g. "Front left_dynamique", "Rear left_dynamique", "Right_Single_statique");
+hierarchy tree with "Statics fins" and "Dynamics Fyn"; toolbar icons for adding, duplicating,
+deleting, importing STL and exporting STL; right-panel tabs "Board Aspect", "Shape", "Fins",
+"Shaper Report".
+Read-only: set configuration "Quad" (from the tree); "Selected fin: Front left_dynamique(1)" /
+"Rear left_dynamique(0)" / "Right_Single_statique(4)"; "Option dynamics is Off"; "No Drag (dynamics
+Off)", "No Lift (dynamics Off)"; "Drift:" and "Attack:" readouts (e.g. 0°, 0.140°, -1°); "Foil Depth
+mm" (e.g. 0), "Height mm" (e.g. 120, 112), "Width mm" (e.g. 153, 110); dynamic fin text "Fin dynamic
+variable geometry system profiles and toe are changing according to flow direction"; static fin text
+"Fin static elements:" then profiles such as "(0)profile: 0006 Camber: 0..."; pop-up "Static Fin
+selected: Right_Single_statique" with a profile graphic; "ADAC SYSTEM Adaptive & Dynamic Attack &
+Camber" logo.
+
+Q: Are the fins_global_* fields in the Dynamics grid ever non-zero?
+A: During a wave non of the fins_globals are 0, they all have values, but must have a hydroscan
+beforehand to recieve the actual dynamics grid. As the wave progresses, the numbers continuously
+change, but you need to click the numbers to update this change, to see it at that time point. I do
+not know how quickly these change but you may need to run a very quick operation to extract them
+all.
+
+Q: Any fin value in the hydroscan analysis tree or scan results?
+A: No fin values
+
+#### Round F2 — where fin forces appear, and the scan test
+
+Q: "Option dynamics is Off": where is it switched on, and do numbers appear without a wave?
+A: With Board Dynamics switched on, it gives you "At Flow speed 10 m/sec, Drift = 15deg, Attack
+14deg, Efficiency Lift / Drag = 4.27. But you need to have a fin selected for this to work.
+
+Q: During a wave, does changing a fin setting change fins_global_*?
+A: Can't edit in a wave
+
+Q: How many fins does blueTreck_Copy_3 carry?
+A: 4 (quad)
+
+Q: Which single change for the scan test?
+A: I just ran a hydroscan on blueTreck_copy_4, having removed all fins
+
+[Claude Code check, 2026-09-30: blueTreck_Copy_4.fynbs 631,847 B vs Copy_3 1,576,313 B, so the
+fins were removed. Scratch extraction: all 53 operating points and all 470 element rows identical to
+Copy_3 in every physical column; only board_speed_setting_ms differs (metadata). total_mass_kg
+unchanged at 2.855926.]
+
+#### Decision and round S1 — STL export
+
+Q: Fins could only become data as computed fin forces. Pursue that?
+A: Pursue it
+
+Q: Had you changed DanielThomson_ModernPlaningHull_Copy_2's dimensions before exporting?
+A: Yes, edited
+
+Q: How does STL export behave?
+A: Fin STL export works, "For Boards under Files > Export ... STL > Export Board STL. For fins, under
+Fins tab at bottom right, you need to expand either Statics Fins or Dynamics FIns (if there are fins
+loaded for each, then press on the fin of interest and press export Export fin to STL format (3d
+print). You can also, on a sidenote, choose to export all stls in ASCII, in settings if this helps"
+
+Q: Please export default_shortboard twice, default_fish, and one fin STL.
+A: I have done them all, note down for future that you cannot export Dynamics Fins, only Statics Fins
+
+[Claude Code check, 2026-09-30, files in ~/Downloads:
+- every board STL is 919,484 B = 18,388 triangles;
+- default_shortboard exported twice: byte-identical (SHA-256 5f9f12fdc75c2930...);
+- after dropping zero-area triangles (1,768 / 1,828), both board meshes are closed (0 edges used
+  other than twice);
+- default_fish: STL volume 44.913 L = SWD volume_shape_l 44.913 L; STL L 2.1341 m, W 0.6689 m,
+  against the repo's reconstructed L 2.1710, W 0.6805 (-1.7% on both; the ratios agree);
+- default_shortboard: STL L 1.8000 m, W 0.4860 m, volume 24.858 L, against SWD volume_shape_l
+  24.009 L (+3.5%). 24.858 L is default_shortboard_Copy_3's stored volume;
+- meshes: same triangle count, broadly the same ordering (triangle-centroid x-order correlation
+  0.998, y-side agreement 100%), but welded vertex counts differ (8,312 / 8,282 / 8,198), so exact
+  point-for-point correspondence is NOT established;
+- fin Single_statique: 6,436 triangles, closed; extent 160.7 x 7.1 x 112.0 mm; signed volume
+  -0.032 L (inverted winding; |V| 32 cm3); surface 0.0190 m2.]
+
+#### Round S2/S3 — shortboard volume, fish length, STL import round trip
+
+Q: What did the window title read when you exported default_shortboard?
+A: default_shortboard reads L 1800mm, V 24.86L, width 486mm, on window with
+board:default_shortboard(1800mm)
+
+Q: What length does the title show for default_fish?
+A: About 2134 mm
+
+Q: File > Import STL Board: what does it ask for, and what happens after import?
+A: Standard file picker, "THis is a breakdown of the window that showed up from gemini: Import
+Parameters & Controls / Mesh Data: The left panel confirms the software has parsed the raw STL file
+(18,388 triangles, 55,164 nodes, 0.88 MB). / Orientation Adjustments: Buttons on the left (Rot Y,
+Invert Tail Nose, Invert Top Bottom) allow the user to correct the 3D spatial alignment of the mesh
+before finalizing the 2D curve generation. / Extraction Status: The right panel confirms the binary
+STL was successfully opened, aligned, and globally measured (Length: 2134mm, Wide: 334mm),
+positioning the primary "Apply the extracted geometry" action button to finalize the import. /
+Geometry Analysis Graphs (Tail at 0.0, Nose at 1.0) / Top Graph (Cross-Section): Displays a specific
+thickness profile-labeled "Section Tail"-showing the deck curve and rail volume against a horizontal
+zero-axis. / Middle Graph (Outline/Plan Shape): Maps the board's width curve from tail to nose. It
+plots critical dimensional nodes identifying longitudinal position (X) and half-width (w), such as
+X1067 w333. A dashed vertical line explicitly identifies the "WIDE POINT" of the outline. / Bottom
+Graph (Rocker Profile): Maps the board's side-view curvature. The red line tracks the bottom rocker,
+and the green line tracks the deck profile. The software has automatically calculated and annotated
+precise rocker depth drop-offs (in both millimeters and inches) and localized bottom angles at
+various intervals along the hull."
+
+Q: Round trip: import the default_fish STL and scan it?
+A: I ran it, it firstly opens up a Windows window for file choosing, with File name: and Save as
+type: with Fyn Boards Shaper as the only choice. I saved it to downloads, clicked the confimation
+(longer than 60mn) then it ran. During the process of doing it for a STL, you will need to make a
+new file for each drift angle, 0,2,5,etc.) take note of this. However, after those three, it bean
+not needing me to do anything, and ran through it itself. Invesitgate the files to see what happened
+there
+
+[Claude Code check, 2026-09-30:
+- Files written: Fyn_STL_board_default_fish.fynbs and _5deg.fynbs in ~/Downloads;
+  Fyn_STL_board_default_fish_10deg.fynbs in biblio/Boards. Report folders under the three names
+  hold drift 0,2 / 0,2,5 / all 11 (identical copies of the shared angles). So the save prompt
+  repeated until the board was saved inside the library (inference; to confirm).
+- Round trip (scratch extraction): the imported board has volume_shape_l 37.007 L vs default_fish
+  44.913 L (-17.6%), mass 2.590 vs 3.022 kg. 49 matched operating points, 0 identical; median ratio
+  imported/original: lift 0.897, drag 0.529, friction 0.900, contact area 0.867, roll 0.864. Water
+  differs too: rho 1025 vs 1023.
+- default_shortboard: the app shows 24.86 L = the STL volume (24.858), but the .fynbs field
+  volume_shape_l = 24.009 L. The stored field is stale for this board.]
 
 ---
 
@@ -355,6 +497,7 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-09-25 | Define Antigravity's role primarily as an SQA Code Auditor following the wiki SQA loop protocol with tiered execution to gate usage limits | Prompt 2026-09-25, "make a root configuration file for HYDRODYNAMICS-FIN... taking note that the main function of this agent will be as an auditor of code" |
 | 2026-09-26/27 | Make SQA a single unattended pass (agy, then Devin, then one final Claude `sqa-lead` + fixer whose verdict is final) instead of repeat-until-clean rounds, accepting that fixes are no longer re-verified. Also: leave a CLI out when its quota is low, never substituting another; keep agy/Devin prompts short because their tokens are scarcer; give them four hard rules but no "report, don't fix" rule for security findings; no questions mid-run | Prompts and answers 2026-09-26/27 UTC, quoted verbatim in § 2 |
 | 2026-09-29 | Keep § 6 current with no manual step: a session-end hook regenerates it and **commits it without a human reading it first**, replacing R4's review-before-commit. What remains: the hook holds, and commits nothing, when a new prompt matches a licence, registry, home-directory or tenant pattern, or when `AI-USE.md` has uncommitted edits. It never pushes, so a human still decides what reaches the public repo | Prompt 2026-09-29 (§ 6), "Set up the end-of-session hook, but make it completely hands off for me" |
+| 2026-09-30 | Pursue fin forces as **computed** data (the `fin_polars.csv` polars + each board's stored fins + SWD's fin model from a bounded decompile). The hydroscan ignores fins, so they cannot be extracted | Answer 2026-09-30 "Pursue it" (§ 2 answers subsection) |
 
 **Interview readiness** (`CLAUDE.md` R7 — nothing in the repo I cannot explain unaided). To be
 ticked by the author, not by AI:
@@ -469,6 +612,8 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E83 | 2026-09-02 | `verify_2b.ps1`'s HALT on 0 tree items: "A folder was almost certainly left collapsed … Expand all 11 folders and re-run", which `TODO.md` L.5 repeated | The tree is on SWD's **My Library** tab and the runs sat on Project. Collapsed folders would still appear as TreeItems. And `SelectionItemPattern.Select()` only highlights; loading needs right-click → `Open` | Benjamin, running SWD by hand when asked (2026-09-29) | `TODO.md` L.5; `SWD/TODO.md` "Hand-run fact-finding" |
 | E84 | 2026-09-29 | `swd_extract.ps1 -TrustCurrentLibrary` records the library "and exits without extracting", touching nothing else | With no `-OutDir` it first deletes `SWD/data/extract_manifest.json` (`:337-338`, before the trust-only exit), leaving the committed dataset without its completion sentinel | `git status` after the run showed the file deleted (self-caught, Claude Code) | `SWD/TODO.md` "Hand-run fact-finding"; restored from git; fix owed (needs SQA) |
 | E85 | 2026-09-29 | § 6 holds "every prompt given to Claude Code for this repository, verbatim" | Answers given through Claude Code's question tool (AskUserQuestion) are stored as tool results, not prompts, and `tools/extract_prompts.py` never reads them. The 2026-09-29 hand-run answers — the source of every finding in that day's § 2 entries — were missing | Benjamin asked for his answers to be listed here, and a check found no handling for them in the extractor | § 2 "Answers given to Claude Code's questions, 2026-09-29" (copied in by hand); an extractor fix is owed |
+| E86 | 2026-09-30 | `README.md` § 5 and `src/geometry.py`: reconstructed absolute dimensions "carry a 1.56 % calibration bound" | `default_fish` reconstructs at 2171 mm long; SWD's own window title and its STL export say 2134 mm (1.7% long; width likewise). The bound is the spread of the shape coefficient over the two calibration boards, not a bound on other boards | STL export compared with the repo's reconstruction, then Benjamin read the title length (2026-09-30) | not yet corrected in `README.md` / `src/geometry.py`; `SWD/TODO.md` Part B |
+| E87 | 2026-09-30 | `volume_shape_l`, read from each board file, is the board's volume (a model feature) | For `default_shortboard` the file stores 24.009 L while SWD displays 24.86 L and its STL encloses 24.858 L. The stored field can be stale, and which volume its hydroscan used is unknown | STL export volume check, confirmed by Benjamin reading the app (2026-09-30) | callout on the wiki *SWD Operating Points Dataset*; `SWD/TODO.md` Part B; not yet corrected in the training table |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn

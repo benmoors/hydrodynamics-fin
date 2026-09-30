@@ -331,12 +331,6 @@ foreach ($candidate in @($OutDir, $canonOut)) {
 $OutDir = $canonOut
 if (-not (Test-Path -LiteralPath $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
 
-# extract_manifest.json is the completion sentinel (see .NOTES). Delete any
-# stale one up front so an aborted run cannot leave the previous run's manifest
-# vouching for a half-replaced set of CSVs.
-$manifestPath = Join-Path $OutDir 'extract_manifest.json'
-if (Test-Path -LiteralPath $manifestPath) { Remove-Item -LiteralPath $manifestPath -Force }
-
 # --- Provenance gate --------------------------------------------------------
 # BinaryFormatter.Deserialize on an attacker-controlled stream is arbitrary code
 # execution in this process, at this user's privilege. Microsoft's position is
@@ -451,6 +445,15 @@ if ($TrustCurrentLibrary) {
     Write-Host 'Nothing was extracted. Re-run without -TrustCurrentLibrary to extract.'
     return
 }
+
+# extract_manifest.json is the completion sentinel (see .NOTES). Delete any
+# stale one before anything is written, so an aborted run cannot leave the
+# previous run's manifest vouching for a half-replaced set of CSVs.
+# It sits BELOW the -TrustCurrentLibrary exit on purpose: above it, a trust-only
+# run ("Nothing was extracted") deleted SWD/data/extract_manifest.json and left
+# the committed dataset with no sentinel (AI-USE.md E84, 2026-09-29).
+$manifestPath = Join-Path $OutDir 'extract_manifest.json'
+if (Test-Path -LiteralPath $manifestPath) { Remove-Item -LiteralPath $manifestPath -Force }
 
 # --- Assembly resolution ----------------------------------------------------
 # Reports are stamped "SurfHydrodynamics, Version=1.0.0.5" but the installed

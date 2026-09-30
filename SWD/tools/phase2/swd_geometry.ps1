@@ -120,7 +120,13 @@ if ((Test-SwdGeometryMsgApi).Count -gt 0) {
 $script:GeometryAxes = @{
     Length = @{ Group = 'Board Length'; Apply = 'Apply Length'; Unit = 'mm';     Tolerance = 0.5   }
     Width  = @{ Group = 'Board Width';  Apply = 'Apply Width';  Unit = 'mm';     Tolerance = 0.5   }
-    Volume = @{ Group = 'Board Volume'; Apply = 'Apply Volume'; Unit = 'litres'; Tolerance = 0.005 }
+    Volume = @{ Group = 'Board Volume'; Apply = 'Apply Volume'; Unit = 'litres'; Tolerance = 0.005
+                # 'Apply Volume' is only the caption until the target box is first edited; SWD
+                # then renames the button to 'Set <N> liters volume to board' for the rest of the
+                # session, which is what users normally see (Benjamin, 2026-09-30: "Apply volume
+                # never existed"). Matching only the literal made the whole panel unresolvable,
+                # so every axis - Length included - was refused after one volume edit.
+                ApplyLike = '^Set \S+ liters volume to board$' }
 }
 
 # The Configuration label's fields, in one place: ConvertFrom-SwdConfigurationText
@@ -252,7 +258,8 @@ function Resolve-SwdGeometryControl {
         $edits = @($within | Where-Object {
             $_.Class -like '*EDIT*' -and [bool]$_.Enabled -and [bool]$_.Visible })
         $buttons = @($within | Where-Object {
-            $_.Class -like '*BUTTON*' -and $_.Text -eq $spec.Apply })
+            $_.Class -like '*BUTTON*' -and $_.Text -and
+            ($_.Text -eq $spec.Apply -or ($spec.ContainsKey('ApplyLike') -and $_.Text -cmatch $spec.ApplyLike)) })
 
         if ($edits.Count -ne 1)   { $missing += "$axis enabled EDIT: found $($edits.Count)" }
         if ($buttons.Count -ne 1) { $missing += "$axis '$($spec.Apply)' button: found $($buttons.Count)" }

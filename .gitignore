@@ -93,6 +93,8 @@ SWD/tools/tests/_mutants/
 # were refuted; see AI-USE.md errors ledger. Kept local, not published.
 FABLE-RES.md
 GEM-RES.docx
+# 2026-09-30 automation research reports (Claude/Fable, Gemini); verdicts in the wiki.
+Research for Automation/
 
 # Pester's -CI switch writes an NUnit report to the working directory. It embeds
 # user=, user-domain= and machine-name=, so it is a repo rule R9 leak, not just

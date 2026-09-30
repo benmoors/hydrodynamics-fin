@@ -229,6 +229,7 @@ the item's full narrative in the body.
 | "what inputs can I use", "what features", "how does this map to the paper's equations", "the IMU channels" | `wiki-query`, or wiki *SWD Operating Points Dataset*; the full catalogue is in [SWD/docs/project-io-spec.md](SWD/docs/project-io-spec.md) |
 | "what went wrong in the live run", "the SQA findings from the scan" | [SWD/tools/phase2/LIVE-RUN-FINDINGS.md](SWD/tools/phase2/LIVE-RUN-FINDINGS.md) |
 | "the scan dialogs", "what dialogs does the scanner raise" | [SWD/tools/phase2/SCAN-FLOW.md](SWD/tools/phase2/SCAN-FLOW.md) |
+| "the probes", "fiddling", "the side-effect rig", "the evening run" | [SWD/docs/plans/SWD-AUTOMATION-PROBES.md](SWD/docs/plans/SWD-AUTOMATION-PROBES.md); evidence in wiki *SWD Automation Technique Register* |
 | "the AI acknowledgement", "AI use", "the prompt log", "what did the AI get wrong" | [AI-USE.md](AI-USE.md), rules in section 3 and `.claude/rules/ai-use-requirements.md` |
 | "what is next", "what should I do now" | this section, then the [worklist notes](SWD/docs/worklist/worklist.base) |
 | "the memory", "what do you remember", "tidy the notes", "broken links" | [memory/MEMORY.md](memory/MEMORY.md) and `/obsidian-memory` |

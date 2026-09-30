@@ -231,6 +231,23 @@ Describe 'Resolve-SwdGeometryControl' {
         $r.Length.Edit | Should -Not -Be 303
     }
 
+    It 'resolves the Volume apply button after SWD renames it (live 2026-09-30)' {
+        $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 512) { $_.Text = 'Set 10 liters volume to board' }; $_ })
+        $r = Resolve-SwdGeometryControl -Controls $c
+        $r.Volume.Apply | Should -Be 512
+        $r.Missing | Should -BeNullOrEmpty
+        $r.Length.Apply | Should -Be 304
+    }
+    It 'accepts the renamed caption for any target value but no lookalike' {
+        foreach ($t in 'Set 11 liters volume to board', 'Set 40.7 liters volume to board') {
+            $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 512) { $_.Text = $t }; $_ })
+            (Resolve-SwdGeometryControl -Controls $c).Volume.Apply | Should -Be 512
+        }
+        foreach ($t in 'Set 10 liters volume to board and save', 'set 10 liters volume to board', 'Set  liters volume to board') {
+            $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 512) { $_.Text = $t }; $_ })
+            (Resolve-SwdGeometryControl -Controls $c).Volume.Apply | Should -BeNullOrEmpty
+        }
+    }
     It 'matches the Volume group by prefix, since its caption carries the value' {
         $r = Resolve-SwdGeometryControl -Controls (New-GeometryFixture)
         $r.Volume.Apply | Should -Be 512

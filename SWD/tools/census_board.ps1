@@ -322,15 +322,6 @@ if ($AllowUntrustedFiles) {
     Write-Warning '****************************************************************'
 }
 
-function Get-Sha256Hex {
-    # Get-FileHash is NOT available in this Windows PowerShell 5.1 host - measured,
-    # it throws CommandNotFoundException - so hash through .NET directly.
-    param([Parameter(Mandatory)][string] $Path)
-    $sha = [Security.Cryptography.SHA256]::Create()
-    try { return [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($Path))).Replace('-', '') }
-    finally { $sha.Dispose() }
-}
-
 function Test-SwdStreamTrusted {
     <# SHA-256 of the open stream against the approved set. Hashing from the open
        stream and seeking to 0 eliminates TOCTOU between hash check and deserialisation. #>
@@ -342,12 +333,6 @@ function Test-SwdStreamTrusted {
     if ($script:TrustedHashes.Contains($h)) { return $true }
     [void]$script:UntrustedSeen.Add((Split-Path -Leaf $Path))
     return $false
-}
-
-function Test-SwdFileTrusted {
-    param([Parameter(Mandatory)][string] $Path)
-    if ($AllowUntrustedFiles) { return $true }
-    return $script:TrustedHashes.Contains((Get-Sha256Hex -Path $Path))
 }
 
 # --- Assembly resolution -----------------------------------------------------

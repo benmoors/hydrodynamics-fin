@@ -415,17 +415,6 @@ function Test-SwdStreamTrusted {
     return $false
 }
 
-function Test-SwdFileTrusted {
-    <# SHA-256 of the content against the approved set. A hash, not a path: a path
-       allowlist would still trust a file whose bytes changed underneath it. #>
-    param([Parameter(Mandatory)][string] $Path)
-    if ($AllowUntrustedFiles) { return $true }
-    $h = Get-Sha256Hex -Path $Path
-    if ($script:TrustedHashes.Contains($h)) { return $true }
-    [void]$script:UntrustedSeen.Add((Get-LibraryRelativePath -Path $Path))
-    return $false
-}
-
 if ($TrustCurrentLibrary) {
     # -Include is unreliable beside -LiteralPath, so filter on the extension.
     $allFyn = @(Get-ChildItem -LiteralPath $BiblioPath -Recurse -File -ErrorAction SilentlyContinue |
@@ -914,8 +903,10 @@ function Get-ConstantZeroColumn {
 
 function Write-CsvNoBom {
     <# CSV without a UTF-8 BOM: Python's json/csv readers choke on it.
-       Streamed rather than -join'ed: fin_polars.csv is ~100 MB of text and
-       materialising it as one string first is pure transient allocation.
+       Written line by line rather than -join'ed: fin_polars.csv is ~100 MB of text,
+       and one joined string would be a second full copy of it. The lines are NOT
+       streamed, though: 'foreach' evaluates the whole ConvertTo-Csv output before the
+       first write, so every line is in memory at once, beside the row objects (SQA S22).
        ConvertTo-Csv still does the quoting, so the bytes are unchanged. #>
     param([Parameter(Mandatory)] $Rows, [Parameter(Mandatory)][string] $Path, [string[]] $Keep = @())
     $rows  = @($Rows)
@@ -1053,7 +1044,7 @@ Write-Host "  element columns resolved: $($ELEMENT_FIELDS.Count)"
 Write-Host "`n[1/4] boards"
 $scanRoot   = Join-Path $BiblioPath 'rapports_hydro'
 $boardFiles = @(Get-ChildItem -LiteralPath (Join-Path $BiblioPath 'Boards') -Recurse -Filter *.fynbs -File)
-$boardRows  = @()
+$boardRows  = New-Object System.Collections.ArrayList
 # Ordinal, not the default case-insensitive comparer: two .fynbs differing only
 # in case are two different files on NTFS and must not collide into one entry.
 $boardIndex = New-Object 'System.Collections.Hashtable' ([StringComparer]::Ordinal)
@@ -1093,7 +1084,7 @@ foreach ($bf in $boardFiles) {
         # strings "True"/"False", which pandas reads as an object column.
         has_hydroscan     = [int]($scanCount -gt 0)
     }
-    $boardRows += $row
+    [void]$boardRows.Add($row)
     $boardIndex[$name] = $row
 }
 Write-Host "  boards parsed: $($boardRows.Count) / $($boardFiles.Count)  (failed: $boardFail)"
@@ -1114,8 +1105,10 @@ Write-Host "  with hydroscan: $(@($boardRows | Where-Object has_hydroscan).Count
 # independent observation.
 # ===========================================================================
 Write-Host "`n[2/4] hydro reports"
-$opRows      = @()
-$elemRows    = @()
+# ArrayList, not '@()' and '+=': += copies the whole array on every row, O(n^2) in the
+# row count (SQA S21; the element rows are 6,867 today and grow with every scan).
+$opRows      = New-Object System.Collections.ArrayList
+$elemRows    = New-Object System.Collections.ArrayList
 $reportFail  = 0
 $reportFiles = @()
 if (Test-Path -LiteralPath $scanRoot) {
@@ -1236,7 +1229,7 @@ foreach ($rf in $reportFiles) {
                     turn_radius_m = $radius
                 }
                 foreach ($k in $ELEMENT_FIELDS.Keys) { $er[$k] = $vals[$k] }
-                $elemRows += [pscustomobject]$er
+                [void]$elemRows.Add([pscustomobject]$er)
             }
         }
 
@@ -1262,7 +1255,7 @@ foreach ($rf in $reportFiles) {
             $scanSpeed / $radius
         } else { [double]::NaN }
 
-        $opRows += [pscustomobject][ordered]@{
+        [void]$opRows.Add([pscustomobject][ordered]@{
             board            = $boardName
             drift_deg        = $drift
             roll_case        = $ci
@@ -1289,7 +1282,7 @@ foreach ($rf in $reportFiles) {
             contact_area_m2  = $sumArea
             volume_litres    = $sumVol
             total_mass_kg    = $massKg
-        }
+        })
     }
 }
 

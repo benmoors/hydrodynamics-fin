@@ -330,14 +330,6 @@ function Test-StreamTrusted {
     return $false
 }
 
-function Test-Trusted {
-    param([string] $Path)
-    $sha = [Security.Cryptography.SHA256]::Create()
-    try { $h = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($Path))).Replace('-','') }
-    finally { $sha.Dispose() }
-    return $trusted.Contains($h)
-}
-
 # --- Assembly ----------------------------------------------------------------
 # Handler returns an already-loaded assembly and never calls LoadFrom: an
 # unguarded LoadFrom here recurses into an uncatchable StackOverflowException.

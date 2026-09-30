@@ -8,7 +8,7 @@
       - the MSAA diff, volatility set, library hash and settle decision
       - the native helper against a throwaway in-process WinForms window: MSAA walk
         (checkbox state on a FlatStyle=Standard CheckBox, the case BM_GETCHECK is blind to),
-        frame hashing with ignore rectangles, tab switching by MSAA default action.
+        frame hashing with ignore rectangles, tab switching by TCM_SETCURFOCUS.
     The live probes (T9-T14) need SWD and are exercised by running the script itself.
 #>
 
@@ -56,6 +56,95 @@ Describe 'tab allowlist' {
     It 'allows <_>' -ForEach @('Shape', 'Fins', 'SizeConfig', 'Rockers') { Test-SwdProbeAllowedTab $_ | Should -BeTrue }
     It 'refuses <_>' -ForEach @('SurfCommunity(Off)', 'CNC', 'Wave Room', 'Shaper;Report', 'Warnings(2)', '', $null) { Test-SwdProbeAllowedTab $_ | Should -BeFalse }
     It 'normalises MSAA line breaks before matching' { ConvertTo-SwdProbeLabel 'Board;Aspect' | Should -Be 'Board Aspect' }
+}
+
+Describe 'denylist holds when the allowlist is widened: more verbs, invisible characters, NFD, locale (SQA W1)' {
+    # Each caption must be refused however the allowlist was widened: with the word as a person
+    # reads it ($visible), or with the caption copied exactly, invisible characters and all.
+    It 'refuses <label>' -ForEach @(
+        @{ label = 'Scan'; text = 'Scan'; visible = 'Scan' }
+        @{ label = 'Start scan'; text = 'Start scan'; visible = 'Start scan' }
+        @{ label = 'Rescan'; text = 'Rescan'; visible = 'Rescan' }
+        @{ label = 'Hydro-Scan'; text = 'Hydro-Scan'; visible = 'Hydro-Scan' }
+        @{ label = 'Lancer le scan'; text = 'Lancer le scan'; visible = 'Lancer le scan' }
+        @{ label = 'Import'; text = 'Import'; visible = 'Import' }
+        @{ label = 'Importer'; text = 'Importer'; visible = 'Importer' }
+        @{ label = 'Duplicate'; text = 'Duplicate'; visible = 'Duplicate' }
+        @{ label = 'Dupliquer'; text = 'Dupliquer'; visible = 'Dupliquer' }
+        @{ label = 'Remove'; text = 'Remove'; visible = 'Remove' }
+        @{ label = 'Effacer'; text = 'Effacer'; visible = 'Effacer' }
+        @{ label = 'Sauvegarder'; text = 'Sauvegarder'; visible = 'Sauvegarder' }
+        @{ label = 'Reinitialiser, unaccented'; text = 'Reinitialiser'; visible = 'Reinitialiser' }
+        @{ label = 'Reinitialiser, e-acute'; text = ('R' + [char]0x00E9 + 'initialiser'); visible = ('R' + [char]0x00E9 + 'initialiser') }
+        @{ label = 'REINITIALISER, upper-case E-acute'; text = ('R' + [char]0x00C9 + 'INITIALISER'); visible = ('R' + [char]0x00C9 + 'INITIALISER') }
+        @{ label = 'Deverrouiller, unaccented'; text = 'Deverrouiller'; visible = 'Deverrouiller' }
+        @{ label = 'Deverrouiller, e-acute'; text = ('D' + [char]0x00E9 + 'verrouiller'); visible = ('D' + [char]0x00E9 + 'verrouiller') }
+        @{ label = 'soft hyphen inside Delete'; text = ('Del' + [char]0x00AD + 'ete'); visible = 'Delete' }
+        @{ label = 'zero-width space inside Delete'; text = ('Del' + [char]0x200B + 'ete'); visible = 'Delete' }
+        @{ label = 'word joiner inside Delete'; text = ('Del' + [char]0x2060 + 'ete'); visible = 'Delete' }
+        @{ label = 'BOM inside Delete'; text = ('Del' + [char]0xFEFF + 'ete'); visible = 'Delete' }
+        @{ label = 'combining grapheme joiner (Mn, not Cf) inside Delete'; text = ('Del' + [char]0x034F + 'ete'); visible = 'Delete' }
+        @{ label = 'variation selector inside Delete'; text = ('Del' + [char]0xFE0F + 'ete'); visible = 'Delete' }
+        @{ label = 'NUL inside Delete'; text = ('Del' + [char]0x0000 + 'ete'); visible = 'Delete' }
+        @{ label = 'C1 control inside Delete'; text = ('Del' + [char]0x0085 + 'ete'); visible = 'Delete' }
+        @{ label = 'astral tag character inside Delete'; text = ('Del' + [char]::ConvertFromUtf32(0xE0020) + 'ete'); visible = 'Delete' }
+        @{ label = 'astral format character (Kaithi number sign) inside Delete'; text = ('Del' + [char]::ConvertFromUtf32(0x110BD) + 'ete'); visible = 'Delete' }
+        @{ label = 'zero-width joiner inside Save'; text = ('Sa' + [char]0x200D + 've'); visible = 'Save' }
+        @{ label = 'soft hyphen inside Hydro-Scan'; text = ('Hydro' + [char]0x00AD + 'Scan'); visible = 'Hydro-Scan' }
+        @{ label = 'Creer decomposed (e + combining acute, NFD)'; text = ('Cre' + [char]0x0301 + 'er'); visible = ('Cr' + [char]0x00E9 + 'er') }
+        @{ label = 'Creer with a joiner between e and its combining acute'; text = ('Cre' + [char]0x200D + [char]0x0301 + 'er'); visible = ('Cr' + [char]0x00E9 + 'er') }
+    ) {
+        $saved = $script:ProbeAllowedButtons
+        try {
+            foreach ($entry in @($visible, $text)) {
+                $script:ProbeAllowedButtons = @($saved) + $entry
+                Test-SwdProbeAllowedButton $text | Should -BeFalse
+            }
+            # The denylist itself sees the word, not just the allowlist refusing a spelling.
+            Get-SwdProbeDenyMatch (ConvertTo-SwdProbeLabel $text) | Should -Not -BeNullOrEmpty
+        } finally { $script:ProbeAllowedButtons = $saved }
+    }
+    It 'the allowlist is exact (ordinal): refuses <label>' -ForEach @(
+        # Visible letters the old linguistic -ccontains ignored (measured: 2,534 BMP code points).
+        @{ label = 'Apply Length with U+0525 inside'; text = ('Apply Len' + [char]0x0525 + 'gth'); entry = '' }
+        @{ label = 'Apply Length with U+A7AA inside'; text = ('Apply ' + [char]0xA7AA + 'Length'); entry = '' }
+        @{ label = 'Delete with U+0525 inside, allowlist widened with Delete'; text = ('Del' + [char]0x0525 + 'ete'); entry = 'Delete' }
+    ) {
+        $saved = $script:ProbeAllowedButtons
+        try {
+            if ($entry) { $script:ProbeAllowedButtons = @($saved) + $entry }
+            Test-SwdProbeAllowedButton $text | Should -BeFalse
+        } finally { $script:ProbeAllowedButtons = $saved }
+    }
+    It 'the tab allowlist is exact (ordinal)' {
+        Test-SwdProbeAllowedTab ('Fi' + [char]0x0525 + 'ns') | Should -BeFalse
+    }
+    It 'refuses <_> under a Turkish culture, where (?i) folds I to a dotless i' -ForEach @('IMPORT', 'SUPPRIMER', 'Import') {
+        $saved = $script:ProbeAllowedButtons; $culture = [Threading.Thread]::CurrentThread.CurrentCulture
+        try {
+            [Threading.Thread]::CurrentThread.CurrentCulture = [Globalization.CultureInfo]::GetCultureInfo('tr-TR')
+            $script:ProbeAllowedButtons = @($saved) + $_
+            Test-SwdProbeAllowedButton $_ | Should -BeFalse
+        } finally { [Threading.Thread]::CurrentThread.CurrentCulture = $culture; $script:ProbeAllowedButtons = $saved }
+    }
+    It 'normalises invisible characters away and composes to NFC (compared ordinally)' {
+        # Should -BeExactly is itself linguistic and passes with the soft hyphen still present.
+        [string]::Equals((ConvertTo-SwdProbeLabel ('Del' + [char]0x00AD + 'ete')), 'Delete', [StringComparison]::Ordinal) | Should -BeTrue
+        [string]::Equals((ConvertTo-SwdProbeLabel ('Cre' + [char]0x0301 + 'er')), ('Cr' + [char]0x00E9 + 'er'), [StringComparison]::Ordinal) | Should -BeTrue
+        [string]::Equals((ConvertTo-SwdProbeLabel ('&Apply' + [char]0x00A0 + ' Length ')), 'Apply Length', [StringComparison]::Ordinal) | Should -BeTrue
+    }
+    It 'still allows every allowlisted button caption' {
+        foreach ($c in $script:ProbeAllowedButtons) { Test-SwdProbeAllowedButton $c | Should -BeTrue -Because $c }
+    }
+    It 'still allows every allowlisted tab' {
+        foreach ($t in $script:ProbeAllowedTabs) { Test-SwdProbeAllowedTab $t | Should -BeTrue -Because $t }
+    }
+    It 'refuses an ill-formed caption (<label>) rather than waving it through' -ForEach @(
+        @{ label = 'a lone surrogate'; text = ('Apply ' + [char]0xD800 + 'Length') }
+        @{ label = 'a noncharacter'; text = ('Apply Length' + [char]0xFFFE) }
+    ) {
+        { Assert-SwdProbeButton -Handle 42 -TextReader { param($h) $text }.GetNewClosure() } | Should -Throw
+    }
 }
 
 Describe 'board guard' {
@@ -345,6 +434,237 @@ Describe 'paths and output' {
     }
 }
 
+Describe 'the library check runs on a stopped or failed run too (SQA W3)' {
+    BeforeAll {
+        function Get-Summary {
+            $f = Get-ChildItem -LiteralPath $script:LogRoot -Recurse -Filter 'summary.json' | Select-Object -First 1
+            Get-Content -Raw -LiteralPath $f.FullName | ConvertFrom-Json
+        }
+    }
+    BeforeEach {
+        $script:LogRoot = Join-Path $TestDrive ('w3-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+        New-Item -ItemType Directory -Force -Path $script:LogRoot | Out-Null
+        $script:HashN = 0
+        Mock Get-SwdProbeLogDir { $script:LogRoot }
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Process = [pscustomobject]@{ Id = $PID }; Handle = 1; Title = 'FYN Shaper Wave Dynamics   <Board: x_Copy_1(2000mm)>' } }
+        # Never the real library: every hash is a stub, and it differs between calls.
+        Mock Get-SwdLibraryHash { $script:HashN++; @{ 'Boards\a.fynbs' = "H$($script:HashN)" } }
+    }
+    It 'still re-hashes and records the library after a STOP, and the stop is what surfaces' {
+        Mock Invoke-SwdProbeT12 { throw 'SWD-PROBE-STOPPED: stop file present' }
+        { Invoke-SwdProbe -Name T12 3>$null } | Should -Throw 'SWD-PROBE-STOPPED*'
+        Should -Invoke Get-SwdLibraryHash -Times 2 -Exactly
+        $s = Get-Summary
+        $s.Outcome | Should -Be 'error'
+        $s.Library.Ok | Should -BeFalse
+        @($s.Library.Changed) | Should -Be @('Boards\a.fynbs')
+    }
+    It 'a failing re-hash never replaces the original error, and is recorded as not re-checked' {
+        Mock Invoke-SwdProbeT12 { throw 'probe crashed' }
+        Mock Get-SwdLibraryHash {
+            $script:HashN++
+            if ($script:HashN -ge 2) { throw ("cannot read " + (Join-Path $env:USERPROFILE 'x.fynbs')) }
+            @{ 'a' = 'x' }
+        }
+        { Invoke-SwdProbe -Name T12 3>$null } | Should -Throw 'probe crashed'
+        $s = Get-Summary
+        $null -eq $s.Library.Ok | Should -BeTrue
+        $s.Library.Error | Should -Match 'cannot read'
+        $s.Library.Error | Should -Not -Match ([regex]::Escape($env:USERPROFILE))
+    }
+    It 'records the library on a completed run as before' {
+        Mock Get-SwdLibraryHash { @{ 'a' = 'same' } }
+        Mock Invoke-SwdProbeT12 { [pscustomobject]@{ Exact = $true } }
+        $r = Invoke-SwdProbe -Name T12
+        $r.Outcome | Should -Be 'completed'
+        $r.Library.Ok | Should -BeTrue
+        Should -Invoke Get-SwdLibraryHash -Times 2 -Exactly
+    }
+    It 'a failure before the library was hashed surfaces as itself, not as a StrictMode error from finally' {
+        Mock Get-SwdProbeMain { throw 'no SWD window' }
+        { Invoke-SwdProbe -Name T12 3>$null } | Should -Throw 'no SWD window'
+        Should -Invoke Get-SwdLibraryHash -Times 0 -Exactly
+        (Get-Summary).Outcome | Should -Be 'error'
+    }
+}
+
+Describe 'a missing library root is reported without the username or tenant (SQA W4)' {
+    It 'redacts <label>' -ForEach @(
+        @{ label = 'a plain OneDrive path'; shape = 'plain' }
+        @{ label = 'a forward-slash spelling'; shape = 'slash' }
+        @{ label = 'an upper-case spelling'; shape = 'upper' }
+        @{ label = 'a trailing backslash'; shape = 'trail' }
+    ) {
+        $saved = $env:OneDriveCommercial
+        $fake = Join-Path $TestDrive 'OneDrive - Contoso Fixture Tenant'
+        try {
+            $env:OneDriveCommercial = $fake
+            $root = Join-Path $fake 'Documents\ShaperWaveDynamics documents\biblio'
+            switch ($shape) {
+                'slash' { $root = $root.Replace('\', '/') }
+                'upper' { $root = $root.ToUpperInvariant() }
+                'trail' { $root = $root + '\' }
+            }
+            $err = $null
+            try { [void](Get-SwdLibraryHash -Root $root) } catch { $err = $_.Exception.Message }
+            $err | Should -Match 'not found'
+            $err | Should -Not -Match '(?i)Contoso Fixture Tenant'
+            $err | Should -Not -Match ('(?i)' + [regex]::Escape($env:USERPROFILE))
+            $err | Should -Match '~\\OneDrive\\'
+        } finally { $env:OneDriveCommercial = $saved }
+    }
+}
+
+Describe 'T9 reads the Apply Volume caption before its write and flags a dirty baseline (SQA S3)' {
+    BeforeAll {
+        function Ctl($h, $cls, $parent, $text) {
+            [pscustomobject]@{ Handle = [int64]$h; Class = $cls; CtrlId = 0; Visible = $true; Enabled = $true; Rect = '0,0,10,10'
+                               Parent = [int64]$parent; Text = $text; TimedOut = $false; Skipped = $false; LastError = 0 }
+        }
+        function Set-T9Scenario($CaptionBefore, $CaptionAfter = 'Set 11 liters volume to board') {
+            $mk = { param($cap) @((Ctl 500 'WindowsForms10.Window.8' 200 'Board Volume: 26.8 liters'), (Ctl 511 'WindowsForms10.EDIT' 510 '10'),
+                                  (Ctl 512 'WindowsForms10.BUTTON' 500 $cap)) }
+            $script:SnapBefore = [pscustomobject]@{ Title = 'FYN'; Origin = @(0, 0); Controls = (& $mk $CaptionBefore); Msaa = @(); Image = $null }
+            $script:CtlAfter = & $mk $CaptionAfter
+            $script:SnapAfter = [pscustomobject]@{ Title = 'FYN'; Origin = @(0, 0); Controls = $script:CtlAfter; Msaa = @(); Image = $null }
+        }
+    }
+    BeforeEach {
+        Mock Resolve-SwdGeometryControl { [pscustomobject]@{ Volume = [pscustomobject]@{ Group = [int64]500; Edit = [int64]511; Apply = [int64]512 }; Missing = @() } }
+        Mock Get-SwdText { '10' }
+        Mock Assert-SwdProbeContinue { }
+        Mock Set-SwdNumeric { [pscustomobject]@{ Ok = $true; After = '11'; Culture = 'Invariant' } }
+        Mock Wait-SwdProbeSettle { [pscustomobject]@{ Settled = $true } }
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Handle = 1 } }
+        Mock Find-SwdProbeNoiseMask { $null }
+        Mock Get-SwdProbeSnapshot { $script:SnapBefore } -ParameterFilter { $Label -eq 't9-0-before' }
+        Mock Get-SwdProbeSnapshot { $script:SnapAfter } -ParameterFilter { $Label -ne 't9-0-before' }
+        Mock Get-SwdControl { $script:CtlAfter }
+        $script:T9Stop = Join-Path $TestDrive 'STOP-t9'
+    }
+    It 'a clean board: the caption before the write is Apply Volume, and the baseline is not dirty' {
+        Set-T9Scenario -CaptionBefore 'Apply Volume'
+        $r = Invoke-SwdProbeT9 -RunDir $TestDrive -StopFile $script:T9Stop
+        @($r.ApplyVolumeCaptionBefore) | Should -Be @('Apply Volume')
+        @($r.ApplyVolumeCaption) | Should -Be @('Set 11 liters volume to board')
+        $r.BaselineDirty | Should -BeOfType [bool]
+        $r.BaselineDirty | Should -BeFalse
+        $r.LeavesResidue | Should -BeTrue
+    }
+    It 'a board whose Volume box was written earlier this session: the baseline is dirty' {
+        Set-T9Scenario -CaptionBefore 'Set 10 liters volume to board'
+        $r = Invoke-SwdProbeT9 -RunDir $TestDrive -StopFile $script:T9Stop
+        $r.BaselineDirty | Should -BeTrue
+    }
+    It 'a caption that did not answer before the write: dirty or not is unknown, never clean' {
+        Set-T9Scenario -CaptionBefore $null
+        $r = Invoke-SwdProbeT9 -RunDir $TestDrive -StopFile $script:T9Stop
+        $null -eq $r.BaselineDirty | Should -BeTrue
+    }
+    It 'LeavesResidue is unknown, not false, when the image detector failed (W2)' {
+        Set-T9Scenario -CaptionBefore 'Apply Volume'
+        Mock Compare-SwdProbeSnapshot { [pscustomobject]@{ InScopeCount = 0; OutOfScopeCount = $null; ImageError = 'boom'
+                                                           OutOfScope = [pscustomobject]@{ Win32 = @(); Msaa = @(); ImageBoxes = @() } } }
+        $r = Invoke-SwdProbeT9 -RunDir $TestDrive -StopFile $script:T9Stop
+        $null -eq $r.LeavesResidue | Should -BeTrue
+    }
+}
+
+Describe 'library hash sees hidden files and hidden folders (SQA S11)' {
+    BeforeEach {
+        $script:HLib = Join-Path $TestDrive ('hlib' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+        New-Item -ItemType Directory -Force -Path (Join-Path $script:HLib 'Boards\hid den'), (Join-Path $script:HLib 'temp') | Out-Null
+        Set-Content (Join-Path $script:HLib 'Boards\a.fynbs') 'board a'
+        Set-Content (Join-Path $script:HLib 'Boards\.hidden.fynbs') 'hidden board'
+        [IO.File]::SetAttributes((Join-Path $script:HLib 'Boards\.hidden.fynbs'), [IO.FileAttributes]::Hidden)
+        Set-Content (Join-Path $script:HLib 'desktop.ini') '[x]'
+        [IO.File]::SetAttributes((Join-Path $script:HLib 'desktop.ini'), [IO.FileAttributes]'Hidden, System')
+        Set-Content (Join-Path $script:HLib 'Boards\hid den\c.fynbs') 'in a hidden folder'
+        $d = Get-Item -LiteralPath (Join-Path $script:HLib 'Boards\hid den')
+        $d.Attributes = $d.Attributes -bor [IO.FileAttributes]::Hidden
+        Set-Content (Join-Path $script:HLib 'temp\render.png') 'x'
+        [IO.File]::SetAttributes((Join-Path $script:HLib 'temp\render.png'), [IO.FileAttributes]::Hidden)
+    }
+    It 'hashes <rel>, and reports a change to it' -ForEach @(
+        @{ rel = 'Boards\.hidden.fynbs' }
+        @{ rel = 'desktop.ini' }
+        @{ rel = 'Boards\hid den\c.fynbs' }
+    ) {
+        $b = Get-SwdLibraryHash -Root $script:HLib
+        $b.ContainsKey($rel) | Should -BeTrue
+        [IO.File]::AppendAllText((Join-Path $script:HLib $rel), 'tampered')
+        $c = Compare-SwdLibraryHash -Before $b -After (Get-SwdLibraryHash -Root $script:HLib)
+        $c.Ok | Should -BeFalse
+        @($c.Changed) | Should -Be @($rel)
+    }
+    It 'still excludes SWD''s own temp folder, hidden files in it included' {
+        (Get-SwdLibraryHash -Root $script:HLib).Keys | Should -Not -Contain 'temp\render.png'
+    }
+}
+
+Describe 'MSAA truncation is flagged and surfaced (SQA S4)' {
+    It 'a node with more than 10,000 children marks the walk truncated instead of reading as a leaf' {
+        $f = New-Object System.Windows.Forms.Form; $f.StartPosition = 'Manual'; $f.Location = New-Object System.Drawing.Point(900, 400)
+        $lb = New-Object System.Windows.Forms.ListBox; $lb.Size = New-Object System.Drawing.Size(150, 100)
+        $lb.BeginUpdate(); foreach ($i in 1..10001) { [void]$lb.Items.Add("i$i") }; $lb.EndUpdate()
+        $f.Controls.Add($lb)
+        try {
+            $f.Show(); [System.Windows.Forms.Application]::DoEvents()
+            $n = [SwdProbeNative]::Walk([intptr][int64]$lb.Handle, 50000, 60000)
+            @($n).Count | Should -BeLessThan 10
+            [SwdProbeNative]::LastWalkTruncated | Should -BeTrue
+            # The control: under the cap the same list is walked in full and not truncated.
+            $lb.BeginUpdate(); $lb.Items.RemoveAt(0); $lb.Items.RemoveAt(0); $lb.EndUpdate(); [System.Windows.Forms.Application]::DoEvents()
+            $m = [SwdProbeNative]::Walk([intptr][int64]$lb.Handle, 50000, 60000)
+            @($m).Count | Should -BeGreaterThan 9999
+            [SwdProbeNative]::LastWalkTruncated | Should -BeFalse
+        } finally { $f.Close(); $f.Dispose() }
+    }
+    It 'Compare-SwdProbeSnapshot and Format-SwdProbeDiff surface a truncated walk on either side' {
+        $clean = [pscustomobject]@{ Controls = @(); Msaa = @(); Image = $null; MsaaTruncated = $false }
+        $cut = [pscustomobject]@{ Controls = @(); Msaa = @(); Image = $null; MsaaTruncated = $true }
+        (Compare-SwdProbeSnapshot -Before $clean -After $clean).MsaaTruncated | Should -BeFalse
+        $d = Compare-SwdProbeSnapshot -Before $clean -After $cut
+        $d.MsaaTruncated | Should -BeTrue
+        (Format-SwdProbeDiff $d) -join "`n" | Should -Match 'MSAA WALK TRUNCATED'
+        (Compare-SwdProbeSnapshot -Before $cut -After $clean).MsaaTruncated | Should -BeTrue
+    }
+    It 'a snapshot without the flag (built offline) reads as not truncated' {
+        $s = [pscustomobject]@{ Controls = @(); Msaa = @(); Image = $null }
+        (Compare-SwdProbeSnapshot -Before $s -After $s).MsaaTruncated | Should -BeFalse
+    }
+}
+
+Describe 'a tab switch is confirmed by name, not only by index (SQA S12)' {
+    It 'refuses when the tab at the selected index no longer carries the requested name' {
+        $f = New-Object System.Windows.Forms.Form; $f.StartPosition = 'Manual'; $f.Location = New-Object System.Drawing.Point(900, 400)
+        $tc = New-Object System.Windows.Forms.TabControl; $tc.Size = New-Object System.Drawing.Size(200, 100)
+        foreach ($t in 'Shape', 'Fins') { $pg = New-Object System.Windows.Forms.TabPage; $pg.Text = $t; $tc.TabPages.Add($pg) }
+        # An application that renames the page it has just shown: index 1 is selected, but it
+        # is no longer the 'Fins' tab.
+        $tc.add_SelectedIndexChanged({ if ($tc.SelectedIndex -eq 1) { $tc.TabPages[1].Text = 'Wave Room' } }.GetNewClosure())
+        $f.Controls.Add($tc)
+        try {
+            $f.Show(); [System.Windows.Forms.Application]::DoEvents()
+            { Select-SwdProbeTab -Handle ([int64]$f.Handle) -Name 'Fins' } | Should -Throw "*not the selected 'Fins' tab*"
+        } finally { $f.Close(); $f.Dispose() }
+    }
+    It 'reads the page tab it selected back through MSAA, selected and named' {
+        $f = New-Object System.Windows.Forms.Form; $f.StartPosition = 'Manual'; $f.Location = New-Object System.Drawing.Point(900, 400)
+        $tc = New-Object System.Windows.Forms.TabControl; $tc.Size = New-Object System.Drawing.Size(200, 100)
+        foreach ($t in 'Shape', 'Fins') { $pg = New-Object System.Windows.Forms.TabPage; $pg.Text = $t; $tc.TabPages.Add($pg) }
+        $f.Controls.Add($tc)
+        try {
+            $f.Show(); [System.Windows.Forms.Application]::DoEvents()
+            $r = Select-SwdProbeTab -Handle ([int64]$f.Handle) -Name 'Fins'
+            $n = [SwdProbeNative]::ChildAt([intptr]$r.TabControl, $r.Index)
+            $n.Name | Should -BeExactly 'Fins'
+            ($n.State -band 0x2) | Should -Be 0x2
+            $null -eq [SwdProbeNative]::ChildAt([intptr]$r.TabControl, 99) | Should -BeTrue
+        } finally { $f.Close(); $f.Dispose() }
+    }
+}
+
 Describe 'native helper against a throwaway WinForms window' {
     BeforeAll {
         $script:Form = New-Object System.Windows.Forms.Form
@@ -376,6 +696,19 @@ Describe 'native helper against a throwaway WinForms window' {
         $script:Form.Show(); [System.Windows.Forms.Application]::DoEvents()
         $script:H = $script:Form.Handle
         function Pump { 1..5 | ForEach-Object { [System.Windows.Forms.Application]::DoEvents(); Start-Sleep -Milliseconds 20 } }
+        # SQA W6: PrintWindow(PW_RENDERFULLCONTENT) returns different pixels for back-to-back
+        # captures of this fixture's themed TabControl strip and TextBox, with nothing changing
+        # (measured 2026-10-01: raw hashes differed in 12 of 320 pairs, masked in 0 of 320). The
+        # three FrameHash tests ignore both, +/-2 px. Production FrameHash keeps flag 2.
+        function FixtureNoise {
+            $r = New-Object 'SwdWin+RECT'; [void][SwdWin]::GetWindowRect($script:H, [ref]$r)
+            $out = @()
+            foreach ($c in $script:Tabs, $script:Box) {
+                $s = $c.RectangleToScreen($c.ClientRectangle)
+                $out += ($s.X - $r.Left - 2), ($s.Y - $r.Top - 2), ($s.Width + 4), ($s.Height + 4)
+            }
+            return , ([int[]]$out)
+        }
     }
     AfterAll { if ($script:Form) { $script:Form.Close(); $script:Form.Dispose() } }
 
@@ -458,7 +791,8 @@ Describe 'native helper against a throwaway WinForms window' {
     }
     It 'FrameHash is stable for an unchanged window and names its size' {
         Pump
-        $a = [SwdProbeNative]::FrameHash($script:H, $null); $b = [SwdProbeNative]::FrameHash($script:H, $null)
+        $n = FixtureNoise
+        $a = [SwdProbeNative]::FrameHash($script:H, $n); $b = [SwdProbeNative]::FrameHash($script:H, $n)
         $a | Should -Match '^\d+x\d+:[0-9A-F]{32}$'
         $b | Should -Be $a
     }
@@ -466,10 +800,11 @@ Describe 'native helper against a throwaway WinForms window' {
         Pump
         $r = New-Object 'SwdWin+RECT'; [void][SwdWin]::GetWindowRect($script:H, [ref]$r)
         $lr = $script:Label.RectangleToScreen($script:Label.ClientRectangle)
-        $ignore = [int[]]@(($lr.X - $r.Left - 2), ($lr.Y - $r.Top - 2), ($lr.Width + 4), ($lr.Height + 4))
-        $a = [SwdProbeNative]::FrameHash($script:H, $null); $ai = [SwdProbeNative]::FrameHash($script:H, $ignore)
+        $n = FixtureNoise
+        $ignore = [int[]](@(($lr.X - $r.Left - 2), ($lr.Y - $r.Top - 2), ($lr.Width + 4), ($lr.Height + 4)) + $n)
+        $a = [SwdProbeNative]::FrameHash($script:H, $n); $ai = [SwdProbeNative]::FrameHash($script:H, $ignore)
         $script:Label.Text = 'Board Volume: 40.8 liters'; Pump
-        [SwdProbeNative]::FrameHash($script:H, $null) | Should -Not -Be $a
+        [SwdProbeNative]::FrameHash($script:H, $n) | Should -Not -Be $a
         [SwdProbeNative]::FrameHash($script:H, $ignore) | Should -Be $ai
         $script:Label.Text = 'Board Volume: 40.7 liters'; Pump
     }
@@ -485,9 +820,10 @@ Describe 'native helper against a throwaway WinForms window' {
             Pump
             $r = New-Object 'SwdWin+RECT'; [void][SwdWin]::GetWindowRect($script:H, [ref]$r)
             $lr = $cpu.RectangleToScreen($cpu.ClientRectangle)
-            $ignore = [int[]]@(($lr.X - $r.Left - 2), ($lr.Y - $r.Top - 2), ($lr.Width + 4), ($lr.Height + 4))
+            $n = FixtureNoise
+            $ignore = [int[]](@(($lr.X - $r.Left - 2), ($lr.Y - $r.Top - 2), ($lr.Width + 4), ($lr.Height + 4)) + $n)
             $raw = @(); $masked = @()
-            foreach ($i in 1..6) { Pump; Start-Sleep -Milliseconds 120; Pump; $raw += [SwdProbeNative]::FrameHash($script:H, $null); $masked += [SwdProbeNative]::FrameHash($script:H, $ignore) }
+            foreach ($i in 1..6) { Pump; Start-Sleep -Milliseconds 120; Pump; $raw += [SwdProbeNative]::FrameHash($script:H, $n); $masked += [SwdProbeNative]::FrameHash($script:H, $ignore) }
             @($raw | Select-Object -Unique).Count | Should -BeGreaterThan 1
             @($masked | Select-Object -Unique).Count | Should -Be 1
         } finally { $timer.Stop(); $timer.Dispose(); $script:Form.Controls.Remove($cpu); $cpu.Dispose(); Pump }
@@ -496,5 +832,130 @@ Describe 'native helper against a throwaway WinForms window' {
         $script:Check.Focus() | Out-Null; Pump
         $samples = @(); foreach ($i in 1..4) { Pump; Start-Sleep -Milliseconds 150; $samples += @{ T = $i * 100; Responsive = $true; CpuPct = 0.0; Frame = [SwdProbeNative]::FrameHash($script:H, $null) } }
         (Measure-SwdSettle -Samples $samples -FrameK 3).Settled | Should -BeTrue
+    }
+}
+
+Describe 'image diff runner: its arguments, real diffs, and a failure reported as data (SQA S1, W2)' {
+    BeforeAll {
+        # Real PNGs from System.Drawing, in a folder whose name has a space.
+        function New-TestPng([string]$Path, [int]$W, [int]$H, [int[]]$Box) {
+            $b = New-Object System.Drawing.Bitmap($W, $H)
+            try {
+                if ($Box) {
+                    $g = [System.Drawing.Graphics]::FromImage($b)
+                    try { $g.FillRectangle([System.Drawing.Brushes]::White, $Box[0], $Box[1], $Box[2], $Box[3]) } finally { $g.Dispose() }
+                }
+                $b.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+            } finally { $b.Dispose() }
+        }
+        $script:ImgDir = Join-Path $TestDrive 'image diff'
+        New-Item -ItemType Directory -Force -Path $script:ImgDir | Out-Null
+        $script:PngA = Join-Path $script:ImgDir 'a.png'; New-TestPng $script:PngA 100 100
+        $script:PngB = Join-Path $script:ImgDir 'b changed.png'; New-TestPng $script:PngB 100 100 @(70, 70, 10, 10)
+        $script:PngBig = Join-Path $script:ImgDir 'big.png'; New-TestPng $script:PngBig 200 200
+        function Snap($img) { [pscustomobject]@{ Controls = @(); Msaa = @(); Image = $img } }
+    }
+    It 'hands py -3.14 the script, pair, both images, --mask and every --expect rect' {
+        # A test-scoped py shadows the launcher, so the argv is asserted, not the source text.
+        function py { $script:PyArgs = @($args); '{"changed_tiles": 0, "in_scope": [], "out_of_scope": [], "missing_expected": []}' }
+        $r = Invoke-SwdProbeImageDiff -BeforeImage 'b4 x.png' -AfterImage 'af.png' -Mask 'm.npy' -ExpectRects @(@(1, 2, 3, 4), @(5, 6, 7, 8))
+        $got = @($script:PyArgs | ForEach-Object { "$_" })
+        $got[0] | Should -BeExactly '-3.14'
+        $got[1] | Should -BeExactly (Join-Path $script:ProbeRoot 'swd_diff.py')
+        ($got[2..4] -join '|') | Should -BeExactly 'pair|b4 x.png|af.png'
+        ($got[5..6] -join '|') | Should -BeExactly '--mask|m.npy'
+        ($got[7..9] -join '|') | Should -BeExactly '--expect|1,2,3,4|5,6,7,8'
+        $got.Count | Should -Be 10
+        $r.changed_tiles | Should -Be 0
+    }
+    It 'leaves out --mask and --expect when there are none, and skips a malformed rect' {
+        function py { $script:PyArgs = @($args); '{"changed_tiles": 0, "in_scope": [], "out_of_scope": [], "missing_expected": []}' }
+        [void](Invoke-SwdProbeImageDiff -BeforeImage 'a.png' -AfterImage 'b.png' -ExpectRects @(, @(1, 2, 3)))
+        @($script:PyArgs | ForEach-Object { "$_" }) -join '|' | Should -BeExactly ('-3.14|' + (Join-Path $script:ProbeRoot 'swd_diff.py') + '|pair|a.png|b.png')
+    }
+    It 'the real interpreter puts a change inside an expected rect in scope, and outside it out of scope' {
+        $in = Invoke-SwdProbeImageDiff -BeforeImage $script:PngA -AfterImage $script:PngB -ExpectRects @(, @(64, 64, 36, 36))
+        @($in.in_scope).Count | Should -Be 1
+        @($in.out_of_scope).Count | Should -Be 0
+        $out = Invoke-SwdProbeImageDiff -BeforeImage $script:PngA -AfterImage $script:PngB -ExpectRects @(, @(0, 0, 32, 32))
+        @($out.out_of_scope).Count | Should -Be 1
+        @($out.missing_expected).Count | Should -Be 1
+    }
+    It 'a failed diff (images of different sizes) comes back as data under Stop and never throws' {
+        $ErrorActionPreference = 'Stop'
+        { $script:R = Invoke-SwdProbeImageDiff -BeforeImage $script:PngA -AfterImage $script:PngBig } | Should -Not -Throw
+        $script:R.PSObject.Properties['out_of_scope'] | Should -BeNullOrEmpty
+        $script:R.Error | Should -Match 'shape mismatch'
+    }
+    It 'a warning on stderr does not spoil a good diff, even under Stop' {
+        # A real interpreter that writes to stderr at start-up and still exits 0: stderr must
+        # be kept apart from the JSON, never turned into a failure (W2).
+        $site = Join-Path $TestDrive 'site warn'
+        New-Item -ItemType Directory -Force -Path $site | Out-Null
+        [IO.File]::WriteAllText((Join-Path $site 'sitecustomize.py'), "import sys`nsys.stderr.write('UserWarning: something upstream is deprecated\n')`n")
+        $saved = $env:PYTHONPATH
+        try {
+            $env:PYTHONPATH = $site
+            $ErrorActionPreference = 'Stop'
+            $r = Invoke-SwdProbeImageDiff -BeforeImage $script:PngA -AfterImage $script:PngB
+            $r.PSObject.Properties['Error'] | Should -BeNullOrEmpty
+            $r.changed_tiles | Should -Be 1
+        } finally { $env:PYTHONPATH = $saved }
+    }
+    It 'a runner that does not run, or answers with no result, comes back as data too' {
+        function py { throw 'launcher missing' }
+        (Invoke-SwdProbeImageDiff -BeforeImage 'a.png' -AfterImage 'b.png').Error | Should -Match 'did not run: launcher missing'
+        function py { 'not json at all' }
+        (Invoke-SwdProbeImageDiff -BeforeImage 'a.png' -AfterImage 'b.png').Error | Should -Match 'no usable result'
+    }
+    It 'Compare-SwdProbeSnapshot reports a failed image diff as DETECTOR FAILED, with a $null count, never 0' {
+        $ErrorActionPreference = 'Stop'
+        $d = Compare-SwdProbeSnapshot -Before (Snap $script:PngA) -After (Snap $script:PngBig)
+        $null -eq $d.OutOfScopeCount | Should -BeTrue
+        $d.ImageError | Should -Match 'shape mismatch'
+        (Format-SwdProbeDiff $d) -join "`n" | Should -Match 'DETECTOR FAILED'
+    }
+    It 'a working diff still counts its changes and carries no ImageError' {
+        $d = Compare-SwdProbeSnapshot -Before (Snap $script:PngA) -After (Snap $script:PngB)
+        $d.OutOfScopeCount | Should -Be 1
+        $d.ImageError | Should -BeNullOrEmpty
+    }
+    It 'the failure text names no username or tenant (R9), though Python doubles the backslashes' {
+        $saved = $env:OneDriveCommercial
+        $fake = Join-Path $TestDrive 'OneDrive - Contoso Fixture Tenant'
+        New-Item -ItemType Directory -Force -Path $fake | Out-Null
+        try {
+            $env:OneDriveCommercial = $fake
+            $d = Compare-SwdProbeSnapshot -Before (Snap (Join-Path $fake 'no such frame.png')) -After (Snap $script:PngA)
+            $d.ImageError | Should -Not -BeNullOrEmpty
+            $d.ImageError | Should -Not -Match 'Contoso Fixture Tenant'
+            $d.ImageError | Should -Not -Match ([regex]::Escape($env:USERPROFILE))
+            $d.ImageError | Should -Match ([regex]::Escape('~\OneDrive\no such frame.png'))
+        } finally { $env:OneDriveCommercial = $saved }
+    }
+    It 'T12 reports Exact as unknown, not true or false, when the image detector failed' {
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Handle = 1; Title = 'FYN' } }
+        Mock Get-SwdProbeSnapshot { [pscustomobject]@{ Title = 'FYN'; Origin = @(0, 0) } }
+        Mock Get-SwdProbeLengthContext { [pscustomobject]@{ LengthMm = 2000.0 } }
+        Mock Set-SwdProbeLength { [pscustomobject]@{ Applied = $false } }
+        Mock Find-SwdProbeNoiseMask { $null }
+        Mock Compare-SwdProbeSnapshot { [pscustomobject]@{ OutOfScopeCount = $null; ImageError = 'boom'; OutOfScope = [pscustomobject]@{ Win32 = @(); Msaa = @(); ImageBoxes = @() } } }
+        $r = Invoke-SwdProbeT12 -RunDir $TestDrive -StopFile (Join-Path $TestDrive 'STOP-t12') -DeltaMm 1
+        $null -eq $r.Exact | Should -BeTrue
+        $null -eq $r.Residual | Should -BeTrue
+        $r.Lines -join "`n" | Should -Match 'DETECTOR FAILED'
+    }
+    It 'T14 reports both controls as unknown when an image detector failed' {
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Handle = 1; Title = 'FYN' } }
+        Mock Get-SwdProbeSnapshot { [pscustomobject]@{ Title = 'FYN'; Origin = @(0, 0) } }
+        Mock Get-SwdProbeLengthContext { [pscustomobject]@{ LengthMm = 2000.0; ExpectHandles = @(1); LengthText = '2000'; ExpectRect = @(0, 0, 1, 1) } }
+        Mock Set-SwdProbeLength { [pscustomobject]@{ Applied = $true; Settle = [pscustomobject]@{ SettleMs = 1 } } }
+        Mock Find-SwdProbeNoiseMask { $null }
+        Mock Start-Sleep { }
+        Mock Assert-SwdProbeContinue { }
+        Mock Compare-SwdProbeSnapshot { [pscustomobject]@{ Win32 = @(); Msaa = @(); OutOfScopeCount = $null; InScopeCount = 0; ImageError = 'boom'; OutOfScope = [pscustomobject]@{ Win32 = @(); Msaa = @(); ImageBoxes = @() } } }
+        $r = Invoke-SwdProbeT14 -RunDir $TestDrive -StopFile (Join-Path $TestDrive 'STOP-t14') -DeltaMm 1
+        $null -eq $r.NegativeClean | Should -BeTrue
+        $null -eq $r.PositiveDetected | Should -BeTrue
     }
 }

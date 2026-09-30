@@ -117,6 +117,14 @@ Detail: `wiki/sources/SWD Automation Probe Results 2026-09-30.md`. Logs:
 
 ## SQA handoff (for tonight's pass)
 
+> [!note] Done 2026-10-01: one SQA pass over the 10 files in `SQA-LOG.md` (agy, then Devin, then one
+> Claude check). Final `Critical=0 | Warning=3 | Suggestion=11`; the guard is green at Medium integrity
+> (`swd_probe` 193/0 in 6 of 6 runs). Open point 1 below is still open (W7, Benjamin's decision), as
+> is a new one: a failed `PrintWindow` capture silently drops the image detector (NEW-1). Point 2 is
+> S2 (fails closed), point 3 is fixed (`BaselineDirty`), point 4 is partly fixed (truncation now
+> surfaced) and point 5 is fixed (W1, E103). Report and findings:
+> `%LOCALAPPDATA%\sqa-loop\runs\hfin-sqa-log-2026-09-30.filed\report.md`; `AI-USE.md` § 2 and E100–E105.
+
 Owner override, 2026-09-30 (`AI-USE.md` § 4): `swd_probe.ps1` was run live **before** SQA.
 
 **In scope:**

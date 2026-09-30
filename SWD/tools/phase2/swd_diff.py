@@ -30,6 +30,8 @@ def load(path):
 
 def tile_changes(a, b, tile=TILE):
     """Boolean (rows, cols) grid: True where any pixel in the tile differs."""
+    if a.shape != b.shape:
+        raise ValueError(f"image shape mismatch: {a.shape} vs {b.shape}")
     d = a != b
     h, w = d.shape
     r, c = -(-h // tile), -(-w // tile)
@@ -78,24 +80,38 @@ def classify(a, b, noise=None, expected=()):
 
 
 def idle(frames_dir):
-    """T5: how often each method flags change between consecutive idle frames."""
+    """T5: how often each method flags change between consecutive idle frames.
+
+    Streams the frames, two in memory at a time: loading all N first cost 7.84 MiB per
+    1845x1111 frame, about 1 GiB at 118 (SQA E-W1). Still float32, because uint8
+    overflows a*a in ssim_map. Every frame must match the first one's shape.
+    """
     files = sorted(Path(frames_dir).glob("*.png"))
-    frames = [load(f) for f in files]
-    noise = np.zeros_like(tile_changes(frames[0], frames[0]))
+    if not files:
+        raise ValueError(f"no PNG frames in {frames_dir}")
+    prev = load(files[0])
+    noise = np.zeros_like(tile_changes(prev, prev))
     t_tile = t_ssim = 0.0
     fp_tile = fp_ssim = 0
-    for a, b in zip(frames, frames[1:]):
-        s = time.perf_counter(); t = tile_changes(a, b); t_tile += time.perf_counter() - s
-        s = time.perf_counter(); m = ssim_map(a, b) < 0.99; t_ssim += time.perf_counter() - s
+    for f in files[1:]:
+        cur = load(f)
+        if cur.shape != prev.shape:
+            raise ValueError(f"image shape mismatch: {cur.shape} vs {prev.shape}")
+        s = time.perf_counter(); t = tile_changes(prev, cur); t_tile += time.perf_counter() - s
+        s = time.perf_counter(); m = ssim_map(prev, cur) < 0.99; t_ssim += time.perf_counter() - s
         noise |= t
         fp_tile += bool(t.any())
         fp_ssim += bool(m.any())
-    n = max(len(frames) - 1, 1)
+        prev = cur
+    # The true pair count: one frame is 0 pairs, and a per-pair time over none is not
+    # measured (None), never 0 ms.
+    n = len(files) - 1
     np.save(Path(frames_dir) / "noise_mask.npy", noise)
-    return {"frames": len(frames), "pairs": n,
+    return {"frames": len(files), "pairs": n,
             "pairs_flagged_tile": fp_tile, "pairs_flagged_ssim_lt_0.99": fp_ssim,
-            "noise_tiles": int(noise.sum()), "noise_boxes": boxes(tiles_to_pixels(noise, frames[0].shape)),
-            "ms_per_pair_tile": round(1000 * t_tile / n, 2), "ms_per_pair_ssim": round(1000 * t_ssim / n, 2)}
+            "noise_tiles": int(noise.sum()), "noise_boxes": boxes(tiles_to_pixels(noise, prev.shape)),
+            "ms_per_pair_tile": round(1000 * t_tile / n, 2) if n else None,
+            "ms_per_pair_ssim": round(1000 * t_ssim / n, 2) if n else None}
 
 
 def _selfcheck():
@@ -114,14 +130,18 @@ def _selfcheck():
 
 
 if __name__ == "__main__":
-    args = sys.argv[1:]
-    if not args:
-        _selfcheck()
-    elif args[0] == "idle":
-        print(json.dumps(idle(args[1]), indent=1))
-    elif args[0] == "pair":
-        noise = np.load(args[args.index("--mask") + 1]) if "--mask" in args else None
-        exp = [tuple(map(int, s.split(","))) for s in args[args.index("--expect") + 1:]] if "--expect" in args else []
-        print(json.dumps(classify(load(args[1]), load(args[2]), noise, exp), indent=1))
-    else:
-        sys.exit(__doc__)
+    try:
+        args = sys.argv[1:]
+        if not args:
+            _selfcheck()
+        elif args[0] == "idle":
+            print(json.dumps(idle(args[1]), indent=1))
+        elif args[0] == "pair":
+            noise = np.load(args[args.index("--mask") + 1]) if "--mask" in args else None
+            exp = [tuple(map(int, s.split(","))) for s in args[args.index("--expect") + 1:]] if "--expect" in args else []
+            print(json.dumps(classify(load(args[1]), load(args[2]), noise, exp), indent=1))
+        else:
+            sys.exit(__doc__)
+    except Exception as e:
+        print(f"error: {e}", file=sys.stderr)
+        sys.exit(1)

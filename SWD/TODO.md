@@ -1247,11 +1247,13 @@ from it.
 - **So fin forces could only ever be computed data:** `fin_polars.csv` + each fin's geometry
   (`ailerons`) + SWD's fin model (a decompile). That is Benjamin's decision.
   `SWD/tools/probe_fins.ps1` (read-only `ailerons` dump) is written but not SQA'd or run, and stays
-  off `SQA-LOG.md` unless that route is chosen.
+  off `SQA-LOG.md` unless that route is chosen. *(2026-10-01: it was on the log after all and has now
+  had its SQA pass, with 22 new tests in `SWD/tools/tests/probe_fins.Tests.ps1`. It has still never
+  been run on the real library.)*
 - **Test boards to keep out of the corpus:** add `blueTreck_Copy_4`.
 - **Fixed today:** E84. `swd_extract.ps1` now deletes the sentinel only after the
   `-TrustCurrentLibrary` exit. A new regression test fails on the old order and passes on the new.
-  Not yet SQA'd (`SQA-LOG.md`).
+  Not yet SQA'd (`SQA-LOG.md`). *(2026-10-01: SQA'd. `swd_extract` 153/0; see `AI-USE.md` § 2.)*
 
 ## Part B, 2026-09-30 — STL export is a sound geometry source; import is not
 

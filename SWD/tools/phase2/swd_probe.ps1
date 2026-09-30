@@ -22,8 +22,9 @@
 
     SAFETY INVARIANTS (do not depend on any review):
       - Only buttons on an explicit ALLOWLIST can be clicked, and the text is re-read and
-        checked against a DENYLIST (scan, delete, unlock, save, export, share, rename,
-        create, reset, upload, CNC) immediately before every click.
+        checked against a DENYLIST (scan, delete, remove, unlock, save, export, import,
+        share, rename, create, duplicate, reset, upload, CNC; English and French)
+        immediately before every click.
       - Only tabs on an allowlist can be selected.
       - The loaded board's name must contain '_Copy'. Originals are refused.
       - Logs go only where swd_msg.ps1's path guard allows (never the install or library).
@@ -74,10 +75,19 @@ if (-not (Get-Command Set-SwdGeometry -ErrorAction SilentlyContinue)) { . (Join-
 
 # Buttons a probe may click. Exact, after trimming and removing '&' accelerators.
 $script:ProbeAllowedButtons = @('Apply Length', 'Apply Width', 'Apply Volume', 'Apply situation')
-# Tabs a probe may select through MSAA.
+# Tabs a probe may select (by TCM_SETCURFOCUS; the MSAA walk only finds them).
 $script:ProbeAllowedTabs = @('Shape', 'Fins', 'SizeConfig', 'Outline', 'Rockers', 'Guides Sections')
-# Defence in depth: refused even if someone widens the allowlist.
-$script:ProbeDenyPattern = '(?i)hydro\s*scan|scanner|delete|supprim|unlock|save|enregistr|export|share|partag|rename|renomm|create|cr[e\u00e9]er|sous-dossier|reset|upload|cnc|surfcommunity'
+# Defence in depth: refused even if someone widens the allowlist. Matched against the
+# NORMALISED label (ConvertTo-SwdProbeLabel), culture-invariantly. 'scan' is bare, so
+# 'Rescan', 'Hydro-Scan' and 'Lancer le scan' are refused as well as 'Hydrodynamics Scanner'.
+$script:ProbeDenyPattern = '(?i)scan|delete|supprim|effac|remove|unlock|d[e\u00e9]verrouill|save|enregistr|sauvegard|export|import|share|partag|rename|renomm|create|cr[e\u00e9]er|sous-dossier|duplicat|dupliqu|reset|r[e\u00e9]initialis|upload|cnc|surfcommunity'
+# Invisible characters removed from a caption before either list is consulted: \p{Cf}, the
+# C0/C1 controls other than tab/CR/LF (those become spaces below), and Unicode's
+# default-ignorable code points, so one copied unnoticed from an SWD caption cannot split a
+# denied word. Listed explicitly because .NET Framework's regex \p{Cf} misses U+00AD (its
+# Latin-1 table still classes the soft hyphen as a dash) and cannot match an astral
+# character at all (measured).
+$script:ProbeInvisiblePattern = '\p{Cf}|[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u00ad\u034f\u061c\u115f\u1160\u17b4\u17b5\u180b-\u180f\u200b-\u200f\u202a-\u202e\u2060-\u206f\u3164\ufe00-\ufe0f\ufeff\uffa0\ufff0-\ufff8]|\uD804[\uDCBD\uDCCD]|\uD80D[\uDC30-\uDC3F]|\uD82F[\uDCA0-\uDCA3]|\uD834[\uDD73-\uDD7A]|[\uDB40-\uDB43][\uDC00-\uDFFF]'
 # Window-relative rectangles (x, y, w, h) in the 1845x1111 PrintWindow frame that change
 # on their own: status-bar CPU and RAM readouts, the UnLock/section-slider block (T5), and
 # the title bar, whose colour follows focus (T4c). Zeroed before frame hashing.
@@ -173,10 +183,13 @@ public static class SwdProbeNative {
     return n;
   }
 
+  // null when the object reports more than 10,000 children: too many to walk, and the walk
+  // must then say it was cut short rather than treat the node as a leaf (S4).
   private static object[] Kids(IAccessible acc) {
     int count = 0;
     try { count = acc.accChildCount; } catch { return new object[0]; }
-    if (count <= 0 || count > 10000) return new object[0];
+    if (count > 10000) return null;
+    if (count <= 0) return new object[0];
     var kids = new object[count]; int got = 0;
     try { if (AccessibleChildren(acc, 0, count, kids, out got) < 0) got = 0; } catch { got = 0; }
     var outp = new object[got]; Array.Copy(kids, outp, got); return outp;
@@ -206,6 +219,7 @@ public static class SwdProbeNative {
     self.Hidden = hiddenAbove || (self.State & 0x8000) != 0;
     list.Add(self);
     object[] kids = Kids(acc);
+    if (kids == null) { LastWalkTruncated = true; kids = new object[0]; }
     bool standardWindow = self.Role == "9" && kids.Length == 7;
     for (int i = 0; i < kids.Length; i++) {
       if (list.Count >= max || sw.ElapsedMilliseconds > deadline) { LastWalkTruncated = true; return; }
@@ -219,6 +233,20 @@ public static class SwdProbeNative {
         list.Add(n);
       }
     }
+  }
+
+  // The child at POSITION of a window's client object, described like a walk node, or null.
+  // Select-SwdProbeTab reads the page tab back after the switch: TCM_GETCURSEL proves an
+  // index was selected, not that the index still names the requested tab (S12).
+  public static MsaaNode ChildAt(IntPtr hwnd, int position) {
+    if (hwnd == IntPtr.Zero) throw new ArgumentException("ChildAt() refuses a NULL window.");
+    IAccessible acc = Root(hwnd);
+    if (acc == null) return null;
+    object[] kids = Kids(acc);
+    if (kids == null || position < 0 || position >= kids.Length) return null;
+    if (kids[position] is int) return Describe(acc, kids[position], "0/" + position, 1, true);
+    IAccessible ka = kids[position] as IAccessible;
+    return ka == null ? null : Describe(ka, 0, "0/" + position, 1, false);
   }
 
   // Tab switch by MESSAGE. TCM_SETCURFOCUS on a tab control without TCS_BUTTONS changes the
@@ -282,16 +310,63 @@ public static class SwdProbeNative {
 
 function ConvertTo-SwdProbeLabel {
     <#  Normalise a control or tab caption for allowlist matching: '&' accelerators,
-        MSAA's ';' line breaks and runs of whitespace collapse; case is kept.  #>
+        MSAA's ';' line breaks and runs of whitespace collapse; case is kept.
+        Invisible characters ($script:ProbeInvisiblePattern) are removed and the text is
+        composed to NFC FIRST, so the denylist regex, which compares code points, sees the
+        word a person sees: 'Del<U+00AD>ete' and an 'e' + U+0301 spelling both walked a
+        denied word past it (measured). Invisibles go before NFC so a stripped joiner cannot
+        leave a mark uncomposed. Normalize() throws on a lone surrogate and on the
+        noncharacters U+FDD0-U+FDEF, U+FFFE and U+FFFF (measured): the check then refuses,
+        which is the safe direction.  #>
     param([AllowNull()][string]$Text)
     if ($null -eq $Text) { return '' }
-    return (($Text -replace '&', '' -replace '[;\r\n\t]+', ' ') -replace '\s+', ' ').Trim()
+    $t = ($Text -replace $script:ProbeInvisiblePattern, '').Normalize([Text.NormalizationForm]::FormC)
+    return (($t -replace '&', '' -replace '[;\r\n\t]+', ' ') -replace '\s+', ' ').Trim()
+}
+
+function Test-SwdProbeListed {
+    <#  Ordinal membership. The lists are documented as EXACT, but -ccontains is linguistic:
+        it ignored 2,534 BMP code points (NUL, U+00AD, U+034F and letters its sort tables
+        lack), so 'Del' + U+0525 + 'ete' matched a listed 'Delete' while the denylist regex
+        did not see the word (measured 2026-10-01).  #>
+    param([string[]]$List, [string]$Label)
+    return (@($List | Where-Object { [string]::Equals($_, $Label, [StringComparison]::Ordinal) }).Count -gt 0)
+}
+
+function Format-PathForDisplay {
+    <#  A path with the username and the OneDrive tenant collapsed, for the console and
+        summary.json (R9). Ported from census_board.ps1: the OneDrive roots are tested FIRST,
+        because they sit under USERPROFILE and '~' alone leaves the tenant folder name.  #>
+    param([string] $Path)
+    if (-not $Path) { return '' }
+    $p = $Path.Replace('/', '\')
+    foreach ($od in @($env:OneDriveCommercial, $env:OneDriveConsumer, $env:OneDrive)) {
+        if ($od -and $p.StartsWith($od.Replace('/', '\'), [StringComparison]::OrdinalIgnoreCase)) {
+            return '~\OneDrive' + $p.Substring($od.Length)
+        }
+    }
+    $up = $env:USERPROFILE
+    if ($up -and $p.StartsWith($up.Replace('/', '\'), [StringComparison]::OrdinalIgnoreCase)) { return '~' + $p.Substring($up.Length) }
+    return $p
+}
+
+function Format-MessageForDisplay {
+    <#  The same for free text: a .NET or Python error message embeds absolute paths.
+        Ported from census_board.ps1. Longest roots first: OneDrive lives under USERPROFILE.  #>
+    param([string] $Message)
+    foreach ($root in @($env:OneDriveCommercial, $env:OneDriveConsumer, $env:OneDrive)) {
+        if ($root) { $Message = $Message.Replace($root, '~\OneDrive') }
+    }
+    if ($env:USERPROFILE) { $Message = $Message.Replace($env:USERPROFILE, '~') }
+    return $Message
 }
 
 function Get-SwdProbeDenyMatch {
     param([AllowNull()][string]$Text)
     if (-not $Text) { return $null }
-    $m = [regex]::Match($Text, $script:ProbeDenyPattern)
+    # CultureInvariant: under tr-TR, (?i) folds 'I' to a dotless i, so 'IMPORT' and
+    # 'SUPPRIMER' did not match (measured).
+    $m = [regex]::Match($Text, $script:ProbeDenyPattern, [Text.RegularExpressions.RegexOptions]::CultureInvariant)
     if ($m.Success) { return $m.Value }
     return $null
 }
@@ -302,7 +377,7 @@ function Test-SwdProbeAllowedButton {
     $label = ConvertTo-SwdProbeLabel $Text
     if (-not $label) { return $false }
     if (Get-SwdProbeDenyMatch $label) { return $false }
-    return ($script:ProbeAllowedButtons -ccontains $label)
+    return (Test-SwdProbeListed -List $script:ProbeAllowedButtons -Label $label)
 }
 
 function Assert-SwdProbeButton {
@@ -319,7 +394,7 @@ function Test-SwdProbeAllowedTab {
     param([AllowNull()][string]$Name)
     $label = ConvertTo-SwdProbeLabel $Name
     if (-not $label -or (Get-SwdProbeDenyMatch $label)) { return $false }
-    return ($script:ProbeAllowedTabs -ccontains $label)
+    return (Test-SwdProbeListed -List $script:ProbeAllowedTabs -Label $label)
 }
 
 function Get-SwdProbeBoardName {
@@ -433,10 +508,12 @@ function Test-SwdBoxInNoise {
 function Get-SwdLibraryHash {
     <#  SHA-256 per file, keyed by path relative to Root. Exclude = wildcards on that path.  #>
     param([Parameter(Mandatory)][string]$Root, [string[]]$Exclude = $script:ProbeLibraryExclude)
-    if (-not (Test-Path -LiteralPath $Root)) { throw "Library root not found: $Root" }
+    if (-not (Test-Path -LiteralPath $Root)) { throw "Library root not found: $(Format-PathForDisplay $Root)" }
     $full = (Resolve-Path -LiteralPath $Root).ProviderPath.TrimEnd('\')
     $map = @{}
-    foreach ($f in Get-ChildItem -LiteralPath $full -Recurse -File) {
+    # -Force: without it hidden files, and every file in a hidden folder, were never hashed,
+    # so tampering with one left Ok=$true (S11).
+    foreach ($f in Get-ChildItem -LiteralPath $full -Recurse -File -Force) {
         $rel = $f.FullName.Substring($full.Length).TrimStart('\')
         $skip = $false; foreach ($x in $Exclude) { if ($rel -like $x) { $skip = $true; break } }
         if ($skip) { continue }
@@ -615,15 +692,40 @@ function Find-SwdProbeNoiseMask {
 }
 
 function Invoke-SwdProbeImageDiff {
+    <#  swd_diff.py 'pair'. Returns its result, or an object whose only property is Error.
+        It does not throw for a failed diff: the caller reports that as 'detector failed',
+        never as zero changes (W2).  #>
     param([Parameter(Mandatory)][string]$BeforeImage, [Parameter(Mandatory)][string]$AfterImage, [string]$Mask, $ExpectRects = @())
     $args2 = @((Join-Path $script:ProbeRoot 'swd_diff.py'), 'pair', $BeforeImage, $AfterImage)
     if ($Mask) { $args2 += @('--mask', $Mask) }
     # A loop, not a pipeline: piping an array of 4-element arrays can unroll them.
     $rects = @(); foreach ($r in @($ExpectRects)) { if ($null -ne $r -and @($r).Count -eq 4) { $rects += ,(@($r) -join ',') } }
     if ($rects.Count) { $args2 += '--expect'; $args2 += $rects }
-    $json = & python @args2 2>&1
-    if ($LASTEXITCODE -ne 0) { return [pscustomobject]@{ Error = ($json -join ' ') } }
-    return (($json -join "`n") | ConvertFrom-Json)
+    # Local 'Continue': -Probe runs under 'Stop', where Windows PowerShell 5.1 turns any
+    # stderr line of a native command into a terminating error, so the error branch never
+    # ran and a failed diff aborted the probe (measured, size-mismatched pair). stderr is
+    # told apart from stdout by type, so a warning on it cannot corrupt the JSON.
+    $ErrorActionPreference = 'Continue'
+    $out = New-Object System.Collections.Generic.List[string]
+    $err = New-Object System.Collections.Generic.List[string]
+    # Reset first, so an exit code this call did not produce (an earlier command's, or none
+    # at all under StrictMode) is never read as this diff's.
+    $global:LASTEXITCODE = 0
+    try {
+        foreach ($line in (& py -3.14 @args2 2>&1)) {
+            if ($line -is [Management.Automation.ErrorRecord]) { $err.Add("$line") } else { $out.Add("$line") }
+        }
+        $code = $LASTEXITCODE
+    } catch { return [pscustomobject]@{ Error = "image diff did not run: $($_.Exception.Message)" } }
+    $why = ($err -join ' ').Trim()
+    if ($code -ne 0) { return [pscustomobject]@{ Error = $(if ($why) { $why } else { "swd_diff.py exited $code" }) } }
+    $res = $null
+    try { $res = ($out -join "`n") | ConvertFrom-Json } catch { $res = $null }
+    # Success needs positive evidence: a result carrying out_of_scope.
+    if ($null -eq $res -or -not $res.PSObject.Properties['out_of_scope']) {
+        return [pscustomobject]@{ Error = "swd_diff.py returned no usable result. $why".Trim() }
+    }
+    return $res
 }
 
 function Compare-SwdProbeSnapshot {
@@ -656,8 +758,17 @@ function Compare-SwdProbeSnapshot {
         $hs = ($d.Kind -ne 'CHANGED') -and $d.PSObject.Properties['Hidden'] -and [bool]$d.Hidden
         $d | Add-Member -NotePropertyName Hidden -NotePropertyValue ([bool]$hs) -Force
     }
-    $img = $null
-    if ($Before.Image -and $After.Image) { $img = Invoke-SwdProbeImageDiff -BeforeImage $Before.Image -AfterImage $After.Image -Mask $Mask -ExpectRects $ExpectRects }
+    $img = $null; $imgErr = $null
+    if ($Before.Image -and $After.Image) {
+        $img = Invoke-SwdProbeImageDiff -BeforeImage $Before.Image -AfterImage $After.Image -Mask $Mask -ExpectRects $ExpectRects
+        # A diff that failed is a detector that did not run, never a clean one (W2), so the
+        # out-of-scope count below becomes $null, not 0. Python reports a path through
+        # repr(), doubling its backslashes, which are collapsed before redaction (R9).
+        if ($null -eq $img -or -not $img.PSObject.Properties['out_of_scope']) {
+            $raw = if ($img -and $img.PSObject.Properties['Error']) { "$($img.Error)" } else { 'image diff returned nothing' }
+            $imgErr = Format-MessageForDisplay ($raw.Replace('\\', '\'))
+        }
+    }
     # Assigned per branch: '$x = if (...) { @(...) } else { @() }' yields $null for an empty
     # result (then .Count throws under StrictMode) and unrolls a single box into its four
     # numbers. Measured on the first live T9, 2026-09-30.
@@ -668,9 +779,14 @@ function Compare-SwdProbeSnapshot {
     $outW = @($win | Where-Object { -not $_.InScope -and -not $_.Hidden })
     $outM = @($ms | Where-Object { -not $_.InScope -and -not $_.Hidden })
     return [pscustomobject]@{
-        Win32 = $win; Msaa = $ms; Image = $img
+        Win32 = $win; Msaa = $ms; Image = $img; ImageError = $imgErr
         OutOfScope = [pscustomobject]@{ Win32 = $outW; Msaa = $outM; ImageBoxes = $imgOut }
-        OutOfScopeCount = $outW.Count + $outM.Count + $imgOut.Count
+        # $null, never 0, when the image detector failed: the count is then unknown.
+        OutOfScopeCount = $(if ($imgErr) { $null } else { $outW.Count + $outM.Count + $imgOut.Count })
+        # Either MSAA walk cut short (node, time or depth cap, or a node with more than 10,000
+        # children): the MSAA half of this diff is then incomplete (S4).
+        MsaaTruncated = [bool](($Before.PSObject.Properties['MsaaTruncated'] -and $Before.MsaaTruncated) -or
+                               ($After.PSObject.Properties['MsaaTruncated'] -and $After.MsaaTruncated))
         InScopeCount = @($win | Where-Object { $_.InScope }).Count + @($ms | Where-Object { $_.InScope }).Count
         HiddenStructural = @($win | Where-Object { $_.Hidden }).Count + @($ms | Where-Object { $_.Hidden }).Count
     }
@@ -680,6 +796,8 @@ function Format-SwdProbeDiff {
     <#  Short human-readable lines for the console and the summary.  #>
     param($Diff, [int]$Max = 25)
     $lines = @()
+    if ($Diff.PSObject.Properties['ImageError'] -and $Diff.ImageError) { $lines += "  IMG  DETECTOR FAILED, change count unknown: $(ConvertTo-SwdSafeText $Diff.ImageError 160)" }
+    if ($Diff.PSObject.Properties['MsaaTruncated'] -and $Diff.MsaaTruncated) { $lines += '  MSAA WALK TRUNCATED: changes past the cut are not in this diff' }
     foreach ($d in @($Diff.OutOfScope.Win32) | Select-Object -First $Max) { $lines += "  W32  $($d.Kind) $($d.Field) h=$($d.Handle): '$($d.From)' -> '$($d.To)'" }
     foreach ($d in @($Diff.OutOfScope.Msaa) | Select-Object -First $Max) { $lines += "  MSAA $($d.Kind) $($d.Field) [$(ConvertTo-SwdSafeText $d.Name 40)]: '$(ConvertTo-SwdSafeText "$($d.From)" 40)' -> '$(ConvertTo-SwdSafeText "$($d.To)" 40)'" }
     foreach ($b in @($Diff.OutOfScope.ImageBoxes) | Select-Object -First $Max) { $lines += "  IMG  box $($b -join ',')" }
@@ -692,7 +810,7 @@ function Select-SwdProbeTab {
         Never a mouse click: see SwdProbeNative.SelectTab.  #>
     param([Parameter(Mandatory)][int64]$Handle, [Parameter(Mandatory)][string]$Name)
     if (-not (Test-SwdProbeAllowedTab $Name)) { throw "Tab '$Name' is not on the probe allowlist." }
-    $nodes = @((Get-SwdMsaaSnapshot -Handle $Handle).Nodes | Where-Object { $_.Role -eq '37' -and (ConvertTo-SwdProbeLabel $_.Name) -ceq $Name })
+    $nodes = @((Get-SwdMsaaSnapshot -Handle $Handle).Nodes | Where-Object { $_.Role -eq '37' -and (Test-SwdProbeListed -List (ConvertTo-SwdProbeLabel $_.Name) -Label $Name) })
     if ($nodes.Count -ne 1) { throw "Expected exactly one '$Name' page tab, found $($nodes.Count)." }
     $n = $nodes[0]
     if ($n.Key -notmatch '^h(\d+):.*/(\d+)$') { throw "Page tab '$Name' has no usable key '$($n.Key)'." }
@@ -702,6 +820,12 @@ function Select-SwdProbeTab {
     if ($sb.ToString() -notlike '*SysTabControl32*') { throw "Page tab '$Name' is owned by '$($sb.ToString())', not a tab control. Refusing." }
     $got = [SwdProbeNative]::SelectTab([intptr]$tab, $index)
     if ($got -ne $index) { throw "Tab '$Name': asked for index $index, tab control reports $got." }
+    # By NAME as well as by index (S12): the page tab now at that index must carry the name
+    # and STATE_SYSTEM_SELECTED (0x2).
+    $now = [SwdProbeNative]::ChildAt([intptr]$tab, $index)
+    if (-not $now -or -not (Test-SwdProbeListed -List (ConvertTo-SwdProbeLabel $now.Name) -Label $Name) -or -not ($now.State -band 0x2)) {
+        throw "Tab '$Name': index $index is selected, but it is not the selected '$Name' tab (MSAA reads '$(ConvertTo-SwdSafeText $(if ($now) { $now.Name } else { $null }) 40)')."
+    }
     return [pscustomobject]@{ Tab = $Name; TabControl = $tab; Index = $index; Selected = $got }
 }
 
@@ -792,8 +916,9 @@ function Invoke-SwdProbeSnapshotOnly {
 function Invoke-SwdProbeT9 {
     <#  Write + read back on the Volume TARGET box (entry field; nothing applies without
         Apply Volume), then restore. The diff shows whether the write alone touched
-        anything else. RUN LAST: it leaves the Apply Volume caption changed until the board
-        is reloaded, which blocks Set-SwdGeometry (T12-T14).  #>
+        anything else. It leaves the Apply Volume caption renamed until the board is
+        reloaded; swd_geometry.ps1 resolves the renamed caption, so T12-T14 still run, but a
+        later T9 on the same board starts from that residue, which BaselineDirty reports.  #>
     param([string]$RunDir, [string]$StopFile)
     $res = Resolve-SwdGeometryControl
     if (-not $res.Volume -or -not $res.Volume.Edit) { throw "Volume target box not resolved: $($res.Missing -join '; ')" }
@@ -802,6 +927,11 @@ function Invoke-SwdProbeT9 {
     $n = ConvertTo-SwdNumber -Text $orig
     if (-not $n.Ok) { throw "Volume target box reads '$orig', not a number." }
     $s0 = Get-SwdProbeSnapshot -Dir $RunDir -Label 't9-0-before'
+    # The caption BEFORE the write as well (S3): restoring the box does not restore it, so a
+    # board whose Volume box was written earlier this session starts already renamed, and
+    # LeavesResidue, measured against s0 only, cannot see residue that was there first.
+    $capBefore = @($s0.Controls | Where-Object { $_.Class -like '*BUTTON*' -and $_.Parent -eq $res.Volume.Group } |
+                   ForEach-Object { $_.Text } | Where-Object { $null -ne $_ })
     Assert-SwdProbeContinue -StopFile $StopFile
     $new = ([double]$n.Value + 1).ToString([Globalization.CultureInfo]::InvariantCulture)
     $w1 = $null; $w2 = $null; $st1 = $null; $s1 = $null
@@ -827,15 +957,20 @@ function Invoke-SwdProbeT9 {
         RestoreVsOriginal = [pscustomobject]@{ Changes = $d2.OutOfScopeCount; Lines = (Format-SwdProbeDiff $d2) }
         # Measured 2026-09-30: writing this box renames the Apply Volume button to
         # 'Set N liters volume to board', and restoring the box does NOT restore the caption.
-        # Only a board reload does. Set-SwdGeometry then refuses every axis (it resolves all
-        # three Apply buttons), so run T9 LAST and reload the board afterwards.
-        LeavesResidue = ($d2.OutOfScopeCount -gt 0)
+        # Only a board reload does. LeavesResidue compares against s0 alone, so it is only
+        # a clean-board result when BaselineDirty is $false.
+        # $null when a detector failed: an unknown count is not 'no residue' (W2).
+        LeavesResidue = $(if ($null -eq $d2.OutOfScopeCount) { $null } else { $d2.OutOfScopeCount -gt 0 })
+        ApplyVolumeCaptionBefore = $capBefore
         ApplyVolumeCaption = @(Get-SwdControl | Where-Object { $_.Class -like '*BUTTON*' -and $_.Parent -eq $res.Volume.Group } | ForEach-Object { $_.Text })
+        # $true: the renamed caption was already there before this write. $null: no caption
+        # was read before it, so a dirty baseline cannot be ruled out.
+        BaselineDirty = $(if ($capBefore.Count -eq 0) { $null } else { @($capBefore | Where-Object { $_ -cmatch $script:GeometryAxes['Volume'].ApplyLike }).Count -gt 0 })
     }
 }
 
 function Invoke-SwdProbeT11 {
-    <#  Tab switch through MSAA default action, then back. Checks the page really showed.  #>
+    <#  Tab switch by TCM_SETCURFOCUS (Select-SwdProbeTab), then back. Checks the page really showed.  #>
     param([string]$RunDir, [string]$StopFile)
     $main = Get-SwdProbeMain
     $s0 = Get-SwdProbeSnapshot -Dir $RunDir -Label 't11-0-before'
@@ -879,7 +1014,7 @@ function Invoke-SwdProbeT12 {
     $d = Compare-SwdProbeSnapshot -Before $s0 -After $s2 -Mask $mask
     return [pscustomobject]@{
         OriginalMm = $orig; Up = $up; Down = $down
-        Exact = ($d.OutOfScopeCount -eq 0); Residual = $d.OutOfScopeCount; Lines = (Format-SwdProbeDiff $d 40)
+        Exact = $(if ($null -eq $d.OutOfScopeCount) { $null } else { $d.OutOfScopeCount -eq 0 }); Residual = $d.OutOfScopeCount; Lines = (Format-SwdProbeDiff $d 40)
         TitleBefore = $s0.Title; TitleChanged = $(if ($s1) { $s1.Title } else { $null }); TitleAfter = $s2.Title
     }
 }
@@ -934,7 +1069,7 @@ function Invoke-SwdProbeT14 {
             $d = Compare-SwdProbeSnapshot -Before $s0 -After $s1 -Mask $mask
             foreach ($kv in (Get-SwdProbeVolatility -MsaaDiff $d.Msaa -Win32Diff $d.Win32).GetEnumerator()) { $ignore[$kv.Key] = $true }
             $neg += [pscustomobject]@{ Run = $k; Win32 = @($d.Win32).Count; Msaa = @($d.Msaa).Count
-                                       ImageBoxes = @($d.OutOfScope.ImageBoxes).Count; Lines = (Format-SwdProbeDiff $d) }
+                                       ImageBoxes = @($d.OutOfScope.ImageBoxes).Count; ImageError = $d.ImageError; Lines = (Format-SwdProbeDiff $d) }
             $s0 = $s1
         }
         foreach ($k in 1, 2) {
@@ -954,9 +1089,12 @@ function Invoke-SwdProbeT14 {
         $now = (Get-SwdProbeLengthContext).LengthMm
         if ([math]::Abs([double]$now - $orig) -gt 1e-6) { [void](Set-SwdProbeLength -ValueMm $orig -Main $main.Handle) }
     }
+    # Both verdicts are $null when an image detector failed: a control that could not be
+    # measured has neither passed nor failed (W2).
+    $failed = @($neg | Where-Object { $_.ImageError }).Count + @($pos | Where-Object { $null -eq $_.OutOfScope }).Count
     return [pscustomobject]@{ Negative = $neg; Positive = $pos; VolatileKeys = $ignore.Count
-                              NegativeClean = (@($neg | Where-Object { $_.Win32 + $_.Msaa + $_.ImageBoxes -gt 0 }).Count -eq 0)
-                              PositiveDetected = (@($pos | Where-Object { $_.OutOfScope -gt 0 }).Count -eq $pos.Count) }
+                              NegativeClean = $(if ($failed) { $null } else { @($neg | Where-Object { $_.Win32 + $_.Msaa + $_.ImageBoxes -gt 0 }).Count -eq 0 })
+                              PositiveDetected = $(if ($failed) { $null } else { @($pos | Where-Object { $_.OutOfScope -gt 0 }).Count -eq $pos.Count }) }
 }
 
 function Invoke-SwdProbeT17 {
@@ -985,6 +1123,9 @@ function Invoke-SwdProbe {
     $transcript = Join-Path $run 'transcript.txt'
     Start-Transcript -LiteralPath $transcript | Out-Null
     $summary = [ordered]@{ Probe = $Name; Started = (Get-Date).ToString('o'); RunDir = $run; ReviewStatus = 'pre-SQA (owner override 2026-09-30)' }
+    # Before the try: finally reads them, and under StrictMode an unassigned variable there
+    # would throw over the original error.
+    $lib = $null; $libBefore = $null
     try {
         if ($Name -ne 'T17') {
             $self = [SwdWin]::IntegritySid($PID)
@@ -994,7 +1135,6 @@ function Invoke-SwdProbe {
             $summary.Board = Assert-SwdProbeBoard -Title $main.Title
             $summary.Integrity = Format-Integrity $swdInt
         }
-        $lib = $null; $libBefore = $null
         if ($Name -ne 'T17' -and -not $SkipLibraryHash) {
             $lib = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'ShaperWaveDynamics documents\biblio'
             $libBefore = Get-SwdLibraryHash -Root $lib
@@ -1009,17 +1149,26 @@ function Invoke-SwdProbe {
             'T17' { Invoke-SwdProbeT17 -RunDir $run }
         }
         $summary.Result = $result
-        if ($libBefore) {
-            $cmp = Compare-SwdLibraryHash -Before $libBefore -After (Get-SwdLibraryHash -Root $lib)
-            $summary.Library = $cmp
-            if (-not $cmp.Ok) { Write-Warning "LIBRARY CHANGED: added $($cmp.Added.Count), removed $($cmp.Removed.Count), changed $($cmp.Changed.Count)" }
-        }
         $summary.Outcome = 'completed'
     } catch {
         $summary.Outcome = 'error'
         $summary.Error = $_.Exception.Message
         throw
     } finally {
+        # The only on-disk detector of an SWD write, so it runs on EVERY path (W3): a STOP,
+        # a failed diff or a crashed probe is exactly the run that needs it. Its own
+        # try/catch keeps a failed re-hash from replacing the original error.
+        if ($libBefore) {
+            try {
+                $cmp = Compare-SwdLibraryHash -Before $libBefore -After (Get-SwdLibraryHash -Root $lib)
+                $summary.Library = $cmp
+                if (-not $cmp.Ok) { Write-Warning "LIBRARY CHANGED: added $($cmp.Added.Count), removed $($cmp.Removed.Count), changed $($cmp.Changed.Count)" }
+            } catch {
+                $why = Format-MessageForDisplay $_.Exception.Message
+                $summary.Library = [pscustomobject]@{ Ok = $null; Error = $why }
+                Write-Warning "LIBRARY NOT RE-CHECKED: $why"
+            }
+        }
         $summary.Finished = (Get-Date).ToString('o')
         Write-SwdProbeJson -Path (Join-Path $run 'summary.json') -Object ([pscustomobject]$summary) -Depth 8
         Stop-Transcript | Out-Null

@@ -2235,3 +2235,24 @@ Describe 'SQA 2026-10-06 W1/W2: a sweep chunk never hands SWD back holding a cha
         (Read-SwdProbeState -Path (Join-Path $script:SDir 'state.json')).RestorePendingPid | Should -Be 0
     }
 }
+Describe 'dialog policy: the one Yes (switch Board Dynamics on; Benjamin 2026-10-06)' {
+    BeforeAll { $script:DynText = 'Switch Dynamics On to show elements details ?' }
+    It 'answers Yes on the exact dialog, accelerators and all' {
+        Select-SwdSweepDialogAction -Title 'Dynamics is off' -Texts @($script:DynText) -Buttons @('&Yes', '&No') | Should -Be 'Yes'
+    }
+    It 'falls back to declining when anything differs: <Case>' -ForEach @(
+        @{ Case = 'another title'; Title = 'Dynamics is on'; Text = 'Switch Dynamics On to show elements details ?'; Buttons = @('Yes', 'No'); Want = 'No' }
+        @{ Case = 'another question'; Title = 'Dynamics is off'; Text = 'Switch Dynamics Off to show elements details ?'; Buttons = @('Yes', 'No'); Want = 'No' }
+        @{ Case = 'extra text'; Title = 'Dynamics is off'; Text = 'Switch Dynamics On to show elements details ? Unsaved changes will be lost.'; Buttons = @('Yes', 'No'); Want = 'No' }
+        @{ Case = 'a third button'; Title = 'Dynamics is off'; Text = 'Switch Dynamics On to show elements details ?'; Buttons = @('Yes', 'No', 'Cancel'); Want = 'Cancel' }
+        @{ Case = 'lower-case yes'; Title = 'Dynamics is off'; Text = 'Switch Dynamics On to show elements details ?'; Buttons = @('yes', 'No'); Want = 'No' }
+    ) {
+        Select-SwdSweepDialogAction -Title $Title -Texts @($Text) -Buttons $Buttons | Should -Be $Want
+    }
+    It 'never answers Yes on a Yes-only dialog, even with the allowed wording' {
+        Select-SwdSweepDialogAction -Title 'Dynamics is off' -Texts @($script:DynText) -Buttons @('Yes') | Should -BeNullOrEmpty
+    }
+    It 'keeps the closing order: a save prompt still gets No' {
+        Select-SwdSweepDialogAction -Title 'FYN Shaper Wave Dynamics' -Texts @('Save changes?') -Buttons @('Yes', 'No', 'Cancel') -Order @('No', 'Non', 'Close', 'Fermer', 'Cancel', 'Annuler') | Should -Be 'No'
+    }
+}

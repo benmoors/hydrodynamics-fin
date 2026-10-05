@@ -1434,7 +1434,15 @@ $script:SweepGridSkip = @('Nom', 'infos')
 # resized a 34 L board to 10 L (AI-USE.md E109). The Map loop relaunches after every such trial.
 $script:SweepRestoreByRelaunch = @('NumericUpDownBoardVolumeInput')
 # The only buttons the sweep presses on a dialog it did not expect; each declines or cancels.
-# Preference order: cancel what was asked, then decline it, then close. 'Yes' is never pressed.
+# Preference order: cancel what was asked, then decline it, then close. 'Yes' is never pressed,
+# with ONE exception below.
+# The one dialog 'Yes' may answer (Benjamin, 2026-10-06, AI-USE.md section 4: "You can press yes for
+# this, it is about switching Board Dyanmics on"): selecting a scan position with Board Dynamics OFF
+# asks to switch it on. Matched EXACTLY - title, every text, and buttons exactly Yes + No - after
+# ConvertTo-SwdProbeLabel, so no other dialog, rewording or extra button can borrow it.
+$script:SweepDialogYesAllowed = @(
+    @{ Title = 'Dynamics is off'; Text = 'Switch Dynamics On to show elements details ?' }
+)
 $script:SweepDialogSafeButtons = @('Cancel', 'Annuler', 'No', 'Non', 'Close', 'Fermer')
 # Top-level SWD windows that are not dialogs: the splash and the Board Dynamics notice close themselves.
 $script:SweepTransientLike = @('Loading ShaperWaveDynamics*', 'Dynamics on*', 'Dynamics off*')
@@ -1500,9 +1508,18 @@ function Select-SwdSweepDialogAction {
     <#  The button to press on a dialog the sweep did not expect, or $null to stop (pure).
         Cancel / No / Close (and French) first: each declines what the dialog asks. A dialog
         whose ONLY button is OK is acknowledged when nothing it says is on the denylist (an
-        information box). 'Yes' is never pressed; anything else stops the run.  #>
+        information box). 'Yes' is pressed only on the exact dialogs in
+        $script:SweepDialogYesAllowed (switching Board Dynamics on); anything else stops the run.  #>
     param([AllowNull()][string]$Title, [string[]]$Texts = @(), [string[]]$Buttons = @(), [string[]]$Order = $script:SweepDialogSafeButtons)
     $labels = @(@($Buttons) | ForEach-Object { ConvertTo-SwdProbeLabel $_ } | Where-Object { $_ })
+    # Checked before the decline order, which would otherwise pick No first.
+    $title = ConvertTo-SwdProbeLabel $Title
+    $text = ConvertTo-SwdProbeLabel ((@($Texts) | Where-Object { $_ }) -join ' ')
+    $yesNo = ($labels.Count -eq 2 -and @($labels | Where-Object { [string]::Equals($_, 'Yes', [StringComparison]::Ordinal) }).Count -eq 1 -and
+              @($labels | Where-Object { [string]::Equals($_, 'No', [StringComparison]::Ordinal) }).Count -eq 1)
+    foreach ($a in $script:SweepDialogYesAllowed) {
+        if ($yesNo -and [string]::Equals($title, $a.Title, [StringComparison]::Ordinal) -and [string]::Equals($text, $a.Text, [StringComparison]::Ordinal)) { return 'Yes' }
+    }
     # -Order may only reorder the safe set, never add to it.
     foreach ($want in @($Order | Where-Object { $script:SweepDialogSafeButtons -contains $_ })) {
         foreach ($l in $labels) { if ([string]::Equals($l, $want, [StringComparison]::OrdinalIgnoreCase)) { return $l } }

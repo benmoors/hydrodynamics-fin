@@ -115,6 +115,64 @@ Detail: `wiki/sources/SWD Automation Probe Results 2026-09-30.md`. Logs:
 | T17 | 2026-09-30 | ✅ stop file stops the loop after step 3 (unit + live) | `215102-T17/` |
 | T16 lock test | — | owed: Win+L during a probe | — |
 
+## Input sweep, 2026-10-01/02 (the "full fiddling suite", unattended)
+
+Benjamin's request: run every SWD input overnight and find what each one affects (`AI-USE.md` § 4,
+2026-10-01). Built as `swd_probe.ps1 -Probe Sweep` under the owner override, with light fixes
+allowed during the run. **Its SQA pass is owed** (`SQA-LOG.md`). Result:
+`wiki/syntheses/SWD Input-Output Sensitivity Map.md`; data:
+`wiki/raw/SWD input sensitivity run 2026-10-01.md`; logs, snapshots and CSVs:
+`%LOCALAPPDATA%\swd-probe\2026-10-01\` (`sweep\`, `matrix\`).
+
+| Item | Result |
+|---|---|
+| Board | `default_shortboard_Copy_1` (locked), the board SWD opens itself; Claude Code launched, closed and relaunched SWD (35 relaunches) |
+| Gate | T14 on this board: negative clean ×2; positive 3 in-scope / 23 out-of-scope, identical ×2 |
+| Census | UIA3 census of every allowlisted tab in both Board Dynamics modes (`swd_uia3.py`) + editable board-grid rows: 58 inputs |
+| Map | 230 trials (each value twice, restored after each); 2 transient errors, passed on retry; 0 skipped |
+| Situation | `flow ms` 5–20 m/s and Slope −3…+3°, one fresh SWD session per level (Apply situation presses once per session) |
+| Curve | ladders for fin box X offset, cant, foil pitch, board length and width |
+| Safety | Hydrodynamics Scanner never actuated; no dialog needed an answer, no Yes; library hash (446 files) unchanged on every chunk with a verdict and equal to the 2026-09-30 backup at the end; SWD's settings file byte-identical to the backup at the end |
+| Tests | `swd_probe` Pester 241/0 (48 new tests); PSScriptAnalyzer 0 findings; `swd_uia3.py` and `swd_sweep_matrix.py` self-checks pass. Other phase2 files unchanged |
+
+**Changes to `swd_probe.ps1` beyond the sweep itself:**
+- **NEW-1 fixed** (a failed capture now reports the image detector as failed). Done under
+  Benjamin's light-fix delegation; W7 stays his decision.
+- The tab allowlist gains Test Position, Spoon, Elements;analysis and Dashboard.
+- The button allowlist gains the anchored `Set N liters volume to board` pattern. Bare `Apply`
+  stays refused.
+- `Get-SwdProbeMain` waits out the Board Dynamics notice that briefly holds `MainWindowHandle`.
+
+**Bugs found while building or running the sweep, all fixed, none reaching a result:**
+- **Interop and naming:**
+  - PowerShell passes `$null` to a .NET `string` as `""`, so the MSAA role filter never matched.
+  - A local `$native` silently overwrote the `-Native` parameter (PowerShell names are
+    case-insensitive).
+  - A `$Input` parameter shadowed PowerShell's automatic variable (PSScriptAnalyzer).
+  - The test helper `R` resolved to the `Invoke-History` alias.
+- **Values:**
+  - `$b * 1.1, $b * 0.9` multiplies by an array, because the comma binds tighter than `*`.
+  - `$(@(x))` unrolled a one-item list, and `+=` concatenated the relaunch record.
+- **SWD specifics:**
+  - A NumericUpDown's own window text is empty, so spinners are read and written through their
+    inner EDIT.
+  - The fin selector took a sibling category for a fin.
+  - A close prompt answered "Cancel" kept SWD open, so closing now prefers "No".
+- **Process:**
+  - Apply situation is one-shot, so a Situation pass was added.
+  - A relaunch censused modes with nothing left to sweep.
+  - Positional MSAA keys misread re-laid property grids, so the matrix re-reads grids by row name.
+- The harness's 2-hour background limit stopped the chunk loop once, between a snapshot and a
+  write; it resumed from `state.json` with nothing changed.
+
+**Open points for the sweep's SQA pass:**
+1. **The input allowlist is the census**, filtered by kind, denylist and skip list. Text and number
+   boxes still have no caption allowlist of their own (as before).
+2. **Apply-situation inputs relaunch SWD per level**, and their applied values persist in SWD's
+   settings; the sweep sets them back at the end.
+3. `Stop-SwdSweepApp` force-stops SWD when it has not exited after 60 s. It happened once.
+4. **`Clear-SwdSweepPopup`** leaves a visible window with no buttons alone as a non-dialog.
+
 ## SQA handoff (for tonight's pass)
 
 > [!note] Done 2026-10-01: one SQA pass over the 10 files in `SQA-LOG.md` (agy, then Devin, then one
@@ -189,3 +247,25 @@ PSScriptAnalyzer: 0 findings on `swd_probe.ps1` and `swd_geometry.ps1`.
    caps, and the COM exception handling on a busy SWD.
 5. **Denylist and allowlist wording:** `ProbeDenyPattern`, `ProbeAllowedButtons`,
    `ProbeAllowedTabs`.
+
+## Live-solver pilot, 2026-10-05/06 (Stage 1, run overnight)
+
+Benjamin's direction (`AI-USE.md` § 4, 2026-10-05): read the live solver over speed × slope ×
+every scan position, loop order speed → slope → drift → Pos Y → Pos X, slope fully nested; Stage 1
+tonight as a full test, SQA after, levels for Stage 2 chosen from the report. Built as three new
+passes of `swd_probe.ps1` under the owner override. Data and tables:
+`wiki/raw/SWD live-solver pilot 2026-10-05.md`; records in `%LOCALAPPDATA%\swd-probe\2026-10-05\`.
+
+| Item | Result |
+|---|---|
+| Board | `default_shortboard_Copy_1` (locked), volume guard 33.95 L, surfer Surfer Pro 80 kg |
+| Pilot | P0 launch element = 2026-10-01 to every digit; P1 typed write + Apply; P2 the Apply refreshes the grid; P3 every position re-solves (lift within 0.02 %); P4 order effect (7 of 10 positions move; ≤ 0.15 % drag, ≤ 1.3 % angle); P5 14 of 15 levels exact, slope −2° bistable; P6 3–25 m/s and ±30° usable; P9 retired (modal question); P9b tree positions = `elements.csv` rows, 272 = 272 |
+| Loop test | 2,448 reads, 0 element mismatches after the sign fix, 9/9 block controls, 146 repeat reads identical; converged 52–53 % / 78–80 % / 88–89 % at 5 / 10 / 20 m/s |
+| Safety | Hydrodynamics Scanner never actuated; one modal "Dynamics is off" question answered No (E113); no Yes; library hash (446 files) unchanged on every chunk; SWD left at 10 m/s, 0° and closed; settings file equals the backup except two wave-view distances that differed before the run |
+| Tests | `swd_probe` Pester 291/0; PSScriptAnalyzer 0 findings; `swd_solver_table.py --self-test` passes |
+
+**Fixes made during the run** (light-touch, each with a test, `AI-USE.md` § 5): `-SweepDir` was
+ignored (E112); P9 blocked on a modal question and was retired (E113); the cursor guard halted on a
+2 px hand movement (E114); one census missed half the Project tab (E115); the lift flag used the
+median (E116); a loop crossing midnight restarted in a dated directory (E117); the element check now
+compares drift and Y by magnitude.

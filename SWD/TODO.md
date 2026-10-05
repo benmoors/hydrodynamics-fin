@@ -1278,3 +1278,47 @@ from it.
     beyond the 1.56% bound stated in `README.md` § 5 and `src/geometry.py`.
   - STL gives exact absolute dimensions, but it describes the board *as it is now*, which need not
     be what was scanned.
+
+## Input sweep, 2026-10-01/02: what every input affects
+
+Unattended overnight run of `swd_probe.ps1 -Probe Sweep` on `default_shortboard_Copy_1` (58 inputs,
+230 paired trials, 15 speed and slope levels, 5 ladders). The library was unchanged. Detail:
+`docs/plans/SWD-AUTOMATION-PROBES.md` § Input sweep; the answer is wiki *SWD Input-Output
+Sensitivity Map*.
+
+- **A second calculator exists.** With Board Dynamics ON, the analysis grid is a live single-point
+  trim solver. It responds to `flow ms` (5–20 m/s), Slope and geometry with **no scan**: friction
+  33 → 445 N and drag 127 → 617 N from 5 to 20 m/s, with lift held at 807 N. Nothing is saved to
+  disk; it is read from the screen through MSAA.
+- **Apply situation presses once per SWD session**, and its values persist in SWD's settings file.
+- **The bold Dynamics rows are stored values** and recompute nothing. **Fins** move only the fin
+  readout (through cant). **Rail force and yaw moment** respond erratically to small geometry
+  changes.
+- **Yours to decide:**
+  - whether the project uses the single-point solver, and over which inputs;
+  - W7 (`Applied` semantics).
+- **Owed:** an SQA pass over the sweep code (`SQA-LOG.md`).
+
+## Live-solver pilot, 2026-10-05/06: speed × slope × scan position
+
+Stage 1 of the campaign Benjamin chose on 2026-10-05 (`AI-USE.md` § 4), run overnight as
+`swd_probe.ps1 -Probe Sweep -Pass SolverPilot | SolverLoop | SolverRestore` on
+`default_shortboard_Copy_1`. The library was unchanged on every chunk. Detail:
+`docs/plans/SWD-AUTOMATION-PROBES.md` § Live-solver pilot; wiki *SWD Live-Solver Pilot 2026-10-05*.
+
+- **No relaunch per level.** Typing a speed or slope and pressing Apply situation re-solves, in one
+  session (E110 corrects E107).
+- **Every scan position can be read live:** 272 at drift ≤ 20° (picked through the hydroscan's
+  drift list), re-solved at the applied speed and slope. Loop test: 2,448 reads (3 speeds × 3
+  slopes), all 9 block controls matched, and 146 repeat reads matched every row. The median read
+  takes 1.9 s.
+- **An `elements.csv` row is one scan position, not a mesh slice** (272 = 272; E111). So
+  `operating_points.csv` rows sum about 12 attitudes.
+- **Many positions do not converge:** 52–53 % at 5 m/s, 78–80 % at 10 m/s, 88–89 % at 20 m/s.
+- **Small order effect:** reading positions in reverse moved drag by ≤ 0.15 % and planing angle by
+  ≤ 1.3 % (pilot P4).
+- **Data:** `%LOCALAPPDATA%\swd-probe\2026-10-05\solver\solver_points.csv` (key rows) and
+  `solver_points_all.csv` (all 73). Not copied to `SWD/data/`: that is Benjamin's call.
+- **Yours to decide:** Stage 2's speed and slope levels, boards and drift range; whether to remove
+  the order effect with an anchor read (about 2× the time); the training table (E111).
+- **Owed:** re-run the 2026-10-01 "no effect" inputs that have no Apply button, with a refresh (E110).

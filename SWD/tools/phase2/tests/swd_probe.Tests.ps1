@@ -2256,3 +2256,460 @@ Describe 'dialog policy: the one Yes (switch Board Dynamics on; Benjamin 2026-10
         Select-SwdSweepDialogAction -Title 'FYN Shaper Wave Dynamics' -Texts @('Save changes?') -Buttons @('Yes', 'No', 'Cancel') -Order @('No', 'Non', 'Close', 'Fermer', 'Cancel', 'Annuler') | Should -Be 'No'
     }
 }
+Describe 'Stage 2 (2026-10-06): the one original board, and only for the solver' {
+    It 'accepts default_shortboard with -AllowOriginal' {
+        Assert-SwdProbeBoard 'FYN Shaper Wave Dynamics   <Board: default_shortboard(1829mm)> <no Wave> <Surfer: Surfer Pro(80Kg)>' -AllowOriginal | Should -Be 'default_shortboard'
+    }
+    It 'refuses default_shortboard without -AllowOriginal (every non-solver probe)' {
+        { Assert-SwdProbeBoard 'FYN Shaper Wave Dynamics   <Board: default_shortboard(1829mm)> <no Wave>' } | Should -Throw '*not a copy*'
+    }
+    It 'refuses every other original even with -AllowOriginal: <_>' -ForEach @('default_fish', 'Default_Shortboard', 'default_shortboard_x', 'xdefault_shortboard', 'default_shortboard.', 'default shortboard') {
+        { Assert-SwdProbeBoard "FYN Shaper Wave Dynamics   <Board: $_(1829mm)> <no Wave>" -AllowOriginal } | Should -Throw '*not a copy*'
+    }
+    It 'refuses an original with an invisible suffix even with -AllowOriginal: <_>' -ForEach @(
+        @{ Suffix = 'soft hyphen'; Char = [char]0x00AD }
+        @{ Suffix = 'zero-width space'; Char = [char]0x200B }
+    ) {
+        $n = 'default_shortboard' + $Char
+        { Assert-SwdProbeBoard "FYN Shaper Wave Dynamics   <Board: $n(1829mm)> <no Wave>" -AllowOriginal } | Should -Throw '*not a copy*' -Because $Suffix
+    }
+    It 'still accepts a copy with -AllowOriginal' {
+        Assert-SwdProbeBoard 'FYN Shaper Wave Dynamics   <Board: default_shortboard_Copy_1(1829mm)>' -AllowOriginal | Should -Be 'default_shortboard_Copy_1'
+    }
+    It 'reads the surfer mass from the caption' {
+        Get-SwdProbeSurferKg 'FYN Shaper Wave Dynamics   <Board: b_Copy_1(2000mm)> <no Wave> <Surfer: Surfer Pro(80Kg)>' | Should -Be 80
+        Get-SwdProbeSurferKg 'FYN Shaper Wave Dynamics   <Surfer: Surfer 65 kg(65,5Kg)>' | Should -Be 65.5
+        Get-SwdProbeSurferKg 'FYN Shaper Wave Dynamics   <Board: b_Copy_1(2000mm)>' | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Stage 2: the board file is found by exact name, never guessed' {
+    BeforeAll {
+        $script:Lib = @('C:\lib\Default\default_shortboard.fynbs', 'C:\lib\Default\default_shortboard_Copy_1.fynbs', 'C:\lib\x\xdefault_shortboard.fynbs',
+                        'C:\lib\x\default_shortboard.fynbs.bak', 'C:\lib\Default\default_fish.fynbs')
+    }
+    It 'returns the one exact match' {
+        Find-SwdSolverBoardFile -Name 'default_shortboard' -Files $script:Lib | Should -Be 'C:\lib\Default\default_shortboard.fynbs'
+    }
+    It 'matches the file name without regard to case' {
+        Find-SwdSolverBoardFile -Name 'default_shortboard' -Files @('C:\lib\D\DEFAULT_SHORTBOARD.FYNBS') | Should -Be 'C:\lib\D\DEFAULT_SHORTBOARD.FYNBS'
+    }
+    It 'throws on no match and on two matches, naming the file only' {
+        { Find-SwdSolverBoardFile -Name 'default_longboard' -Files $script:Lib } | Should -Throw "*0 library files named 'default_longboard.fynbs'*"
+        { Find-SwdSolverBoardFile -Name 'default_shortboard' -Files (@($script:Lib) + 'C:\lib\old\default_shortboard.fynbs') } | Should -Throw "*2 library files named 'default_shortboard.fynbs'*"
+        { Find-SwdSolverBoardFile -Name 'default_longboard' -Files @() } | Should -Throw '*0 library files*'
+    }
+    It 'refuses a name that is not a plain board name: <_>' -ForEach @('..\x', 'a\b', '*', 'default?', 'x..y', '', ' lead', 'a/b') {
+        { Find-SwdSolverBoardFile -Name $_ -Files $script:Lib } | Should -Throw
+    }
+    It 'refuses a trailing-dot name, even if a double-dot file exists' {
+        { Find-SwdSolverBoardFile -Name 'default_shortboard.' -Files @('C:\lib\Default\default_shortboard..fynbs') } | Should -Throw '*not a plain board name*'
+    }
+}
+
+Describe 'Stage 2: the file picker parts' {
+    BeforeAll {
+        $script:Row = { param($h, $class, $id, $parent, $text) [pscustomobject]@{ Handle = [int64]$h; Class = $class; CtrlId = $id; Parent = [int64]$parent; Text = $text; Visible = $true } }
+        # The Vista picker: ComboBoxEx32 (1148) > ComboBox > Edit, with Open (1) and Cancel (2).
+        $script:Vista = @(
+            (& $script:Row 10 'DUIViewWndClassName' 0 1 ''), (& $script:Row 11 'ComboBoxEx32' 1148 10 ''), (& $script:Row 12 'ComboBox' 1148 11 ''),
+            (& $script:Row 13 'Edit' 1148 12 ''), (& $script:Row 14 'Edit' 0 10 'search'), (& $script:Row 15 'Button' 1 1 '&Open'), (& $script:Row 16 'Button' 2 1 'Cancel'))
+    }
+    It 'finds the file-name box, Open and Cancel in the Vista layout' {
+        $p = Find-SwdSolverFileDialogPart -Rows $script:Vista
+        $p.Why | Should -BeNullOrEmpty
+        $p.Edit | Should -Be 13; $p.Open | Should -Be 15; $p.Cancel | Should -Be 16
+    }
+    It 'finds the classic edt1 (1152)' {
+        $p = Find-SwdSolverFileDialogPart -Rows @((& $script:Row 20 'Edit' 1152 1 ''), (& $script:Row 21 'Button' 1 1 'Open'), (& $script:Row 22 'Button' 2 1 'Cancel'))
+        $p.Why | Should -BeNullOrEmpty; $p.Edit | Should -Be 20
+    }
+    It 'refuses a window that is not an Open picker: <Case>' -ForEach @(
+        @{ Case = 'no file-name box'; Drop = 13; Caption = $null }
+        @{ Case = 'IDOK is Save'; Drop = 0; Caption = '&Save' }
+        @{ Case = 'IDOK is Delete'; Drop = 0; Caption = 'Delete' }
+        @{ Case = 'no Cancel'; Drop = 16; Caption = $null }
+    ) {
+        $rows = @($script:Vista | Where-Object { $_.Handle -ne $Drop } | ForEach-Object { $c = $_.PSObject.Copy(); if ($Caption -and $c.CtrlId -eq 1) { $c.Text = $Caption }; $c })
+        (Find-SwdSolverFileDialogPart -Rows $rows).Why | Should -Not -BeNullOrEmpty
+    }
+    It 'refuses two file-name boxes' {
+        $rows = @($script:Vista) + (& $script:Row 30 'Edit' 1152 1 '')
+        (Find-SwdSolverFileDialogPart -Rows $rows).Why | Should -Match '2 file-name boxes'
+    }
+    It 'refuses an empty window' {
+        (Find-SwdSolverFileDialogPart -Rows @()).Why | Should -Match '0 file-name boxes'
+    }
+}
+
+Describe 'Stage 2: a night ends on a block boundary' {
+    It 'parses -EndBy strictly' {
+        ConvertTo-SwdSolverEndBy '' | Should -BeNullOrEmpty
+        ConvertTo-SwdSolverEndBy $null | Should -BeNullOrEmpty
+        (ConvertTo-SwdSolverEndBy '2026-10-07T06:50:00') | Should -Be ([datetime]'2026-10-07 06:50:00')
+        foreach ($bad in '07:00', '2026-10-07 06:50', '2026-10-07T06:50', 'tomorrow', '2026-13-07T06:50:00') { { ConvertTo-SwdSolverEndBy $bad } | Should -Throw -Because $bad }
+    }
+    It 'always fits without an end time' {
+        Test-SwdSolverBlockFit -Now ([datetime]'2026-10-07 06:49:00') -EndBy $null -Positions 282 | Should -BeTrue
+    }
+    It 'fits a block that ends in time, and not one that would not' {
+        $end = [datetime]'2026-10-07 06:50:00'
+        # 283 reads x 2.5 s + 30 s = 737.5 s, about 12.3 min.
+        Test-SwdSolverBlockFit -Now $end.AddMinutes(-13) -EndBy $end -Positions 282 -ReadSeconds 2.5 | Should -BeTrue
+        Test-SwdSolverBlockFit -Now $end.AddMinutes(-12) -EndBy $end -Positions 282 -ReadSeconds 2.5 | Should -BeFalse
+        Test-SwdSolverBlockFit -Now $end.AddMinutes(1) -EndBy $end -Positions 282 -ReadSeconds 2.5 | Should -BeFalse
+    }
+    It 'uses 2.7 s a read before any read is timed' {
+        $end = [datetime]'2026-10-07 06:50:00'
+        # 283 x 2.7 + 30 = 794.1 s.
+        Test-SwdSolverBlockFit -Now $end.AddSeconds(-795) -EndBy $end -Positions 282 -ReadSeconds 0 | Should -BeTrue
+        Test-SwdSolverBlockFit -Now $end.AddSeconds(-793) -EndBy $end -Positions 282 -ReadSeconds 0 | Should -BeFalse
+    }
+}
+
+Describe 'Stage 2: the native menu verbs (in-process MenuStrip)' {
+    # Evidence for the route, not proof against SWD: SWD is read from another process, and an
+    # in-process TreeView once exposed less than SWD's (2026-10-05). Files -> Open Board is
+    # verified live in the Stage 2 pilot (P10a).
+    BeforeAll {
+        $script:MenuForm = New-Object System.Windows.Forms.Form
+        $script:MenuForm.StartPosition = 'Manual'; $script:MenuForm.Location = New-Object System.Drawing.Point(900, 400)
+        $ms = New-Object System.Windows.Forms.MenuStrip; $ms.Name = 'MenuStrip1'
+        $files = New-Object System.Windows.Forms.ToolStripMenuItem 'Files'
+        $open = New-Object System.Windows.Forms.ToolStripMenuItem 'Open Board'
+        $script:Opened = 0; $open.add_Click({ $script:Opened++ })
+        [void]$files.DropDownItems.Add($open); [void]$files.DropDownItems.Add((New-Object System.Windows.Forms.ToolStripMenuItem 'Save project'))
+        [void]$ms.Items.Add($files)
+        $script:MenuForm.MainMenuStrip = $ms; $script:MenuForm.Controls.Add($ms)
+        $script:MenuForm.Show(); [System.Windows.Forms.Application]::DoEvents()
+        $script:MenuStrip = $ms
+    }
+    AfterAll { $script:MenuForm.Close(); $script:MenuForm.Dispose() }
+    It 'reads a closed menu item through read-menu' {
+        # Measured 2026-10-06: in-process, the closed item is NOT marked invisible (the plain
+        # 'read' also says ok). The '-menu' verbs skip that check, so they hold either way.
+        $r = [SwdProbeNative]::Act([intptr]$script:MenuStrip.Handle, 'Open Board', '12', 0, 'read-menu', $null, 2000, 5000)
+        $r.Status | Should -Be 'ok'; $r.Matches | Should -Be 1; $r.Role | Should -Be '12'
+    }
+    It 'clicks the closed item with default-menu, without moving the cursor' {
+        $script:Opened = 0
+        $c0 = [SwdProbeNative]::CursorPos()
+        ([SwdProbeNative]::Act([intptr]$script:MenuStrip.Handle, 'Open Board', '12', 0, 'default-menu', $null, 2000, 5000)).Status | Should -Be 'ok'
+        [System.Windows.Forms.Application]::DoEvents()
+        $script:Opened | Should -Be 1
+        $c1 = [SwdProbeNative]::CursorPos()
+        ($c1 -join ',') | Should -Be ($c0 -join ',')
+    }
+    It 'refuses a menu verb on anything that is not a menu item, and the menu set-value and select' {
+        ([SwdProbeNative]::Act([intptr]$script:MenuForm.Handle, 'MenuStrip1', $null, 0, 'default-menu', $null, 2000, 5000)).Status | Should -BeIn @('not-a-menu-item', 'not-found')
+        foreach ($verb in 'setvalue-menu', 'select-menu') {
+            ([SwdProbeNative]::Act([intptr]$script:MenuStrip.Handle, 'Open Board', '12', 0, $verb, 'x', 2000, 5000)).Status | Should -Be 'bad-action' -Because $verb
+        }
+        $script:Opened | Should -Be 1
+    }
+    It 'the menu path itself clears the denylist' {
+        foreach ($l in $script:SolverMenuOpenBoard) { Get-SwdProbeDenyMatch (ConvertTo-SwdProbeLabel $l) | Should -BeNullOrEmpty -Because $l }
+        Get-SwdProbeDenyMatch (ConvertTo-SwdProbeLabel 'Save project') | Should -Not -BeNullOrEmpty
+    }
+}
+
+Describe 'Stage 2: the grid read waits for a slow first solve (pilot 2026-10-06)' {
+    # The first read on a freshly opened board at 1 m/s found no analysis grid; a read seconds
+    # later found it. Read-SwdSolverGrid used to try twice back to back.
+    It 'tries again, with a pause, before giving up' {
+        $script:Finds = 0; $script:Sleeps = 0
+        Mock Find-SwdSolverGrid { $script:Finds++; $Ctx.Grid = 0; $Ctx.ElementTree = 0 }
+        Mock Start-Sleep { $script:Sleeps++ }
+        $ctx = [pscustomobject]@{ Grid = 0; ElementTree = 0 }
+        { Read-SwdSolverGrid -Ctx $ctx } | Should -Throw '*could not be read*'
+        $script:Finds | Should -Be 6
+        $script:Sleeps | Should -Be 5
+    }
+}
+
+Describe 'Stage 2: an empty analysis grid gets its element selected, once (pilot 2026-10-06)' {
+    BeforeEach { Mock Start-Sleep { }; Mock Test-SwdHandle { $false } }
+    It 'selects the element root once when the element tree is there but no grid is' {
+        $script:Roots = 0
+        Mock Find-SwdSolverGrid { $Ctx.Grid = 0; $Ctx.ElementTree = 7 }
+        Mock Select-SwdSolverElementRoot { $script:Roots++; 'ok' }
+        { Read-SwdSolverGrid -Ctx ([pscustomobject]@{ Grid = 0; ElementTree = 0 }) } | Should -Throw '*could not be read*'
+        $script:Roots | Should -Be 1
+    }
+    It 'selects nothing when there is no element tree' {
+        $script:Roots = 0
+        Mock Find-SwdSolverGrid { $Ctx.Grid = 0; $Ctx.ElementTree = 0 }
+        Mock Select-SwdSolverElementRoot { $script:Roots++; 'ok' }
+        { Read-SwdSolverGrid -Ctx ([pscustomobject]@{ Grid = 0; ElementTree = 0 }) } | Should -Throw '*could not be read*'
+        $script:Roots | Should -Be 0
+    }
+}
+
+# ---------------------------------------------------------------------------------------
+# SQA pass 2026-10-08 (code-reviewer intake): each test fails on the code before its fix. As
+# in the 2026-10-06 block, nothing here launches, closes or touches SWD: every log directory is
+# in $TestDrive, transcripts are mocked, and any path to a launch is pinned or mocked.
+# ---------------------------------------------------------------------------------------
+
+Describe 'SQA 2026-10-08 W1: STOP stops SolverRestore too, and no pass bypasses the kill switch' {
+    # Replaces a test (W2) that made no STOP file and ran Start-Transcript for real under C:\fake.
+    BeforeEach {
+        $script:RLog = Join-Path $TestDrive ('stop-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+        New-Item -ItemType Directory -Path $script:RLog | Out-Null
+        $script:SavedExe = $script:SweepExe; $script:SweepExe = Join-Path $TestDrive 'no-such-app.exe'
+        $script:RStop = 'not called'
+        Mock Start-Process { throw 'Start-Process reached in a test' }
+        Mock Start-Transcript { }
+        Mock Stop-Transcript { }
+        Mock Get-Process { [pscustomobject]@{ Id = 4243; StartTime = (Get-Date).AddHours(-1) } } -ParameterFilter { $Name -contains 'SurfHydrodynamics' }
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Process = [pscustomobject]@{ Id = $PID }; Handle = 1; Title = 'FYN Shaper Wave Dynamics   <Board: b_Copy_1(2000mm)>' } }
+        Mock Start-SwdSweepApp { throw 'must not launch' }
+        Mock Invoke-SwdSolver { $script:RStop = $StopFile }
+        Mock Invoke-SwdProbeT12 { $script:RStop = $StopFile; [pscustomobject]@{ Exact = $true } }
+    }
+    AfterEach { $script:SweepExe = $script:SavedExe }
+    It 'SolverRestore refuses to start while STOP is present, before a transcript or an act' {
+        New-Item -ItemType File -Path (Join-Path $script:RLog 'STOP') | Out-Null
+        { Invoke-SwdProbe -Name Sweep -Pass SolverRestore -LogDir $script:RLog -SweepDir (Join-Path $script:RLog 'solver') -SkipLibraryHash } | Should -Throw '*STOP file is present*'
+        Should -Invoke Invoke-SwdSolver -Times 0 -Exactly
+        Should -Invoke Start-Transcript -Times 0 -Exactly
+        $script:RStop | Should -Be 'not called'
+    }
+    It 'a T probe handed -Pass SolverRestore refuses too' {
+        New-Item -ItemType File -Path (Join-Path $script:RLog 'STOP') | Out-Null
+        { Invoke-SwdProbe -Name T12 -Pass SolverRestore -LogDir $script:RLog -SkipLibraryHash } | Should -Throw '*STOP file is present*'
+        Should -Invoke Invoke-SwdProbeT12 -Times 0 -Exactly
+    }
+    It 'without STOP, SolverRestore runs with the kill switch armed: the real STOP path' {
+        $r = Invoke-SwdProbe -Name Sweep -Pass SolverRestore -LogDir $script:RLog -SweepDir (Join-Path $script:RLog 'solver') -SkipLibraryHash
+        $r.Outcome | Should -Be 'completed'
+        $script:RStop | Should -BeLike '*\STOP'
+        Should -Invoke Start-Transcript -Times 1 -Exactly
+    }
+    It 'the refusal names the STOP file without the username (S1, R9)' {
+        New-Item -ItemType File -Path (Join-Path $script:RLog 'STOP') | Out-Null
+        $err = $null
+        try { [void](Invoke-SwdProbe -Name Sweep -Pass SolverRestore -LogDir $script:RLog -SweepDir (Join-Path $script:RLog 'solver') -SkipLibraryHash) } catch { $err = $_.Exception.Message }
+        $err | Should -BeLike '*STOP file is present*'
+        $err | Should -Not -Match ([regex]::Escape($env:USERPROFILE))
+    }
+}
+
+Describe 'SQA 2026-10-08 W1: an empty kill-switch path is refused, never read as no STOP file' {
+    BeforeEach {
+        # Were the refusal gone, these calls would run: nothing they reach may launch SWD.
+        $script:SavedExe = $script:SweepExe; $script:SweepExe = Join-Path $TestDrive 'no-such-app.exe'
+        Mock Start-Process { throw 'Start-Process reached in a test' }
+        Mock Get-Process { } -ParameterFilter { $Name -contains 'SurfHydrodynamics' }
+        Mock Start-SwdSweepApp { throw 'must not launch' }
+        Mock Get-SwdProbeMain { throw 'must not look' }
+        Mock Invoke-SwdSweepUia3 { throw 'must not dump' }
+    }
+    AfterEach { $script:SweepExe = $script:SavedExe }
+    It '<_> refuses an empty -StopFile' -ForEach @('Test-SwdProbeStop', 'Assert-SwdProbeContinue', 'Invoke-SwdProbeStopLoop', 'Invoke-SwdSweep', 'Invoke-SwdSolver') {
+        $never = Join-Path $TestDrive 'never'
+        $call = switch ($_) {
+            'Test-SwdProbeStop' { { Test-SwdProbeStop -StopFile '' -CursorReader { $null } } }
+            'Assert-SwdProbeContinue' { { Assert-SwdProbeContinue -StopFile '' -CursorReader { $null } } }
+            'Invoke-SwdProbeStopLoop' { { Invoke-SwdProbeStopLoop -StopFile '' -Step { } -Iterations 1 } }
+            'Invoke-SwdSweep' { { Invoke-SwdSweep -Pass Map -Dir $never -RunDir $TestDrive -StopFile '' } }
+            'Invoke-SwdSolver' { { Invoke-SwdSolver -Pass SolverRestore -Dir $never -RunDir $TestDrive -StopFile '' } }
+        }
+        $call | Should -Throw "*'StopFile'*empty string*"
+    }
+}
+
+Describe 'SQA 2026-10-08 W5: a runspace left blocked inside SWD no longer holds the probe process open' {
+    # The probe's own entry block, run in a -File child after a stand-in Invoke-SwdProbe that
+    # leaves a runspace blocked for 30 s, as Files -> Open Board does under a modal. Before the
+    # fix the child lived until the runspace let go (measured 2026-10-08: 12.4 s for a 12 s block).
+    It 'the -File run ends at once <Case>' -ForEach @(
+        @{ Case = 'after an error, exit 1'; Fails = $true; Code = 1 }
+        @{ Case = 'after its summary, exit 0'; Fails = $false; Code = 0 }
+    ) {
+        $dir = Join-Path $TestDrive ('w5-' + [guid]::NewGuid().ToString('N').Substring(0, 6))
+        New-Item -ItemType Directory -Path $dir | Out-Null
+        $probe = Join-Path $script:Phase2 'swd_probe.ps1'
+        $ast = [Management.Automation.Language.Parser]::ParseFile($probe, [ref]$null, [ref]$null)
+        $entry = @($ast.EndBlock.Statements | Where-Object { $_ -is [Management.Automation.Language.IfStatementAst] -and $_.Clauses[0].Item1.Extent.Text -eq '$Probe' })
+        $entry.Count | Should -Be 1
+        $body = @(
+            ". '" + $probe.Replace("'", "''") + "'"
+            'function Invoke-SwdProbe {'
+            '    $ps = [PowerShell]::Create(); [void]$ps.AddScript({ [Threading.Thread]::Sleep(30000) }); [void]$ps.BeginInvoke()'
+            '    $script:SolverBlockedRunspace = $true'
+            $(if ($Fails) { "    throw 'stand-in failure'" } else { "    [pscustomobject]@{ Result = 'r'; RunDir = '" + $dir.Replace("'", "''") + "' }" })
+            '}'
+            "`$Probe = 'Sweep'"
+            $entry[0].Extent.Text)
+        $f = Join-Path $dir 'entry.ps1'
+        [IO.File]::WriteAllText($f, ($body -join "`n"), (New-Object Text.UTF8Encoding $false))
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $p = Start-Process -FilePath (Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe') -ArgumentList "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$f`"" `
+                           -NoNewWindow -PassThru -RedirectStandardOutput (Join-Path $dir 'out.txt') -RedirectStandardError (Join-Path $dir 'err.txt')
+        [void]$p.Handle
+        $done = $p.WaitForExit(60000)
+        if (-not $done) { Stop-Process -Id $p.Id -Force }
+        $done | Should -BeTrue
+        $sw.ElapsedMilliseconds | Should -BeLessThan 20000
+        $p.ExitCode | Should -Be $Code
+        if (-not $Fails) { Get-Content -LiteralPath (Join-Path $dir 'out.txt') | Should -Contain "summary: $(Join-Path $dir 'summary.json')" }
+    }
+}
+
+Describe 'SQA 2026-10-08 W7: -Board opens only a board the probes may run on, and names compare ordinally' {
+    BeforeEach {
+        Mock Get-ChildItem { @() }
+        Mock Get-SwdSweepHandle { 0 }
+        Mock Get-SwdDialog { @() }
+    }
+    It 'refuses to open <_> before reading SWD or the library' -ForEach @('default_fish', 'Default_Shortboard', 'default_shortboard_x', 'xdefault_shortboard', ('default_shortboard' + [char]0x00AD), 'default shortboard') {
+        Mock Get-SwdProbeMain { throw 'must not read SWD' }
+        { Open-SwdSolverBoard -Name $_ -Ctx ([pscustomobject]@{ StopFile = (Join-Path $TestDrive 'STOP-w7') }) } | Should -Throw '*not a copy and not the solver*'
+        Should -Invoke Get-ChildItem -Times 0 -Exactly
+    }
+    It 'does not take a caption name with an invisible <Label> for the board asked for' -ForEach @(
+        @{ Label = 'soft hyphen U+00AD'; Code = 0x00AD }
+        @{ Label = 'combining grapheme joiner U+034F'; Code = 0x034F }
+        @{ Label = 'word joiner U+2060'; Code = 0x2060 }
+        @{ Label = 'BOM U+FEFF'; Code = 0xFEFF }
+    ) {
+        $script:W7Title = 'FYN Shaper Wave Dynamics   <Board: default_shortboard' + [char]$Code + '(1829mm)>'
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Process = [pscustomobject]@{ Id = $PID }; Handle = 1; Title = $script:W7Title } }
+        # Not "already loaded": it goes on to look the file up, and this library has none.
+        { Open-SwdSolverBoard -Name 'default_shortboard' -Ctx ([pscustomobject]@{ StopFile = (Join-Path $TestDrive 'STOP-w7') }) } | Should -Throw '*0 library files*'
+        Should -Invoke Get-ChildItem -Times 1 -Exactly
+    }
+    It 'Initialize-SwdSolverSession opens -Board when the caption differs by an invisible character' {
+        Mock Initialize-SwdSolverLaunch { $Ctx.Board = 'default_shortboard' + [char]0x00AD; @() }
+        Mock Open-SwdSolverBoard { throw 'open asked' }
+        Mock Get-SwdProbeMain { throw 'went on without opening' }
+        { Initialize-SwdSolverSession -Ctx ([pscustomobject]@{ Board = $null; Opened = $null; StopFile = 'x' }) -Board 'default_shortboard' } | Should -Throw 'open asked'
+    }
+}
+
+Describe 'SQA 2026-10-08 S2: the original board is matched as SWD prints it, untrimmed' {
+    It 'refuses the original with <Label> even with -AllowOriginal' -ForEach @(
+        @{ Label = 'a trailing NBSP'; Board = 'default_shortboard' + [char]0x00A0 }
+        @{ Label = 'a leading NBSP'; Board = [string][char]0x00A0 + 'default_shortboard' }
+        @{ Label = 'a trailing U+3000'; Board = 'default_shortboard' + [char]0x3000 }
+        @{ Label = 'a leading U+3000'; Board = [string][char]0x3000 + 'default_shortboard' }
+        @{ Label = 'a trailing en space U+2002'; Board = 'default_shortboard' + [char]0x2002 }
+        @{ Label = 'a trailing ASCII space'; Board = 'default_shortboard ' }
+        @{ Label = 'a second leading ASCII space'; Board = ' default_shortboard' }
+        @{ Label = 'a trailing tab'; Board = "default_shortboard`t" }
+    ) {
+        { Assert-SwdProbeBoard "FYN Shaper Wave Dynamics   <Board: $Board(1829mm)> <no Wave>" -AllowOriginal } | Should -Throw '*not a copy*'
+    }
+    It 'still accepts the exact original, and a copy however its name is padded' {
+        Assert-SwdProbeBoard 'FYN Shaper Wave Dynamics   <Board: default_shortboard(1800mm)> <no Wave>' -AllowOriginal | Should -Be 'default_shortboard'
+        Assert-SwdProbeBoard 'FYN Shaper Wave Dynamics   <Board: x_Copy_1 (2000mm)>' -AllowOriginal | Should -Be 'x_Copy_1'
+        Assert-SwdProbeBoard 'FYN Shaper Wave Dynamics   <Board: x_Copy_1 (2000mm)>' | Should -Be 'x_Copy_1'
+    }
+}
+
+Describe 'SQA 2026-10-08 S4: Open-SwdSolverBoard asks ShouldProcess and checks the kill switch before its first act' {
+    BeforeEach {
+        Mock Get-SwdProbeMain { [pscustomobject]@{ Process = [pscustomobject]@{ Id = $PID }; Handle = 1; Title = 'FYN Shaper Wave Dynamics   <Board: default_shortboard(1829mm)>' } }
+        Mock Get-ChildItem { [pscustomobject]@{ FullName = 'C:\lib\Default\default_shortboard_Copy_1.fynbs' } }
+        Mock Get-SwdSweepHandle { 1 }
+        # The first thing done before any menu read or act: reaching it means the checks came late.
+        Mock Get-SwdDialog { throw 'reached the menu' }
+    }
+    It 'returns under -WhatIf before reading or opening the menu' {
+        Open-SwdSolverBoard -Name 'default_shortboard_Copy_1' -Ctx ([pscustomobject]@{ StopFile = (Join-Path $TestDrive 'STOP-s4-none') }) -WhatIf | Should -BeNullOrEmpty
+        Should -Invoke Get-SwdDialog -Times 0 -Exactly
+    }
+    It 'stops on STOP before reading or opening the menu' {
+        $stop = Join-Path $TestDrive 'STOP-s4'
+        New-Item -ItemType File -Path $stop -Force | Out-Null
+        { Open-SwdSolverBoard -Name 'default_shortboard_Copy_1' -Ctx ([pscustomobject]@{ StopFile = $stop }) } | Should -Throw 'SWD-PROBE-STOPPED*'
+        Should -Invoke Get-SwdDialog -Times 0 -Exactly
+    }
+}
+
+Describe 'SQA 2026-10-08 S6: SolverRestore skips the drift walk it never reads' {
+    It 'SolverRestore asks Initialize-SwdSolverSession for -SkipPositions; SolverLoop does not' {
+        Mock Get-Process { [pscustomobject]@{ Id = 4243; StartTime = (Get-Date).AddHours(-1) } } -ParameterFilter { $Name -contains 'SurfHydrodynamics' }
+        Mock Start-SwdSweepApp { throw 'must not launch' }
+        Mock Initialize-SwdSolverSession { $script:S6Skip = [bool]$SkipPositions; throw 'session stub' }
+        foreach ($p in 'SolverRestore', 'SolverLoop') {
+            $script:S6Skip = $null
+            { Invoke-SwdSolver -Pass $p -Dir (Join-Path $TestDrive 's6') -RunDir $TestDrive -StopFile (Join-Path $TestDrive 'STOP-s6') -Speeds @('10') -Slopes @('0') } | Should -Throw 'session stub'
+            $script:S6Skip | Should -Be ($p -eq 'SolverRestore') -Because $p
+        }
+    }
+    It 'Initialize-SwdSolverSession returns under -SkipPositions after the volume guard, before any drift is selected' {
+        # Structural: the session walks a cross-process tree first, which no test here can stand up.
+        $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $script:Phase2 'swd_probe.ps1'), [ref]$null, [ref]$null)
+        $fn = $ast.Find({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Initialize-SwdSolverSession' }, $true)
+        $skip = $fn.Body.Find({ param($n) $n -is [Management.Automation.Language.IfStatementAst] -and $n.Clauses[0].Item1.Extent.Text -eq '$SkipPositions' }, $true)
+        $vol = $fn.Body.Find({ param($n) $n -is [Management.Automation.Language.ThrowStatementAst] -and $n.Extent.Text -like '*SWD-SOLVER-VOLUME*' }, $true)
+        $drift = $fn.Body.Find({ param($n) $n -is [Management.Automation.Language.CommandAst] -and $n.GetCommandName() -eq 'Select-SwdSolverDrift' }, $true)
+        $skip | Should -Not -BeNullOrEmpty
+        $skip.Extent.StartOffset | Should -BeGreaterThan $vol.Extent.EndOffset
+        $skip.Extent.EndOffset | Should -BeLessThan $drift.Extent.StartOffset
+        @($skip.Clauses[0].Item2.FindAll({ param($n) $n -is [Management.Automation.Language.ReturnStatementAst] }, $true)).Count | Should -Be 1
+    }
+}
+
+Describe 'SQA 2026-10-08 S8: loop_state.json keeps only the open block''s first rows' {
+    BeforeAll {
+        $script:S8Pos = @(
+            [pscustomobject]@{ Drift = 0.0; Y = 0.0; X = 0.1; Name = 'Positon X 0.1'; Nth = 0; DriftIndex = 0 }
+            [pscustomobject]@{ Drift = 0.0; Y = 0.0; X = 0.467; Name = 'Positon X 0.467'; Nth = 0; DriftIndex = 0 }
+        )
+    }
+    BeforeEach {
+        $script:S8Dir = Join-Path $TestDrive ('s8-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+        New-Item -ItemType Directory -Path $script:S8Dir | Out-Null
+        $script:SavedExe = $script:SweepExe; $script:SweepExe = Join-Path $TestDrive 'no-such-app.exe'
+        Mock Start-Process { throw 'Start-Process reached in a test' }
+        Mock Get-Process { [pscustomobject]@{ Id = 4243; StartTime = (Get-Date).AddHours(-1) } } -ParameterFilter { $Name -contains 'SurfHydrodynamics' }
+        Mock Start-SwdSweepApp { throw 'must not launch' }
+        Mock Initialize-SwdSolverSession { $Ctx.Positions = $script:S8Pos; $Ctx.Board = 'b_Copy_1'; [pscustomobject]@{ Positions = 2 } }
+        Mock Set-SwdSolverSituation { $Ctx.Applied = "v=$Speed|s=$Slope"; [pscustomobject]@{ Speed = $Speed; Slope = $Slope } }
+        Mock Select-SwdSolverPosition { [pscustomobject]@{ Rows = [ordered]@{ Fx_friction_n = "$($Position.X)" }; ElementName = 'e'; Match = $true; SameAsPrevious = $false; SelectMs = 1; SettleMs = 1; ReadMs = 1 } }
+    }
+    AfterEach { $script:SweepExe = $script:SavedExe }
+    It 'drops each block''s first rows once its control is recorded' {
+        Invoke-SwdSolver -Pass SolverLoop -Dir $script:S8Dir -RunDir $TestDrive -StopFile (Join-Path $TestDrive 'STOP-s8') -Speeds @('10', '12', '14') -Slopes @('0')
+        $st = Read-SwdProbeState -Path (Join-Path $script:S8Dir 'loop_state.json')
+        $st.Cursor | Should -Be 6
+        @($st.BlockFirst.PSObject.Properties).Count | Should -Be 0
+        @(Get-Content -LiteralPath (Join-Path $script:S8Dir 'controls.jsonl') | Where-Object { $_ } | ForEach-Object { ($_ | ConvertFrom-Json).Match }) | Should -Be @($true, $true, $true)
+    }
+    It 'a block resumed part-way still has its first rows for its control' {
+        $fp = Get-SwdSolverFingerprint -Board 'b_Copy_1' -Speeds @('10', '12') -Slopes @('0') -Positions $script:S8Pos
+        Write-SwdProbeJson -Path (Join-Path $script:S8Dir 'loop_state.json') -Object ([pscustomobject]@{ Fingerprint = $fp; Cursor = 1; BlockFirst = @{ 'v=10|s=0' = [ordered]@{ Fx_friction_n = '0.1' } } })
+        Invoke-SwdSolver -Pass SolverLoop -Dir $script:S8Dir -RunDir $TestDrive -StopFile (Join-Path $TestDrive 'STOP-s8') -Speeds @('10', '12') -Slopes @('0')
+        $c = @(Get-Content -LiteralPath (Join-Path $script:S8Dir 'controls.jsonl') | Where-Object { $_ } | ForEach-Object { $_ | ConvertFrom-Json })
+        @($c | ForEach-Object { $_.Block }) | Should -Be @('v=10|s=0', 'v=12|s=0')
+        @($c | ForEach-Object { $_.Match }) | Should -Be @($true, $true)
+        @((Read-SwdProbeState -Path (Join-Path $script:S8Dir 'loop_state.json')).BlockFirst.PSObject.Properties).Count | Should -Be 0
+    }
+}
+
+Describe 'SQA 2026-10-08 S9: boundaries the Stage 2 tests left unpinned' {
+    It 'a block that ends exactly at EndBy fits; one that would end 0.1 s later does not' {
+        $end = [datetime]'2026-10-07 06:50:00'
+        # 283 reads x 2.5 s + 30 s = 737.5 s, exact in binary.
+        Test-SwdSolverBlockFit -Now $end.AddSeconds(-737.5) -EndBy $end -Positions 282 -ReadSeconds 2.5 | Should -BeTrue
+        Test-SwdSolverBlockFit -Now $end.AddSeconds(-737.4) -EndBy $end -Positions 282 -ReadSeconds 2.5 | Should -BeFalse
+    }
+    It 'Initialize-SwdSolverSession redoes the launch part after it opens -Board' {
+        Mock Open-SwdSolverBoard { [pscustomobject]@{ Board = $Name; Opened = $true } }
+        Mock Get-SwdProbeMain { throw 'stop here' }
+        Mock Initialize-SwdSolverLaunch { $Ctx.Board = 'default_shortboard'; @() }
+        { Initialize-SwdSolverSession -Ctx ([pscustomobject]@{ Board = $null; Opened = $null; StopFile = 'x' }) -Board 'default_shortboard_Copy_1' } | Should -Throw 'stop here'
+        Should -Invoke Open-SwdSolverBoard -Times 1 -Exactly
+        Should -Invoke Initialize-SwdSolverLaunch -Times 2 -Exactly
+    }
+    It 'and opens nothing, launching once, when SWD already shows -Board' {
+        Mock Open-SwdSolverBoard { throw 'must not open' }
+        Mock Get-SwdProbeMain { throw 'stop here' }
+        Mock Initialize-SwdSolverLaunch { $Ctx.Board = 'default_shortboard_Copy_1'; @() }
+        { Initialize-SwdSolverSession -Ctx ([pscustomobject]@{ Board = $null; Opened = $null; StopFile = 'x' }) -Board 'default_shortboard_Copy_1' } | Should -Throw 'stop here'
+        Should -Invoke Initialize-SwdSolverLaunch -Times 1 -Exactly
+    }
+}

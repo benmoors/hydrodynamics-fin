@@ -1322,3 +1322,44 @@ Stage 1 of the campaign Benjamin chose on 2026-10-05 (`AI-USE.md` § 4), run ove
 - **Yours to decide:** Stage 2's speed and slope levels, boards and drift range; whether to remove
   the order effect with an anchor read (about 2× the time); the training table (E111).
 - **Owed:** re-run the 2026-10-01 "no effect" inputs that have no Apply button, with a refresh (E110).
+
+## Live-solver campaign, Stage 2, 2026-10-06/07: `default_shortboard`, one 80 kg surfer
+
+Benjamin's levels (`AI-USE.md` § 4, 2026-10-06): `default_shortboard` alone; speeds 1–10 m/s in
+1 m/s steps; slopes −10° to +20° in 5° steps; drift ≤ 20° (282 positions); order speed → slope →
+(Apply once) → drift → Pos Y → Pos X. 70 blocks, 19,740 reads plus 70 block controls. Split by
+night: each night ends on a block boundary by 06:50 and closes SWD before the laptop leaves at
+07:30.
+
+- **New code** (pre-SQA, owner override): `-Board` opens a board through Files → Open Board and the
+  file picker; the solver passes alone may run on `default_shortboard` (an original);
+  `-EndBy` ends a night on a block boundary; `swd_solver_driver.ps1` runs a night, started
+  detached, and always restores SWD. Pester 450/0 before the pilot, PSScriptAnalyzer 0.
+- **Pilot (P10), 2026-10-06 21:45–22:06:** Files → Open Board loaded the board in 19.6 s with no
+  other dialog and no cursor movement; board-grid volume 24.858 L; tree positions per drift
+  45/46/49/47/47/48 = `elements.csv`; surfer 80 kg (caption) and a weight plateau of 802.0–802.6 N
+  (80 + 1.74 kg). Low-speed smoke (1 and 2 m/s × −10° and +20°, drift 0): 180/180 element
+  matches, 4/4 block controls, median 1.84 s a read; 0 of 90 converge at 1 m/s, 7 of 90 at 2 m/s.
+- **Fix during the pilot (E123):** after a board is opened the Elements;analysis grid stays empty
+  until its element is selected; the reader now selects the element tree's root item once.
+- **Night 1 started 22:06** (detached driver; data `%LOCALAPPDATA%\swd-probe\stage2-campaign\solver\`).
+  Expected ~11.7 h in all at ~6 blocks an hour; the rest runs on night 2.
+- **Night 2 (2026-10-07 21:27 → 2026-10-08 01:08):** resumed at read 14,100 (8 m/s, −5°) and completed
+  the campaign: **19,740 reads, 70/70 block controls, 0 element mismatches, library unchanged on all 28
+  chunks**; SWD restored and closed at 06:45 (night 1) and 01:08 (night 2). The settings file differs from
+  the 2026-09-30 backup only in the two wave-view distances, as before Stage 1.
+- **Results** (lift within 1 % of the 802.2 N weight plateau = converged): 0 of 282 positions converge at
+  1 m/s, 8–16 at 2 m/s, 104–120 at 5 m/s, 187–197 at 10 m/s; downhill slope adds a few. Over converged
+  positions at 0°: planing angle 40.3° → 20.9° → 12.2°, friction 3.7 → 13.1 → 34.7 N at 2, 5, 10 m/s; each
+  +5° of slope lowers median total drag by 72–94 N (W·sin 5° = 70 N). The first X station of every
+  (drift, Pos Y) group never converges, even at 10 m/s. Data and report:
+  `%LOCALAPPDATA%\swd-probe\stage2-campaign\` (`solver_points.csv`, `solver_points_all.csv`,
+  `solver_report.md`); wiki *SWD Live-Solver Campaign 2026-10-06*. Not copied to `SWD/data/` (Benjamin's call).
+- **SQA pass (2026-10-08, SWD closed):** agy → Devin → `sqa-lead` C=1 W=8 S=9 → `code-reviewer`; final
+  C=0 W=0 S=4. The driver now bounds every child with a wall-clock limit and force-stops SWD before 07:00 as a
+  last resort; STOP skips the restore and only closes SWD (agy's STOP bypass reverted, E125); `-Board` accepts
+  only a copy or the listed original. swd_probe 496/0, new driver suite 53/0, all phase2 suites 1,018/0. The
+  fixes have not run live yet. Report: `%LOCALAPPDATA%\sqa-loop\runs\hfin-stage2-2026-10-08.filed\report.md`.
+- **Yours to decide:** delete `C:\fake` (test transcripts from agy's test); whether a driver started after
+  07:00 should be refused rather than run up to 14 h; whether unconverged reads belong in a model; which other
+  boards, if any, get the campaign; copying the CSVs into `SWD/data/`.

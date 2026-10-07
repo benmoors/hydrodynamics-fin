@@ -269,3 +269,20 @@ ignored (E112); P9 blocked on a modal question and was retired (E113); the curso
 2 px hand movement (E114); one census missed half the Project tab (E115); the lift flag used the
 median (E116); a loop crossing midnight restarted in a dated directory (E117); the element check now
 compares drift and Y by magnitude.
+
+## Live-solver campaign, Stage 2, 2026-10-06/07 (`default_shortboard`, split by night)
+
+Benjamin's direction (`AI-USE.md` § 4, 2026-10-06): how the position, speed and angle of the
+board affect the forces and every other solver output, for one 80 kg surfer, on
+`default_shortboard`; speeds 1–10 m/s, slopes −10…+20° in 5° steps, drift ≤ 20°; the night ends
+before the laptop leaves at 07:30.
+
+| Item | Result |
+|---|---|
+| Board open | Files → Open Board → the standard Open picker. The menu item's MSAA default action is `PerformClick` (no cursor), but the picker is modal, so the action runs on a second runspace while the main thread fills the picker (WM_SETTEXT, read back) and posts Open. Cross-process, the closed menu's item was not found; opening `Files` first (ShowDropDown) exposed it. 19.6 s, no other dialog, no cursor movement, library unchanged |
+| Board guard | Solver passes only, exact name `default_shortboard`; every other probe stays copy-only |
+| Analysis grid | Empty after a board open until the Elements;analysis tree's root item is selected (E123); the reader now does that once |
+| Pilot P10 | Volume 24.858 L; per-drift positions = `elements.csv` (282); surfer 80 kg; weight plateau 802.0–802.6 N; 180 low-speed reads, 4/4 block controls, median 1.84 s a read |
+| Night driver | `swd_solver_driver.ps1`, 30-min chunks, `-EndBy` 06:50, always `SolverRestore` (Copy_1 reopened, 10 m/s, 0°, SWD closed). Started with `Invoke-CimMethod Win32_Process Create`: measured to run at High integrity in the interactive session |
+| Campaign | Night 1 22:06–06:45 (50 blocks), night 2 21:27–01:08 (20 blocks): 19,740 reads, 70/70 block controls, library unchanged on 28/28 chunks, both mornings SWD closed |
+| SQA (2026-10-08) | Final C=0 W=0 S=4 after agy, Devin, `sqa-lead` (C=1 W=8 S=9) and one fixer: each driver child now has a wall-clock limit with a force-stop, STOP skips the restore and only closes SWD (E125 reverted agy's bypass), stderr no longer kills a chunk, `-Board` accepts only a copy or the listed original, path guard before any write. 93 new tests; not yet run live |

@@ -26,7 +26,9 @@
         share, rename, create, duplicate, reset, upload, CNC, overwrite, licence; English
         and French) immediately before every click.
       - Only tabs on an allowlist can be selected.
-      - The loaded board's name must contain '_Copy'. Originals are refused.
+      - The loaded board's name must contain '_Copy'. Originals are refused, except that the
+        solver passes alone may run on the one original Benjamin chose for Stage 2
+        (default_shortboard, 2026-10-06): they never edit geometry and never scan.
       - Logs go only where swd_msg.ps1's path guard allows (never the install or library).
       - The SWD library is hashed before and after every run (SWD's own temp\ excluded);
         any other change is reported as LIBRARY CHANGED.
@@ -38,7 +40,9 @@
     (-Probe Sweep, added 2026-10-01 for an overnight run under the same override) has had
     no SQA pass yet; it is owed. The live-solver passes (-Pass SolverPilot | SolverLoop |
     SolverRestore, 2026-10-05) were added and run the same night at Benjamin's instruction,
-    with their SQA pass to follow the run.
+    with their SQA pass to follow the run. Stage 2 (2026-10-06, same override): -Board opens a
+    board through Files -> Open Board, -EndBy ends a night on a block boundary, and
+    swd_solver_driver.ps1 runs the nights; their SQA pass follows the campaign.
 
     Windows PowerShell 5.1, elevated (SWD runs at High integrity; AI-USE.md E16/E17).
 .PARAMETER Probe
@@ -65,7 +69,9 @@ param(
     # Sweep only: which pass this chunk runs, its time budget, and where state lives
     # (default <LogDir>\sweep). Run chunk after chunk; each resumes from state.json.
     [ValidateSet('Census', 'Map', 'Situation', 'Curve', 'SolverPilot', 'SolverLoop', 'SolverRestore')][string]$Pass = 'Map',
-    [ValidateRange(1, 9)][double]$MaxMinutes = 8,
+    # Up to 30 for the Stage 2 driver, which runs detached from Claude Code (2026-10-06); 8-9
+    # was the ceiling for chunks run as Claude Code background jobs.
+    [ValidateRange(1, 30)][double]$MaxMinutes = 8,
     [string]$SweepDir,
     # Solver passes only (2026-10-05; default state dir <LogDir>\solver): the loop's levels
     # ('5,10,20' is accepted as one argument), its drift range, and the board volume guard
@@ -73,7 +79,12 @@ param(
     [string[]]$Speeds = @('5', '10', '20'),
     [string[]]$Slopes = @('-3', '0', '3'),
     [ValidateRange(0, 90)][double]$MaxDrift = 20,
-    [ValidateRange(0, 1000)][double]$ExpectVolumeL = 0
+    [ValidateRange(0, 1000)][double]$ExpectVolumeL = 0,
+    # Solver passes, Stage 2 (2026-10-06): the board to open first when SWD shows another one
+    # (Files -> Open Board), and the local time 'yyyy-MM-ddTHH:mm:ss' by which the loop's last
+    # (speed, slope) block must end: a block that cannot finish by then is not started.
+    [string]$Board = '',
+    [string]$EndBy = ''
 )
 
 Set-StrictMode -Version Latest
@@ -126,6 +137,14 @@ $script:ProbeMsaaNoiseLike = @('Cpu:*', 'Available RAM*', 'Os:*')
 # item's default action is the WinForms PerformClick(), not a synthesised click; the cursor is
 # still checked either side, because a TAB's default action turned out to be a real click (T11).
 $script:ProbeAccDefaultAllowed = @('Board Dynamics')
+# Stage 2 (Benjamin, 2026-10-06): the one ORIGINAL board the solver passes may run on, by exact
+# ordinal name. Every other probe, and every other original, stays refused (Assert-SwdProbeBoard).
+$script:SolverOriginalBoards = @('default_shortboard')
+# The menu path that loads a board (Round 8, SWD/TODO.md: File -> Open Board and the standard
+# file picker, chosen over the library tree's context menu, which sits beside Delete and Share).
+$script:SolverMenuOpenBoard = @('Files', 'Open Board')
+# Set when Open-SwdSolverBoard leaves its menu runspace blocked inside SWD (W5, SQA 2026-10-08).
+$script:SolverBlockedRunspace = $false
 $script:ProbeStopFileName = 'STOP'
 $script:ProbeLibraryExclude = @('temp\*')
 
@@ -405,14 +424,19 @@ public static class SwdProbeNative {
   // (role 36) only, and they skip the invisible check: the tree-view proxy marks every item
   // scrolled out of view STATE_SYSTEM_INVISIBLE (measured 2026-10-05: 15 of 88 items visible), and
   // selecting one by TVM_SELECTITEM scrolls it into view. Anything other than a tree item is refused.
+  // The "-menu" actions (read-menu, default-menu; 2026-10-06) are read and default for a MENU ITEM
+  // (role 12) only, also without the invisible check: a closed WinForms menu's items carry
+  // STATE_SYSTEM_INVISIBLE, and a ToolStripItem's default action is PerformClick, which needs no
+  // open menu and no cursor. Anything other than a menu item is refused.
   public static ActResult Act(IntPtr hwnd, string name, string role, int nth, string action, string value, int maxNodes, int deadlineMs) {
     if (hwnd == IntPtr.Zero) throw new ArgumentException("Act() refuses a NULL window.");
     var res = new ActResult();
     // Only read, default and select have a tree form; setting a tree item's value is never asked
     // for (Invoke-SwdProbeAcc refuses it), so it is refused here too, before any Find (S6).
-    if (action == "setvalue-tree") { res.Status = "bad-action"; return res; }
+    if (action == "setvalue-tree" || action == "setvalue-menu" || action == "select-menu") { res.Status = "bad-action"; return res; }
     bool tree = action != null && action.EndsWith("-tree");
-    if (tree) action = action.Substring(0, action.Length - 5);
+    bool menu = action != null && action.EndsWith("-menu");
+    if (tree || menu) action = action.Substring(0, action.Length - 5);
     IAccessible root = Root(hwnd);
     if (root == null) { res.Status = "no-root"; return res; }
     var hits = new List<KeyValuePair<IAccessible, object>>();
@@ -422,7 +446,8 @@ public static class SwdProbeNative {
     IAccessible acc = hits[nth].Key; object child = hits[nth].Value;
     Fill(res, acc, child);
     if (tree && res.Role != "36") { res.Status = "not-a-tree-item"; return res; }
-    if (!tree && (res.State & 0x8000) != 0) { res.Status = "invisible"; return res; }
+    if (menu && res.Role != "12") { res.Status = "not-a-menu-item"; return res; }
+    if (!tree && !menu && (res.State & 0x8000) != 0) { res.Status = "invisible"; return res; }
     if (action == "read") { res.Status = "ok"; return res; }
     if ((res.State & 0x1) != 0) { res.Status = "unavailable"; return res; }
     try {
@@ -579,11 +604,25 @@ function Get-SwdProbeBoardName {
 }
 
 function Assert-SwdProbeBoard {
-    param([AllowNull()][string]$Title)
+    <#  The loaded board, which must be a copy ('*_Copy*'). -AllowOriginal (the solver passes only,
+        Benjamin 2026-10-06) also accepts an original listed in $script:SolverOriginalBoards, by
+        exact ordinal name: the solver never edits geometry (shaping is disabled with Board
+        Dynamics ON, measured) and never scans. Every other probe stays copy-only.  #>
+    param([AllowNull()][string]$Title, [switch]$AllowOriginal)
     $name = Get-SwdProbeBoardName $Title
     if (-not $name) { throw "Cannot read the loaded board from the caption '$(ConvertTo-SwdSafeText $Title 80)'." }
+    # The original is matched on the name exactly as SWD prints it, '<Board: NAME(', untrimmed (S2,
+    # SQA 2026-10-08): Trim() and '\s*' also took a NBSP or U+3000 either side as part of the gap.
+    if ($AllowOriginal -and $Title -match '<Board: (.+?)\([\d.,]+\s*mm\)>' -and (Test-SwdProbeListed -List $script:SolverOriginalBoards -Label $Matches[1])) { return $Matches[1] }
     if ($name -notlike '*_Copy*') { throw "Board '$name' is not a copy. Probes run on '*_Copy*' boards only." }
     return $name
+}
+
+function Get-SwdProbeSurferKg {
+    <#  The loaded surfer's mass from the caption ('<Surfer: Surfer Pro(80Kg)>'), or $null.  #>
+    param([AllowNull()][string]$Title)
+    if ($Title -and $Title -match '<Surfer:[^<>]*\(([0-9]+(?:[.,][0-9]+)?)\s*Kg\)>') { return [double]::Parse($Matches[1].Replace(',', '.'), [Globalization.CultureInfo]::InvariantCulture) }
+    return $null
 }
 
 function Test-SwdProbeStop {
@@ -1758,7 +1797,7 @@ function Start-SwdSweepApp {
         -StopFile: the kill switch, checked before the launch and on every poll (W3): a STOP used
         to wait out the whole launch, its popups and its settle.  #>
     [CmdletBinding(SupportsShouldProcess)]
-    param([string]$ExpectBoard, [int]$TimeoutMs = 180000, [string]$StopFile)
+    param([string]$ExpectBoard, [int]$TimeoutMs = 180000, [string]$StopFile, [switch]$AllowOriginal)
     if (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue) { throw 'SWD is already running.' }
     if ($StopFile) { Assert-SwdProbeContinue -StopFile $StopFile }
     if (-not $PSCmdlet.ShouldProcess('ShaperWaveDynamics', 'launch')) { return $null }
@@ -1774,7 +1813,7 @@ function Start-SwdSweepApp {
         if ($main.Count -eq 1 -and $splash.Count -eq 0) {
             [void](Clear-SwdSweepPopup -StopFile $StopFile)
             $m = Get-SwdProbeMain
-            $board = Assert-SwdProbeBoard -Title $m.Title
+            $board = Assert-SwdProbeBoard -Title $m.Title -AllowOriginal:$AllowOriginal
             if ($ExpectBoard -and $board -ne $ExpectBoard) { throw "SWD-SWEEP-BOARD: SWD opened '$board', not '$ExpectBoard'." }
             [void](Wait-SwdProbeSettle -Handle $m.Handle -TimeoutMs 30000 -StopFile $StopFile)
             return $board
@@ -2808,6 +2847,74 @@ function ConvertTo-SwdSolverRecord {
         ReadMs = $(if ($Read) { $Read.ReadMs } else { $null }); Rows = $rows; Time = (Get-Date).ToString('o') }
 }
 
+function Find-SwdSolverBoardFile {
+    <#  The one library file named '<Name>.fynbs' among Files (pure). The name is a plain board
+        name (letters, digits, space, '_', '.', '-'); zero or several matches throw, so a board
+        is never opened from a guess. Messages carry the file name only, never the path (R9).  #>
+    param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$Files)
+    if ($Name -notmatch '\A[A-Za-z0-9_](?:[A-Za-z0-9_ .-]{0,78}[A-Za-z0-9_])?\z' -or $Name -match '\.\.') { throw "Refusing board name '$(ConvertTo-SwdSafeText $Name 40)': not a plain board name." }
+    $want = "$Name.fynbs"
+    $hits = @(@($Files) | Where-Object { $_ -and [string]::Equals([IO.Path]::GetFileName($_), $want, [StringComparison]::OrdinalIgnoreCase) })
+    if ($hits.Count -ne 1) { throw "SWD-SOLVER-BOARD: $($hits.Count) library files named '$want', expected exactly 1." }
+    return $hits[0]
+}
+
+function Find-SwdSolverFileDialogPart {
+    <#  The parts of a standard Open file picker among its child windows (pure; rows as
+        Get-SwdDialogControl returns them): the file-name EDIT, inside the combo with control id
+        1148 (cmb13; the Vista picker nests ComboBoxEx32 > ComboBox > Edit) or the classic edt1
+        (1152); the Open button (IDOK, 1, captioned 'Open'); Cancel (IDCANCEL, 2). Why lists
+        what is missing; the caller acts only when it is empty.  #>
+    param([Parameter(Mandatory)][AllowEmptyCollection()]$Rows)
+    $rows = @(@($Rows) | Where-Object { $_ })
+    $byH = @{}; foreach ($r in $rows) { $byH[[int64]$r.Handle] = $r }
+    $edits = @($rows | Where-Object {
+            if ("$($_.Class)" -notlike '*Edit*') { return $false }
+            if ([int]$_.CtrlId -eq 1152) { return $true }
+            $p = $byH[[int64]$_.Parent]
+            for ($hop = 0; $p -and $hop -lt 2; $hop++) {
+                if ([int]$p.CtrlId -eq 1148 -and "$($p.Class)" -like 'ComboBox*') { return $true }
+                $p = $byH[[int64]$p.Parent]
+            }
+            return $false })
+    $ok = @($rows | Where-Object { "$($_.Class)" -like '*Button*' -and [int]$_.CtrlId -eq 1 })
+    $cancel = @($rows | Where-Object { "$($_.Class)" -like '*Button*' -and [int]$_.CtrlId -eq 2 })
+    $why = @()
+    if ($edits.Count -ne 1) { $why += "$($edits.Count) file-name boxes" }
+    if ($ok.Count -ne 1) { $why += "$($ok.Count) Open buttons (IDOK)" }
+    elseif ((ConvertTo-SwdProbeLabel "$($ok[0].Text)") -cne 'Open') { $why += "IDOK reads '$(ConvertTo-SwdSafeText $ok[0].Text 20)', not 'Open'" }
+    if ($cancel.Count -ne 1) { $why += "$($cancel.Count) Cancel buttons (IDCANCEL)" }
+    return [pscustomobject]@{
+        Edit   = $(if ($edits.Count -eq 1) { [int64]$edits[0].Handle } else { 0 })
+        Open   = $(if ($ok.Count -eq 1) { [int64]$ok[0].Handle } else { 0 })
+        Cancel = $(if ($cancel.Count -eq 1) { [int64]$cancel[0].Handle } else { 0 })
+        Why    = ($why -join '; ')
+    }
+}
+
+function ConvertTo-SwdSolverEndBy {
+    <#  -EndBy as a local time (pure): '' -> $null; otherwise exactly 'yyyy-MM-ddTHH:mm:ss'.  #>
+    param([AllowNull()][AllowEmptyString()][string]$Text)
+    if (-not $Text) { return $null }
+    $t = [datetime]::MinValue
+    if (-not [datetime]::TryParseExact($Text, 'yyyy-MM-ddTHH:mm:ss', [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::None, [ref]$t)) {
+        throw "-EndBy '$(ConvertTo-SwdSafeText $Text 30)' is not a local time 'yyyy-MM-ddTHH:mm:ss'."
+    }
+    return $t
+}
+
+function Test-SwdSolverBlockFit {
+    <#  May a (speed, slope) block start at Now and still end by EndBy? (pure; no EndBy: yes.)
+        A block is its positions plus the block control, at this run's median read time, or
+        2.7 s before any read (the slowest block measured on 2026-10-05, 5 m/s, averaged 2.5 s),
+        plus 30 s for the Apply. Stage 2 stops at a block boundary so the laptop can leave at
+        07:30 (Benjamin, 2026-10-06), and no block straddles an SWD relaunch.  #>
+    param([Parameter(Mandatory)][datetime]$Now, $EndBy, [Parameter(Mandatory)][int]$Positions, [double]$ReadSeconds = 0)
+    if ($null -eq $EndBy) { return $true }
+    $s = if ($ReadSeconds -gt 0) { $ReadSeconds } else { 2.7 }
+    return ($Now.AddSeconds(($Positions + 1) * $s + 30) -le [datetime]$EndBy)
+}
+
 # ---- live: session, situation, positions --------------------------------------------------
 
 function Initialize-SwdSolverLaunch {
@@ -2834,12 +2941,124 @@ function Initialize-SwdSolverLaunch {
     return $rows
 }
 
+function Open-SwdSolverBoard {
+    <#  Load a library board through Files -> Open Board and the standard file picker (Round 8,
+        SWD/TODO.md: the automation route, chosen over the library tree's context menu, which
+        sits beside Delete and Share). Stage 2, 2026-10-06.
+        The menu item's MSAA default action is ToolStripItem.PerformClick (no cursor), but its
+        handler shows the picker MODALLY, so that call returns only once the picker has closed
+        and the board has loaded. It runs on a second runspace while this thread fills the
+        picker: the path by WM_SETTEXT into the file-name EDIT (read back), then a posted
+        BM_CLICK on Open (IDOK), watched until the picker is gone and the caption names the
+        board. The path holds the profile name (R9): it is typed into SWD and nowhere else, never
+        printed, logged or returned. Any other window is left to Clear-SwdSweepPopup's policy.  #>
+    [CmdletBinding(SupportsShouldProcess)]
+    param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)]$Ctx, [int]$TimeoutMs = 180000)
+    # Only a board the probes may run on is opened (W7, SQA 2026-10-08): a copy, or the solver's
+    # listed original. Names compare ordinally: -ceq is linguistic and ignored U+00AD.
+    if ($Name -notlike '*_Copy*' -and -not (Test-SwdProbeListed -List $script:SolverOriginalBoards -Label $Name)) { throw "solver: refusing to open '$(ConvertTo-SwdSafeText $Name 40)': not a copy and not the solver's original." }
+    if (Test-SwdProbeListed -List $Name -Label (Get-SwdProbeBoardName (Get-SwdProbeMain).Title)) { return [pscustomobject]@{ Board = $Name; Opened = $false } }
+    $lib = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'ShaperWaveDynamics documents\biblio'
+    $file = Find-SwdSolverBoardFile -Name $Name -Files @(Get-ChildItem -LiteralPath $lib -Recurse -File -Filter '*.fynbs' -ErrorAction Stop | ForEach-Object { $_.FullName })
+    $menu = Get-SwdSweepHandle -Aid 'MenuStrip1' -Ctx $Ctx
+    if (-not $menu) { throw 'solver: the main menu (MenuStrip1) is not in the census' }
+    foreach ($l in $script:SolverMenuOpenBoard) { if (Get-SwdProbeDenyMatch (ConvertTo-SwdProbeLabel $l)) { throw "Refusing the menu item '$l': denylisted." } }
+    $top = $script:SolverMenuOpenBoard[0]; $item = $script:SolverMenuOpenBoard[1]
+    # Both before the first act (S4, SQA 2026-10-08): opening the top menu is an act too.
+    if (-not $PSCmdlet.ShouldProcess("$Name.fynbs", 'open board')) { return $null }
+    Assert-SwdProbeContinue -StopFile $Ctx.StopFile
+    $visible = @{}; foreach ($d in @(Get-SwdDialog)) { $visible[[int64]$d.Handle] = 1 }
+    $read = { [SwdProbeNative]::Act([intptr]$menu, $item, '12', 0, 'read-menu', $null, 3000, 10000) }
+    $r = & $read; $menuOpened = $false
+    if ($r.Status -eq 'not-found') {
+        # A closed menu may not expose its items: open the top item (ShowDropDown) and look again,
+        # once it reads as exactly one menu item (S4).
+        $t = [SwdProbeNative]::Act([intptr]$menu, $top, '12', 0, 'read-menu', $null, 3000, 10000)
+        if ($t.Status -ne 'ok' -or $t.Matches -ne 1) { throw "solver: the '$top' menu: $($t.Status), $($t.Matches) matches" }
+        $f = [SwdProbeNative]::Act([intptr]$menu, $top, '12', 0, 'default-menu', $null, 3000, 10000)
+        if ($f.Status -ne 'ok') { throw "solver: opening the '$top' menu: $($f.Status)" }
+        $menuOpened = $true
+        Start-Sleep -Milliseconds 700
+        $r = & $read
+    }
+    $ps = $null; $async = $null; $dlg = $null; $parts = $null
+    try {
+        if ($r.Status -ne 'ok' -or $r.Matches -ne 1 -or ($r.State -band 1)) {
+            $seen = @([SwdProbeNative]::Walk([intptr]$menu, 500, 5000) | Where-Object { $_.Role -eq '12' -and $_.Name } | ForEach-Object { ConvertTo-SwdSafeText $_.Name 40 })
+            throw "solver: menu item '$item': $($r.Status), $($r.Matches) matches, state $($r.State); menu items seen: $($seen -join ' | ')"
+        }
+        $c0 = [SwdProbeNative]::CursorPos()
+        $ps = [PowerShell]::Create()
+        [void]$ps.AddScript({ param($t, $h, $n) $t::Act([intptr]$h, $n, '12', 0, 'default-menu', $null, 3000, 10000) }).AddArgument([SwdProbeNative]).AddArgument([int64]$menu).AddArgument($item)
+        $async = $ps.BeginInvoke()
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        while (-not $dlg -and $sw.ElapsedMilliseconds -lt 20000) {
+            Start-Sleep -Milliseconds 300
+            $dlg = @(Get-SwdDialog | Where-Object { -not $visible.ContainsKey([int64]$_.Handle) -and $_.Class -eq '#32770' }) | Select-Object -First 1
+            if (-not $dlg -and $async.IsCompleted) { break }
+        }
+        if (-not $dlg) {
+            $st = if ($async.IsCompleted) { @($ps.EndInvoke($async) | ForEach-Object { $_.Status }) -join ',' } else { 'still running' }
+            throw "solver: '$item' raised no file picker in 20 s (menu action: $st)"
+        }
+        $parts = Find-SwdSolverFileDialogPart -Rows @(Get-SwdDialogControl -Handle $dlg.Handle)
+        if ($parts.Why) { throw "solver: the window after '$item' ('$(ConvertTo-SwdSafeText $dlg.Title 40)') is not a file picker: $($parts.Why)" }
+        if (-not [SwdWin]::SetText([intptr]$parts.Edit, $file, 5000) -or ([SwdWin]::GetText([intptr]$parts.Edit, 5000) -cne $file)) { throw "solver: the file name did not take in the picker ($Name.fynbs)" }
+        Assert-SwdProbeContinue -StopFile $Ctx.StopFile
+        if (-not [SwdWin]::PostMessage([intptr]$parts.Open, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero)) { throw 'solver: posting Open to the picker failed' }
+        if (-not (Wait-SwdDialogGone -Handle $dlg.Handle -TimeoutMs 20000)) { throw "solver: the picker stayed open after Open ($Name.fynbs)" }
+        $parts = $null
+        while (-not $async.IsCompleted -and $sw.ElapsedMilliseconds -lt $TimeoutMs) { Start-Sleep -Milliseconds 500 }
+        $title = $null
+        while ($sw.ElapsedMilliseconds -lt $TimeoutMs) {
+            $title = (Get-SwdProbeMain).Title
+            if (Test-SwdProbeListed -List $Name -Label (Get-SwdProbeBoardName $title)) { break }
+            Start-Sleep -Milliseconds 500
+        }
+        if (-not (Test-SwdProbeListed -List $Name -Label (Get-SwdProbeBoardName $title))) { throw "solver: after Open the caption names '$(Get-SwdProbeBoardName $title)', not '$Name'" }
+        # And the board guard on what SWD now shows (W7).
+        [void](Assert-SwdProbeBoard -Title $title -AllowOriginal)
+        $pop = Clear-SwdSweepPopup -StopFile $Ctx.StopFile
+        [void](Wait-SwdProbeSettle -Handle (Get-SwdProbeMain).Handle -TimeoutMs 30000 -StopFile $Ctx.StopFile)
+        $c1 = [SwdProbeNative]::CursorPos()
+        $st = if ($async.IsCompleted) { @($ps.EndInvoke($async) | ForEach-Object { $_.Status }) -join ',' } else { 'still running' }
+        return [pscustomobject]@{ Board = $Name; Opened = $true; File = "$Name.fynbs"; Picker = (ConvertTo-SwdSafeText $dlg.Title 40)
+                                  MenuOpened = $menuOpened; MenuStatus = $st; OpenMs = [int]$sw.ElapsedMilliseconds; Popups = $pop
+                                  CursorMoved = [bool]($c0 -and $c1 -and ($c0[0] -ne $c1[0] -or $c0[1] -ne $c1[1])) }
+    } finally {
+        # A picker this function opened is never left up: Cancel (IDCANCEL), posted. Only to a window
+        # that read as a file picker (S3, SQA 2026-10-08); any other is left to Clear-SwdSweepPopup.
+        if ($parts -and -not $parts.Why -and $parts.Cancel -and $dlg -and [SwdWin]::IsWindow([intptr]$dlg.Handle)) { [void][SwdWin]::PostMessage([intptr]$parts.Cancel, 0x00F5, [IntPtr]::Zero, [IntPtr]::Zero) }
+        # A menu this function opened and did not use is closed: Escape to each window it raised.
+        if ($menuOpened -and -not $dlg) {
+            foreach ($w in @(Get-SwdDialog | Where-Object { -not $visible.ContainsKey([int64]$_.Handle) -and $_.Class -ne '#32770' })) {
+                [void][SwdWin]::PostMessage([intptr]$w.Handle, 0x0100, [IntPtr]0x1B, [IntPtr]::Zero); [void][SwdWin]::PostMessage([intptr]$w.Handle, 0x0101, [IntPtr]0x1B, [IntPtr]::Zero)
+            }
+        }
+        # A finished runspace is freed. One still blocked inside SWD is NOT left behind by the process
+        # exit: it holds a -File run open until SWD lets go of it, BeginStop() and 'exit' included
+        # (W5, SQA 2026-10-08, measured), so the flag has the probe entry end the process itself.
+        if ($ps -and $async -and $async.IsCompleted) { $ps.Dispose() }
+        elseif ($ps -and $async) { $script:SolverBlockedRunspace = $true }
+    }
+}
+
 function Initialize-SwdSolverSession {
     <#  Per SWD session: Board Dynamics ON, the Test Position and Elements;analysis tabs shown,
         a UIA3 dump for the designer names (cached per SWD process), the HydroScans root
-        expanded, the position list, and the board volume guard. Fills Ctx.  #>
-    param([Parameter(Mandatory)]$Ctx, [double]$MaxDrift = 90, [double]$ExpectVolumeL = 0)
+        expanded, the position list, and the board volume guard. Fills Ctx.
+        -SkipPositions (SolverRestore; S6, SQA 2026-10-08): returns after the volume guard, without
+        walking the drifts it would never read (about 45-55 s of a 2-minute restore).  #>
+    param([Parameter(Mandatory)]$Ctx, [double]$MaxDrift = 90, [double]$ExpectVolumeL = 0, [string]$Board = '', [switch]$SkipPositions)
     $rows = Initialize-SwdSolverLaunch -Ctx $Ctx
+    # -Board (Stage 2): open it when SWD shows another board, then redo the launch part (mode D,
+    # tabs) on the board that is now loaded. Covers the first launch, a relaunch and a resume.
+    # Ordinal (W7): -cne is linguistic and took a caption name with U+00AD for -Board.
+    $Ctx.Opened = $null
+    if ($Board -and -not (Test-SwdProbeListed -List $Board -Label $Ctx.Board)) {
+        $Ctx.Opened = Open-SwdSolverBoard -Name $Board -Ctx $Ctx
+        $rows = Initialize-SwdSolverLaunch -Ctx $Ctx
+    }
     $m = Get-SwdProbeMain
     $census = { param($tag) Join-Path $Ctx.Dir "census-$($m.Process.Id)-$tag.json" }
     $load = { param($tag) $f = & $census $tag; if (Test-Path -LiteralPath $f) { @((Get-Content -LiteralPath $f -Raw -Encoding UTF8 | ConvertFrom-Json).rows) } else { @((Invoke-SwdSweepUia3 -OutFile $f).rows) } }
@@ -2874,6 +3093,11 @@ function Initialize-SwdSolverSession {
     if ($ExpectVolumeL -gt 0 -and (-not $vol.Ok -or [math]::Abs([double]$vol.Value - $ExpectVolumeL) -gt 0.05)) {
         throw "SWD-SOLVER-VOLUME: the board grid reads volume_litre '$($Ctx.VolumeL)', expected $ExpectVolumeL L. Not reading a resized board."
     }
+    if ($SkipPositions) {
+        $Ctx.Board = $board
+        return [pscustomobject]@{ Board = $board; VolumeL = $Ctx.VolumeL; Positions = 0; Pid = $m.Process.Id
+                                  SurferKg = (Get-SwdProbeSurferKg (Get-SwdProbeMain).Title); Opened = $Ctx.Opened; Drifts = @() }
+    }
     # Every drift in the list, and the positions the tree shows for it.
     $e = Invoke-SwdProbeAcc -Handle $Ctx.Tree -Name $Ctx.RootName -Action expand -Offscreen -StopFile $Ctx.StopFile
     if ($e.Status -ne 'ok' -and $e.Status -notlike 'not-expandable (Collapse*') { throw "solver session: expanding '$($Ctx.RootName)': $($e.Status)" }
@@ -2895,6 +3119,7 @@ function Initialize-SwdSolverSession {
     $Ctx.Expanded = @{}; $Ctx.Grid = 0; $Ctx.ElementTree = 0; $Ctx.LastRows = $null
     $Ctx.Board = $board
     return [pscustomobject]@{ Board = $board; VolumeL = $Ctx.VolumeL; Positions = $Ctx.Positions.Count; Pid = $m.Process.Id
+                              SurferKg = (Get-SwdProbeSurferKg (Get-SwdProbeMain).Title); Opened = $Ctx.Opened
                               Drifts = @($Ctx.Drifts | ForEach-Object { '{0}:{1}({2})' -f $_.Index, $_.Drift, $_.Positions }) }
 }
 
@@ -2954,11 +3179,34 @@ function Find-SwdSolverGrid {
     $Ctx.ElementTree = if ($el.Count) { [int64]$el[0].Hwnd } else { 0 }
 }
 
-function Read-SwdSolverGrid {
-    <#  The analysis grid as an ordered name -> value map, and the element it shows.  #>
+function Select-SwdSolverElementRoot {
+    <#  Select the Elements;analysis tree's root item (the position's whole-board element, the
+        grid's 'global' row set), which is what fills the analysis grid. After Files -> Open
+        Board nothing in that tree is selected and the grid is empty; at launch SWD had it
+        selected (Stage 2 pilot, 2026-10-06). An MSAA select of a tree item: no cursor.  #>
     param([Parameter(Mandatory)]$Ctx)
-    for ($try = 0; $try -lt 2; $try++) {
+    $first = @([SwdProbeNative]::Walk([intptr]$Ctx.ElementTree, 40, 3000) | Where-Object { $_.Role -eq '36' -and $_.Name -and (ConvertFrom-SwdSolverElement $_.Name) } | Select-Object -First 1)
+    if (-not $first.Count) { return 'no element item' }
+    $r = Invoke-SwdProbeAcc -Handle $Ctx.ElementTree -Name $first[0].Name -Action select -AllowAmbiguous -Offscreen -StopFile $Ctx.StopFile
+    [void](Wait-SwdProbeSettle -Handle (Get-SwdProbeMain).Handle -TimeoutMs 20000 -StopFile $Ctx.StopFile)
+    return $r.Status
+}
+
+function Read-SwdSolverGrid {
+    <#  The analysis grid as an ordered name -> value map, and the element it shows. Six tries,
+        1.5 s apart. When the element tree is found but the analysis grid is not, its root item
+        is selected once (Select-SwdSolverElementRoot): after a board is opened the grid stays
+        empty until it is (Stage 2 pilot, 2026-10-06).  #>
+    param([Parameter(Mandatory)]$Ctx)
+    $selected = $false
+    for ($try = 0; $try -lt 6; $try++) {
+        if ($try) { Start-Sleep -Milliseconds 1500 }
         if (-not $Ctx.Grid -or -not (Test-SwdHandle -Handle $Ctx.Grid) -or -not $Ctx.ElementTree) { Find-SwdSolverGrid -Ctx $Ctx }
+        if (-not $Ctx.Grid -and $Ctx.ElementTree -and -not $selected) {
+            $selected = $true
+            [void](Select-SwdSolverElementRoot -Ctx $Ctx)
+            Find-SwdSolverGrid -Ctx $Ctx
+        }
         $rows = [ordered]@{}
         if ($Ctx.Grid) {
             foreach ($c in [SwdProbeNative]::Walk([intptr]$Ctx.Grid, 400, 5000)) { if ($c.Role -eq '29' -and $c.Name -and -not $rows.Contains($c.Name)) { $rows[$c.Name] = $c.Value } }
@@ -3245,20 +3493,24 @@ function Invoke-SwdSolver {
                          reads and by SolverRestore). State: <Dir>\pilot.json.
           SolverLoop     speed -> slope -> drift -> Pos Y -> Pos X over -Speeds x -Slopes,
                          drift <= -MaxDrift. State: <Dir>\loop_state.json; reads: solver.jsonl;
-                         block controls: controls.jsonl.
+                         block controls: controls.jsonl. -EndBy: no block is started that
+                         cannot end by then ('night end').
           SolverRestore  types 10 m/s and 0 deg, applies, closes SWD, and compares the hash of
-                         SWD's settings file with the 2026-09-30 backup (hash only; R9).  #>
+                         SWD's settings file with the 2026-09-30 backup (hash only; R9).
+        -Board (Loop, Restore): opened first when SWD shows another board.  #>
     param([Parameter(Mandatory)][ValidateSet('SolverPilot', 'SolverLoop', 'SolverRestore')][string]$Pass, [Parameter(Mandatory)][string]$Dir,
           [Parameter(Mandatory)][string]$RunDir, [Parameter(Mandatory)][string]$StopFile, [double]$MaxMinutes = 8,
           [string[]]$Speeds = @('5', '10', '20'), [string[]]$Slopes = @('-3', '0', '3'), [double]$MaxDrift = 20, [double]$ExpectVolumeL = 0,
-          [string]$SettingsBackup = (Join-Path $env:USERPROFILE 'SWD-backup\20260930\user.config'))
+          [string]$SettingsBackup = (Join-Path $env:USERPROFILE 'SWD-backup\20260930\user.config'),
+          [string]$Board = '', [string]$EndBy = '')
     $deadline = (Get-Date).AddMinutes($MaxMinutes)
     if ([SwdProbeNative]::KeepAwake() -eq 0) { throw 'Failed to set thread execution state.' }
     [void][IO.Directory]::CreateDirectory($Dir)
     $ctx = [pscustomobject]@{ Dir = $Dir; RunDir = $RunDir; StopFile = $StopFile; Map = @{}; Names = @{}; Census = @{}
                               SpeedBox = 0; SlopeBox = 0; ApplyButton = 0; Tree = 0; Grid = 0; ElementTree = 0; Positions = @(); Expanded = @{}
                               DriftList = 0; DriftNow = -1; Drifts = @(); RootName = $null
-                              LastRows = $null; Applied = $null; Board = $null; VolumeL = $null; P2Immediate = $null }
+                              LastRows = $null; Applied = $null; Board = $null; VolumeL = $null; P2Immediate = $null; Opened = $null }
+    $endAt = ConvertTo-SwdSolverEndBy $EndBy
     $done = 0; $why = 'pass complete'; $info = [ordered]@{}
     try {
         if ($Pass -eq 'SolverPilot') {
@@ -3270,7 +3522,7 @@ function Invoke-SwdSolver {
             # process started in the last 4 minutes (the runner's own launch) counts as fresh.
             $p = Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue
             if (-not $checks.Contains('P0') -and $p -and ((Get-Date) - $p.StartTime).TotalMinutes -gt 4) { $info.Relaunch = Stop-SwdSweepApp }
-            if (-not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) { $info.Launched = Start-SwdSweepApp -StopFile $StopFile }
+            if (-not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) { $info.Launched = Start-SwdSweepApp -StopFile $StopFile -AllowOriginal }
             if (-not $checks.Contains('P0')) {
                 [void](Initialize-SwdSolverLaunch -Ctx $ctx)
                 $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -3297,8 +3549,8 @@ function Invoke-SwdSolver {
             return
         }
         if ($Pass -eq 'SolverRestore') {
-            if (-not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) { $info.Launched = Start-SwdSweepApp -StopFile $StopFile }
-            $info.Session = Initialize-SwdSolverSession -Ctx $ctx -MaxDrift 0 -ExpectVolumeL $ExpectVolumeL
+            if (-not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) { $info.Launched = Start-SwdSweepApp -StopFile $StopFile -AllowOriginal }
+            $info.Session = Initialize-SwdSolverSession -Ctx $ctx -MaxDrift 0 -ExpectVolumeL $ExpectVolumeL -Board $Board -SkipPositions
             $info.Situation = Set-SwdSolverSituation -Speed '10' -Slope '0' -Ctx $ctx
             $info.Close = Stop-SwdSweepApp
             $cfg = @(Get-ChildItem -LiteralPath (Join-Path $env:LOCALAPPDATA 'ShaperWaveDynamics') -Recurse -Filter 'user.config' -File -ErrorAction SilentlyContinue)
@@ -3317,8 +3569,11 @@ function Invoke-SwdSolver {
         }
         # SolverLoop
         $Speeds = @(ConvertTo-SwdSolverLevel $Speeds); $Slopes = @(ConvertTo-SwdSolverLevel $Slopes)
-        if (-not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) { $info.Launched = Start-SwdSweepApp -StopFile $StopFile }
-        $info.Session = Initialize-SwdSolverSession -Ctx $ctx -MaxDrift $MaxDrift -ExpectVolumeL $ExpectVolumeL
+        if (-not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) { $info.Launched = Start-SwdSweepApp -StopFile $StopFile -AllowOriginal }
+        $info.Session = Initialize-SwdSolverSession -Ctx $ctx -MaxDrift $MaxDrift -ExpectVolumeL $ExpectVolumeL -Board $Board
+        if ($endAt) { $info.EndBy = $EndBy }
+        $readSec = New-Object System.Collections.Generic.List[double]
+        $tPrev = $null
         $blocks = @(Get-SwdSolverBlock -Speeds $Speeds -Slopes $Slopes)
         $n = @($ctx.Positions).Count
         $fp = Get-SwdSolverFingerprint -Board $ctx.Board -Speeds $Speeds -Slopes $Slopes -Positions $ctx.Positions
@@ -3335,11 +3590,19 @@ function Invoke-SwdSolver {
             Assert-SwdProbeContinue -StopFile $StopFile
             $c = Get-SwdSolverCursor -Cursor $cursor -Positions $n
             $b = $blocks[$c.Block]; $pos = $ctx.Positions[$c.Position]
+            # -EndBy (Stage 2): a block is started only if it can end in time, so a night ends
+            # on a block boundary. A block resumed part-way (a chunk boundary) is finished.
+            if ($c.Position -eq 0 -and $endAt) {
+                $med = 0; if ($readSec.Count) { $a = $readSec.ToArray(); [array]::Sort($a); $med = $a[[int][math]::Floor($a.Count / 2)] }
+                if (-not (Test-SwdSolverBlockFit -Now (Get-Date) -EndBy $endAt -Positions $n -ReadSeconds $med)) { $why = 'night end'; break }
+            }
             if ($ctx.Applied -ne $b.Id) {
                 $s = Set-SwdSolverSituation -Speed $b.Speed -Slope $b.Slope -Ctx $ctx
                 Add-SwdSweepRecord -Ctx $ctx -File 'situations.jsonl' -Record ([pscustomobject]@{ Block = $b.Id; Cursor = $cursor; Situation = $s; Time = (Get-Date).ToString('o') })
             }
             $r = Select-SwdSolverPosition -Position $pos -Ctx $ctx
+            # Seconds between consecutive reads, record writing included (the block estimate).
+            $now = Get-Date; if ($tPrev) { $readSec.Add(($now - $tPrev).TotalSeconds) }; $tPrev = $now
             Add-SwdSweepRecord -Ctx $ctx -File 'solver.jsonl' -Record (ConvertTo-SwdSolverRecord -Board $ctx.Board -Speed $b.Speed -Slope $b.Slope -Position $pos -Read $r -Seq $cursor)
             if ($c.Position -eq 0) { $first[$b.Id] = $r.Rows }
             $cursor++; $done++
@@ -3350,6 +3613,9 @@ function Invoke-SwdSolver {
                 $refRows = if ($ref0 -is [System.Collections.IDictionary]) { $ref0 } else { $h = [ordered]@{}; foreach ($p in $ref0.PSObject.Properties) { $h[$p.Name] = $p.Value }; $h }
                 $d = @(Compare-SwdSolverRow -A $refRows -B $r0.Rows)
                 Add-SwdSweepRecord -Ctx $ctx -File 'controls.jsonl' -Record ([pscustomobject]@{ Block = $b.Id; Match = ($d.Count -eq 0); Differing = $d; Time = (Get-Date).ToString('o') })
+                # Used: dropped, so loop_state.json, rewritten after every read, holds one block's rows
+                # (S8, SQA 2026-10-08: it grew to 429 KB). Saved with the cursor that passes the block.
+                $first.Remove($b.Id)
             }
             & $save
         }
@@ -3370,7 +3636,8 @@ function Invoke-SwdSolver {
 function Invoke-SwdProbe {
     param([Parameter(Mandatory)][string]$Name, [double]$DeltaMm = 1.0, [int]$Repeats = 5, [string]$LogDir, [switch]$SkipLibraryHash,
           [string]$Pass = 'Map', [double]$MaxMinutes = 8, [string]$SweepDir,
-          [string[]]$Speeds = @('5', '10', '20'), [string[]]$Slopes = @('-3', '0', '3'), [double]$MaxDrift = 20, [double]$ExpectVolumeL = 0)
+          [string[]]$Speeds = @('5', '10', '20'), [string[]]$Slopes = @('-3', '0', '3'), [double]$MaxDrift = 20, [double]$ExpectVolumeL = 0,
+          [string]$Board = '', [string]$EndBy = '')
     $solver = ($Name -eq 'Sweep' -and $Pass -like 'Solver*')
     # The default state directory is DATED (<LogDir>\<yyyy-MM-dd>\solver), so a multi-chunk loop
     # that crosses midnight would silently start over in a new, empty one (measured 2026-10-06:
@@ -3380,7 +3647,9 @@ function Invoke-SwdProbe {
     $run = Join-Path $root ('{0}-{1}' -f (Get-Date -Format 'HHmmss'), $(if ($Name -eq 'Sweep') { "Sweep-$Pass" } else { $Name }))
     [void][IO.Directory]::CreateDirectory($run)
     $stop = Join-Path $root $script:ProbeStopFileName
-    if (Test-Path -LiteralPath $stop) { throw "A STOP file is present at $stop. Delete it by hand to run probes." }
+    # Every pass, SolverRestore included (SQA 2026-10-08): it can launch SWD, drive a modal picker and
+    # press Apply. The driver skips the restore under STOP and only closes SWD. Path collapsed (S1, R9).
+    if (Test-Path -LiteralPath $stop) { throw "A STOP file is present at $(Format-PathForDisplay $stop). Delete it by hand to run probes." }
     $transcript = Join-Path $run 'transcript.txt'
     Start-Transcript -LiteralPath $transcript | Out-Null
     $summary = [ordered]@{ Probe = $Name; Started = (Get-Date).ToString('o'); RunDir = $run
@@ -3408,14 +3677,14 @@ function Invoke-SwdProbe {
         if ($Name -eq 'Sweep' -and -not (Get-Process SurfHydrodynamics -ErrorAction SilentlyContinue)) {
             $sst = Read-SwdProbeState -Path (Join-Path $stateDir 'state.json')
             $expect = if ($sst -and $sst.PSObject.Properties['Board']) { $sst.Board } else { $null }
-            $summary.Launched = Start-SwdSweepApp -ExpectBoard $expect -StopFile $stop
+            $summary.Launched = Start-SwdSweepApp -ExpectBoard $expect -StopFile $stop -AllowOriginal:$solver
         }
         if ($Name -ne 'T17') {
             $self = [SwdWin]::IntegritySid($PID)
             $main = Get-SwdProbeMain
             $swdInt = [SwdWin]::IntegritySid($main.Process.Id)
             if ($self -ne $swdInt) { throw "Integrity mismatch: probe $(Format-Integrity $self), SWD $(Format-Integrity $swdInt). Run elevated." }
-            $summary.Board = Assert-SwdProbeBoard -Title $main.Title
+            $summary.Board = Assert-SwdProbeBoard -Title $main.Title -AllowOriginal:$solver
             $summary.Integrity = Format-Integrity $swdInt
         }
         if ($Name -ne 'T17' -and -not $SkipLibraryHash -and $null -eq $libBefore) { $libBefore = Get-SwdLibraryHash -Root $lib }
@@ -3431,7 +3700,7 @@ function Invoke-SwdProbe {
                 $script:SweepChunk = $null
                 if ($solver) {
                     Invoke-SwdSolver -Pass $Pass -Dir $stateDir -RunDir $run -StopFile $stop -MaxMinutes $MaxMinutes -Speeds $Speeds -Slopes $Slopes `
-                                     -MaxDrift $MaxDrift -ExpectVolumeL $ExpectVolumeL
+                                     -MaxDrift $MaxDrift -ExpectVolumeL $ExpectVolumeL -Board $Board -EndBy $EndBy
                 } else { Invoke-SwdSweep -Pass $Pass -Dir $stateDir -RunDir $run -StopFile $stop -MaxMinutes $MaxMinutes }
                 $script:SweepChunk
             }
@@ -3467,9 +3736,20 @@ function Invoke-SwdProbe {
 
 if ($Probe) {
     $ErrorActionPreference = 'Stop'
-    $r = Invoke-SwdProbe -Name $Probe -DeltaMm $DeltaMm -Repeats $Repeats -LogDir $LogDir -SkipLibraryHash:$SkipLibraryHash `
-                         -Pass $Pass -MaxMinutes $MaxMinutes -SweepDir $SweepDir -Speeds $Speeds -Slopes $Slopes -MaxDrift $MaxDrift -ExpectVolumeL $ExpectVolumeL
+    # W5 (SQA 2026-10-08): a runspace Open-SwdSolverBoard left blocked inside SWD would hold this run
+    # open after its summary, so a -File run then ends its process itself, output written. Not an
+    # interactive session, which [Environment]::Exit would close.
+    $held = { $script:SolverBlockedRunspace -and @([Environment]::GetCommandLineArgs() | Where-Object { $_ -eq '-File' }).Count }
+    try {
+        $r = Invoke-SwdProbe -Name $Probe -DeltaMm $DeltaMm -Repeats $Repeats -LogDir $LogDir -SkipLibraryHash:$SkipLibraryHash `
+                             -Pass $Pass -MaxMinutes $MaxMinutes -SweepDir $SweepDir -Speeds $Speeds -Slopes $Slopes -MaxDrift $MaxDrift -ExpectVolumeL $ExpectVolumeL `
+                             -Board $Board -EndBy $EndBy
+    } catch {
+        if (& $held) { [Console]::Error.WriteLine("$_"); [Environment]::Exit(1) }
+        throw
+    }
     $r.Result | ConvertTo-Json -Depth 6
     if ($r.PSObject.Properties['Library']) { 'Library: ' + ($r.Library | ConvertTo-Json -Compress) }
     "summary: $(Join-Path $r.RunDir 'summary.json')"
+    if (& $held) { [Environment]::Exit(0) }
 }

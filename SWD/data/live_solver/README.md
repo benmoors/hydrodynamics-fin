@@ -76,12 +76,14 @@ Each folder holds the same two files:
 | `mass_flux_kg_s` | kg/s | `masse_flux_dévié_kg_sec_planing` |
 | `hydrostatic_fx_n` | N | `Fx_deplacement_hydrostatique_n` |
 
-**All columns** (`solver_points_all_columns.csv`) add the rest of the analysis grid under SWD's own names. Units follow the
-name suffix (`_n` N, `_nm` N·m, `_deg` °, `_m2` m², `_mm` mm, `_litres` L, `_kg_sec` kg/s, `_m` m). Three rows are vectors
-written as one quoted `"x, y, z"` text cell: `point_application_global_normal`, `Vecteur_flottaison_n` and
-`Vecteur_flottaison_effective_n`. A few rows are SWD constants or object names (`nom_`, `infos_`, `p_elements_internes`,
-the `(Collection)` rows). `infos_planing_` reads `angle_max` where the solver stopped at its angle limit and `planing`
-otherwise.
+**All columns** (`solver_points_all_columns.csv`) add the rest of the analysis grid. The rows SWD names in French carry
+English names, translated through `SWD/tools/column_names.csv`, which keeps each SWD name beside its English one; the rest
+keep SWD's own names. `SWD/docs/column-names.md` explains how each translation was checked. Units follow the name suffix
+(`_n` N, `_nm` N·m, `_deg` °, `_m2` m², `_mm` mm, `_litres` L, `_kg_s` kg/s, `_m3_s` m³/s, `_ms` m/s, `_m` m, `_pa` Pa).
+Three rows are vectors written as one quoted `"x, y, z"` text cell: `normal_force_application_point`, `buoyancy_vector_n`
+and `effective_buoyancy_vector_n`. A few rows are SWD constants or object names (`name`, `info`, `internal_elements`), and
+three only ever read `(Collection)`: `element_outline_polygon_m` and the two `roll_axis_section_normal_*` rows.
+`planing_info` reads `angle_max` where the solver stopped at its angle limit and `planing` otherwise.
 
 **QA columns:**
 
@@ -117,9 +119,11 @@ from them through `SWD/tools/phase2/swd_solver_table.py`, which has a `--self-te
 
 ```
 py -3.14 SWD/tools/phase2/swd_solver_table.py --dir <solver dir> --out <csv> [--all] [--converged]
+py -3.14 SWD/tools/translate_columns.py <csv>
 ```
 
-`--all` writes every grid row, and `--converged` keeps only the converged reads. The campaign, its checks and its
+`--all` writes every grid row, and `--converged` keeps only the converged reads. The second command gives the rows SWD
+names in French their English headings; it changes only the header line. The campaign, its checks and its
 results are recorded in `SWD/TODO.md` and `AI-USE.md`.
 
 ---

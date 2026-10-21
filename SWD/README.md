@@ -297,6 +297,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\run_pester.ps1" ".\sw
 The test suite stages a SHA-256-verified copy of the script into a temporary directory and runs against
 that, so the suite can execute the real code without any risk to the live tool or the shipped dataset.
 
+The per-board extractor `tools\extract_board.ps1` and the live-solver table `tools\phase2\swd_solver_table.py`
+write SWD's French field names into their headers. Run `py -3.14 SWD\tools\translate_columns.py` after either
+to give them English names; [docs/column-names.md](docs/column-names.md) explains how each name was checked.
+
 ```
 SWD/
 ├── README.md                     this document

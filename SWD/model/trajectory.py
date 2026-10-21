@@ -84,7 +84,7 @@ class BoardPolar:
 def load_polar(board_dir: Path = BOARD_DIR, drift_deg: float = 0.0) -> BoardPolar:
     """Build a :class:`BoardPolar` from the extracted element CSV.
 
-    Roll is aggregated from ``inclinaison_roulis_rad_ligne_attack`` rather than read
+    Roll is aggregated from ``roll_attack_rad`` rather than read
     from ``operating_points.csv``, so the roll axis comes from the same rows the
     forces do.
     """
@@ -93,9 +93,9 @@ def load_polar(board_dir: Path = BOARD_DIR, drift_deg: float = 0.0) -> BoardPola
     if e.empty:
         raise ValueError(f"no rows at drift_deg={drift_deg}")
     g = e.groupby("roll_case").agg(
-        roll_rad=("inclinaison_roulis_rad_ligne_attack", "mean"),
-        lift_n=("portance_globale_verticale_n", "sum"),
-        drag_n=("trainee_globale_horizontale_n", "sum"),
+        roll_rad=("roll_attack_rad", "mean"),
+        lift_n=("lift_total_n", "sum"),
+        drag_n=("drag_total_n", "sum"),
         friction_n=("Fx_friction_n", "sum"),
         v=("scan_speed_ms", "median"),
     )

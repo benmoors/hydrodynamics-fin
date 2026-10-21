@@ -5,7 +5,8 @@ solver.jsonl (one record per read) and controls.jsonl (one per (speed, slope) bl
 solver_points.csv, one row per board x speed x slope x drift x Pos Y x Pos X read, carrying the
 key analysis-grid rows by name (all rows with --all), plus a summary on stdout.
 
-The flags are QA, not filters: every read is written. lift_dev is the lift's deviation from the
+The flags are QA, not filters: every read is written, unless --converged keeps only the reads whose
+lift is within CONVERGED_TOL (1 %) of the plateau (both sets are kept, Benjamin 2026-10-08). lift_dev is the lift's deviation from the
 board's weight plateau (the solver holds lift at the weight where it converges, so a large value
 marks a position it did not; at 5 m/s about half the positions fall short, 2026-10-05, which is
 why the reference is the plateau and not the median); element_match is False when the analysis tree showed another position;
@@ -14,7 +15,7 @@ element_match compares the analysis tree's label with the position by MAGNITUDE 
 SWD labels some positions with negative Y, and (in +3 deg slope blocks) drift 2 as 'Drift -2'
 (2026-10-05/06); element_label keeps the raw label so the sign is not lost.
 
-    py -3.14 swd_solver_table.py [--dir DIR] [--out CSV] [--all]
+    py -3.14 swd_solver_table.py [--dir DIR] [--out CSV] [--all] [--converged]
     py -3.14 swd_solver_table.py --self-test
 """
 import argparse
@@ -48,6 +49,12 @@ KEY_ROWS = [
 ]
 KEYS = ["board", "speed_ms", "slope_deg", "drift_deg", "pos_y", "pos_x"]
 QA = ["element_match", "element_label", "same_as_previous", "lift_dev", "select_ms", "settle_ms", "read_ms", "seq"]
+CONVERGED_TOL = 0.01  # |lift / plateau - 1| at or below this: the solver held lift at the weight
+
+
+def converged(row):
+    """True when a CSV row's lift is within CONVERGED_TOL of the board's weight plateau."""
+    return row["lift_dev"] != "" and abs(row["lift_dev"]) <= CONVERGED_TOL
 
 
 def number(text):
@@ -161,7 +168,7 @@ def summary(rows, controls):
     lines.append(f"same as previous read: {sum(1 for r in rows if r['same_as_previous'] is True)}")
     devs = [abs(r["lift_dev"]) for r in rows if r["lift_dev"] != ""]
     if devs:
-        lines.append(f"lift off the weight plateau by >1% (not converged): {sum(1 for d in devs if d > 0.01)} (max {max(devs):.4f})")
+        lines.append(f"lift off the weight plateau by >1% (not converged): {sum(1 for d in devs if d > CONVERGED_TOL)} (max {max(devs):.4f})")
     for key in ("select_ms", "settle_ms", "read_ms"):
         v = [r[key] for r in rows if isinstance(r[key], (int, float))]
         if v:
@@ -184,6 +191,8 @@ def self_test():
     assert rows[2]["drag_total_n"] == "", "a missing row is blank, not dropped"
     assert abs(rows[3]["lift_dev"]) < 1e-9, "807.3 is the plateau of 807.2, 807.4, 807.3 (500 did not converge)"
     assert abs(rows[2]["lift_dev"] - (500 / 807.3 - 1)) < 1e-6
+    assert [r["seq"] for r in rows if converged(r)] == [0, 1, 3], "500 N is not converged"
+    assert not converged({"lift_dev": ""}) and converged({"lift_dev": -0.01}) and not converged({"lift_dev": 0.0101})
     assert plateau([27.0, 807.3, 807.3, 19.6, 21.1, 807.4]) == 807.3, "a majority of failures does not move it"
     rows_all, extra_all = rows_of(recs, all_rows=True)
     assert extra_all == ["Extra_row"], extra_all
@@ -225,6 +234,7 @@ def main():
     ap.add_argument("--dir", default=os.path.join(os.environ.get("LOCALAPPDATA", ""), "swd-probe", date.today().isoformat(), "solver"))
     ap.add_argument("--out", default=None, help="CSV path (default <dir>/solver_points.csv)")
     ap.add_argument("--all", action="store_true", help="every analysis-grid row, not only the key ones")
+    ap.add_argument("--converged", action="store_true", help="only reads whose lift is within 1 %% of the weight plateau")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     if a.self_test:
@@ -234,10 +244,11 @@ def main():
     controls = read_jsonl(os.path.join(a.dir, "controls.jsonl"))
     rows, extra = rows_of(records, a.all)
     out = a.out or os.path.join(a.dir, "solver_points.csv")
-    write_csv(rows, extra, out)
+    kept = [r for r in rows if converged(r)] if a.converged else rows
+    write_csv(kept, extra, out)
     for line in summary(rows, controls):
         print(line)
-    print(f"wrote {len(rows)} rows")
+    print(f"wrote {len(kept)} of {len(rows)} rows" + (" (converged only)" if a.converged else ""))
     return 0
 
 

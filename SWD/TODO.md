@@ -1360,6 +1360,7 @@ night: each night ends on a block boundary by 06:50 and closes SWD before the la
   last resort; STOP skips the restore and only closes SWD (agy's STOP bypass reverted, E125); `-Board` accepts
   only a copy or the listed original. swd_probe 496/0, new driver suite 53/0, all phase2 suites 1,018/0. The
   fixes have not run live yet. Report: `%LOCALAPPDATA%\sqa-loop\runs\hfin-stage2-2026-10-08.filed\report.md`.
-- **Yours to decide:** delete `C:\fake` (test transcripts from agy's test); whether a driver started after
-  07:00 should be refused rather than run up to 14 h; whether unconverged reads belong in a model; which other
-  boards, if any, get the campaign; copying the CSVs into `SWD/data/`.
+- **Decided 2026-10-08 (Benjamin):** keep the unconverged reads and publish both sections; tables copied to
+  `SWD/data/live_solver/default_shortboard/` (`all_reads/` 19,740 rows, `converged/` 7,745; see its README);
+  the position campaign stays on this one board for now; `C:\fake` deleted by Benjamin.
+- **Still yours:** whether a driver started after 07:00 should be refused rather than run up to 14 h.

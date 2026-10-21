@@ -20,6 +20,14 @@ binding constraint below.
 run actually produced, and records every dropped column. `polar_blocks` = 1,890 / 1,890,
 parse failures 0.
 
+## Live-solver tables (2026-10-08)
+
+`live_solver/` holds a second kind of data: SWD's live trim solver re-solving every scan position of
+`default_shortboard` (drift ≤ 20°, 282 positions) at speeds 1–10 m/s and slopes −10° to +20°, for one
+80 kg surfer. That is 19,740 reads, and the only data here where speed varies. `all_reads/` keeps every read;
+`converged/` keeps the 7,745 whose lift reached the weight. Columns, units and limits are in
+`live_solver/README.md`. The coverage tables below describe the hydroscan corpus only.
+
 ## The four required ML channels
 
 | Channel | Column | dtype | Min | Max | Distinct | NaN |

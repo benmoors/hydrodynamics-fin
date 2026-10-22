@@ -231,6 +231,23 @@ Describe 'Resolve-SwdGeometryControl' {
         $r.Length.Edit | Should -Not -Be 303
     }
 
+    It 'resolves the Volume apply button after SWD renames it (live 2026-09-30)' {
+        $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 512) { $_.Text = 'Set 10 liters volume to board' }; $_ })
+        $r = Resolve-SwdGeometryControl -Controls $c
+        $r.Volume.Apply | Should -Be 512
+        $r.Missing | Should -BeNullOrEmpty
+        $r.Length.Apply | Should -Be 304
+    }
+    It 'accepts the renamed caption for any target value but no lookalike' {
+        foreach ($t in 'Set 11 liters volume to board', 'Set 40.7 liters volume to board') {
+            $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 512) { $_.Text = $t }; $_ })
+            (Resolve-SwdGeometryControl -Controls $c).Volume.Apply | Should -Be 512
+        }
+        foreach ($t in 'Set 10 liters volume to board and save', 'set 10 liters volume to board', 'Set  liters volume to board') {
+            $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 512) { $_.Text = $t }; $_ })
+            (Resolve-SwdGeometryControl -Controls $c).Volume.Apply | Should -BeNullOrEmpty
+        }
+    }
     It 'matches the Volume group by prefix, since its caption carries the value' {
         $r = Resolve-SwdGeometryControl -Controls (New-GeometryFixture)
         $r.Volume.Apply | Should -Be 512
@@ -285,5 +302,89 @@ Describe 'Set-SwdGeometry parameter contract' {
             Where-Object { $_.TypeName.Name -eq 'CmdletBinding' }
         ($meta.NamedArguments | Where-Object ArgumentName -eq 'ConfirmImpact').Argument.Value |
             Should -Be 'High'
+    }
+}
+
+Describe 'Apply captions match ordinally, and the click is bound to them after the box write (SQA S10)' {
+
+    It 'the resolver refuses a Length Apply caption that is only linguistically equal: <label>' -ForEach @(
+        @{ label = 'lower case'; text = 'apply length' }
+        @{ label = 'upper case'; text = 'APPLY LENGTH' }
+        @{ label = 'a soft hyphen inside'; text = ('Apply Len' + [char]0x00AD + 'gth') }
+        @{ label = 'a letter the linguistic compare ignores'; text = ('Apply Len' + [char]0x0525 + 'gth') }
+        @{ label = 'a trailing space'; text = 'Apply Length ' }
+    ) {
+        $c = @(New-GeometryFixture | ForEach-Object { if ($_.Handle -eq 304) { $_.Text = $text }; $_ })
+        $r = Resolve-SwdGeometryControl -Controls $c
+        $r.Length.Apply | Should -BeNullOrEmpty
+        ($r.Missing -join ' ') | Should -BeLike "*Length 'Apply Length' button: found 0*"
+    }
+
+    It 'the exact caption still resolves' {
+        (Resolve-SwdGeometryControl -Controls (New-GeometryFixture)).Length.Apply | Should -Be 304
+    }
+
+    Context 'Set-SwdGeometry re-resolves between the box write and the click' {
+        BeforeEach {
+            function New-GeomState([double]$LengthMm) {
+                [pscustomobject]@{
+                    Configuration = [pscustomobject]@{ VolumeL = 26.85; DisplacementL = 80.10; LengthMm = $LengthMm; WidthMm = 553
+                                                       ThickMm = 40.3; LengthOverWidth = 3.9; WidthOverThick = 13.7; LengthOverThick = 53.0
+                                                       Raw = "Configuration:`nLength $LengthMm mm"; Parsed = 8 }
+                    Boxes = [pscustomobject]@{ Length = $LengthMm; Width = 553; Volume = 10 }
+                    Title = "FYN Shaper Wave Dynamics  <Board: test($LengthMm mm)>"; TitleLengthMm = $LengthMm
+                    Homothety = 'unknown'; Agree = $true
+                }
+            }
+            $script:GeoBefore = New-GeomState 2134
+            $script:GeoAfter = New-GeomState 2200
+            $script:ResolveN = 0; $script:FreshApply = [int64]304; $script:FreshThrows = $false
+            Mock Get-SwdControl { @() }
+            Mock Resolve-SwdGeometryControl {
+                $script:ResolveN++
+                if ($script:ResolveN -gt 1 -and $script:FreshThrows) { throw 'no SizeConfig panel found' }
+                $apply = if ($script:ResolveN -eq 1) { [int64]304 } else { $script:FreshApply }
+                [pscustomobject]@{
+                    Length = [pscustomobject]@{ Group = 300; Edit = 301; Apply = $apply; ApplyEnabled = $true; Unit = 'mm' }
+                    Width  = [pscustomobject]@{ Group = 400; Edit = 401; Apply = 403; ApplyEnabled = $true; Unit = 'mm' }
+                    Volume = [pscustomobject]@{ Group = 500; Edit = 511; Apply = 512; ApplyEnabled = $true; Unit = 'litres' }
+                    ConfigurationHandle = 700; Missing = @()
+                }
+            }
+            Mock Get-SwdGeometry { $script:GeoBefore }
+            Mock Read-SwdGeometryState { $script:GeoAfter }
+            Mock Set-SwdNumeric { [pscustomobject]@{ Ok = $true; Reason = 'ok'; Before = '2134'; After = '2200'; WhatIf = $false } }
+            Mock Invoke-SwdButton { [pscustomobject]@{ Sent = $true; Observed = 'handled'; LastError = 0; WhatIf = $false } }
+            Mock Test-SwdHandle { $true }
+        }
+
+        It 'refuses the click when the Apply button no longer resolves after the write' {
+            $script:FreshApply = $null
+            $r = Set-SwdGeometry -Axis Length -Value 2200 -Confirm:$false -TimeoutMs 1 -PollMs 1
+            Should -Invoke Invoke-SwdButton -Times 0 -Exactly
+            $r.Applied | Should -BeFalse
+            $r.ClickSent | Should -BeFalse
+            $r.Reason | Should -BeLike 'apply-click-refused*THE BOX WAS WRITTEN*'
+            $r.BoxAfter | Should -Be '2200'
+        }
+        It 'refuses the click when a different handle now carries the caption' {
+            $script:FreshApply = [int64]999
+            $r = Set-SwdGeometry -Axis Length -Value 2200 -Confirm:$false -TimeoutMs 1 -PollMs 1
+            Should -Invoke Invoke-SwdButton -Times 0 -Exactly
+            $r.Reason | Should -BeLike 'apply-click-refused*'
+        }
+        It 'refuses, and still returns a result object, when the panel cannot be re-resolved at all' {
+            $script:FreshThrows = $true
+            $r = Set-SwdGeometry -Axis Length -Value 2200 -Confirm:$false -TimeoutMs 1 -PollMs 1
+            Should -Invoke Invoke-SwdButton -Times 0 -Exactly
+            $r.Reason | Should -BeLike '*no SizeConfig panel found*'
+            $r.PSObject.Properties.Name | Should -Contain 'ClickLastError'
+        }
+        It 'clicks exactly once when the same handle still resolves' {
+            $r = Set-SwdGeometry -Axis Length -Value 2200 -Confirm:$false -TimeoutMs 1 -PollMs 1
+            Should -Invoke Invoke-SwdButton -Times 1 -Exactly -ParameterFilter { $Handle -eq 304 }
+            Should -Invoke Resolve-SwdGeometryControl -Times 2 -Exactly
+            $r.Applied | Should -BeTrue
+        }
     }
 }

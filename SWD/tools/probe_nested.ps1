@@ -37,6 +37,7 @@ if (Test-Path -LiteralPath $TrustManifest) {
 
 $onResolve = [System.ResolveEventHandler] {
     param($src, $e)
+    $null = $src # ResolveEventHandler delegate signature
     $n = ($e.Name -split ',')[0]
     foreach ($a in [AppDomain]::CurrentDomain.GetAssemblies()) { if ($a.GetName().Name -eq $n) { return $a } }
     return $null

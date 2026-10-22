@@ -18,7 +18,7 @@ Two fields recover the missing shape information:
     why the raw extents look like noise. Taking max-span over min-span is
     convention-agnostic and yields Length/Width.
 
-``epaisseur_relative_au_wide_point``
+``relative_thickness_at_wide_point``
     Thickness divided by length, at the wide point.
 
 Both were confirmed against SWD's own ``Configuration:`` panel, which independently
@@ -129,7 +129,7 @@ def calibrate_shape_coefficient(
         Shape volume in litres, ``volume_shape_litres``. Must be > 0.
     length_over_width, thickness_over_length : array_like of float
         Dimensionless ratios from :func:`aspect_ratio` and
-        ``epaisseur_relative_au_wide_point``. Must be > 0.
+        ``relative_thickness_at_wide_point``. Must be > 0.
     true_length_m : array_like of float
         Independently known board length in metres. Must be > 0.
 
@@ -178,7 +178,7 @@ def reconstruct_dimensions(
     length_over_width : array_like of float
         From :func:`aspect_ratio`. Corpus range 2.91 to 5.56.
     thickness_over_length : array_like of float
-        ``epaisseur_relative_au_wide_point``. Corpus range 0.0105 to 0.0425.
+        ``relative_thickness_at_wide_point``. Corpus range 0.0105 to 0.0425.
     k : float, optional
         Shape coefficient. Defaults to :data:`SHAPE_COEFFICIENT`.
 

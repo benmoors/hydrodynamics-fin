@@ -1105,3 +1105,262 @@ No indicator is implemented, no code was written, and no report prose was drafte
 arithmetic is reproducible from the tables printed inside the document itself, so no script ships with
 it - the ~60 lines exist and can become `SWD/tools/verify_paper_tables.py` if a runnable check is
 wanted.
+
+---
+
+## Hand-run fact-finding, 2026-09-29 — the speed result survives a clean test
+
+Benjamin ran SWD by hand and answered questions. His answers are verbatim in the local wiki
+(`wiki/raw/SWD hand-run observations 2026-09-29.md`, compiled at *SWD Hand-Run Observations
+2026-09-29*).
+
+### The decisive test
+The 2026-08-31 test (`flow ms` = 10) went through the save-as-copy branch, so it could have been
+confounded. It was repeated on an **unlocked** copy, which skips that branch.
+
+| | Value |
+|---|---|
+| Board | `blueTreck_Copy_2` (unlocked, no save-as-copy), 11 angles, 19:24 → 19:36 |
+| Set / stored / displayed | `flow ms` 10 → `board_speed_setting_ms` 10 → scanner "Relative Speed 10 m/s" |
+| **Extracted** ρV, all 11 angles, every element | **20,500.000** kg/m²s → ρ = 1025, **V = 20.000 m/s** |
+| SWD friction law vs SWD's own friction (median ratio) | **0.942 at 20 m/s**, 0.244 at 10 m/s (corpus: 0.941) |
+
+**The hydroscan solves at 20 m/s regardless.** The stored setting and the on-screen speed are not
+the solver speed, so item 2a's conclusion now rests on a clean test. The extraction went to a
+scratch folder; `SWD/data/` is unchanged, and adding the new board (720 → 773 points) waits for a
+decision.
+
+### How the app works, as observed
+- **Library:** the **My Library** tab (beside Project) in Shape Room, holding `Waves` / `Surfers` /
+  `Boards` and board subfolders. This is why the three 2026-09-02 `verify_2b` runs saw 0 tree items.
+- **Loading:** a click only highlights. Loading is right-click → `Open <name>.fynbs`. The menu also
+  holds `Create`, `Rename`, `Delete`, `Creer un sous-dossier` and `Share … on SurfCommunity`, so any
+  automation must allowlist `Open` alone.
+- **`Lock_` = has a hydroscan.**
+  - Locked: the 11 scanned drift angles, with forces.
+  - Unlocked: any 5° step from 0 to 90° (Board Dynamics ON), with no forces.
+  - An unlocked board scans without save-as-copy.
+- **Surfer:** changed by drag-and-drop onto the Shape Room view, so it likely can't be automated
+  without the mouse.
+- **`roll_surface_rad`:** SWD leaves it zero on every element (dropped at extraction), so there is no
+  second roll measurement.
+
+### Defect found in `swd_extract.ps1` (not yet fixed — a `.ps1` change needs SQA)
+`-TrustCurrentLibrary` with no `-OutDir` deletes `SWD/data/extract_manifest.json`
+(`swd_extract.ps1:337-338`). The deletion comes before the trust-only exit, so a run that prints
+"Nothing was extracted" leaves the committed dataset with no completion sentinel. Hit on 2026-09-29
+and restored from git; the CSVs were untouched. Fix: move the sentinel deletion below the
+`-TrustCurrentLibrary` exit.
+
+### Library state
+The trust manifest was re-approved: 413 files, backup at the session scratchpad. Six `.fynbs` were
+created or changed by hand on 2026-09-29:
+- `default_shortboard_Copy_2`, `default_shortboard_Copy_5`
+- `blueTreck_Copy_1`, `blueTreck_Copy_2`
+- `DanielThomson_ModernPlaningHull_Copy_1`
+- `default_longboard_Copy_1`
+
+### Later the same evening — what the "roll cases" are, and where yaw moment lives
+- **`roll_case` is SWD's Position Y index, not a roll setting.** The path in the app is Hydroscans →
+  Analysis Positions → Positions Y (5 values) → Positions X (~12).
+  - Measured in all 13 per-board `elements.csv`: `pos_y` = *k* × Y_max/4 at every drift, where
+    Y_max is board-specific (0.072–0.138; 0.108 on default_shortboard) and does not track length,
+    width or thickness.
+  - So `roll_rad` is a result of Y.
+  - At 60°/75°/90° the lowest Y positions are missing and the index shifts: case 0 = Y 0.027 at 60°,
+    0.054 at 90°.
+  - The model is unaffected: it uses drift ≤ 20°, where all 5 are present, and never uses
+    `roll_case` as a feature.
+  - Any table keyed on `roll_case` across all drifts is misaligned. A `pos_y` column in
+    `operating_points.csv` would fix that (an extractor change, so SQA first).
+- **Yaw moment:** on screen, `Moment_yaw_hydro` = `Moment yaw total` = −65.89 for one position;
+  the files hold 0 (`[NonSerialized]`); there is no copy or export. Candidates for recovering it:
+  - a bounded decompile of how the display computes it;
+  - a UIA read of the property grid (feasibility unknown).
+- **Other checks:**
+  - `Rayon_centrifuge_m` won't take an edit, so no radius test was possible.
+  - `list_*` / `projection_*` are empty on screen as well.
+  - `Save instant` is a time bookmark, not an export.
+
+### Round 7 — geometry and the File menu
+- **Apply Length is homothetic:** width, thickness and volume scale with it. A length "sweep" is one
+  proportional size axis, not an independent length axis.
+- **Switching boards after an edit gives no prompt, and the edit is discarded.** A resize survives
+  only if something saves it (a scan saves the unlocked board: `blueTreck_Copy_2.fynbs` mtime 19:36 =
+  scan end).
+- **There is no board Save / Save As** (item 2b.6 answered: it does not exist). The File menu has
+  `Open Board`, `Load new board copy`, `Open Surfer`, `Export…STL` and `Save project`.
+  - `Open Board` and `Open Surfer` may be the automation route in place of the tree's context menu
+    and the surfer drag-and-drop, if they open standard file dialogs (to confirm).
+  - `Export…STL` could provide full hull geometry.
+- **After dragging `Surfer 65 kg`,** the title and the `Surfer Kg` box both read 65.
+
+### Round 8 — the automation route and three size controls
+- **`File → Open Board` / `Open Surfer` open the standard Windows file picker.** That is a `#32770`
+  dialog the existing dialog layer can drive: WM_SETTEXT the path, then `Open`. It replaces both the
+  tree's context menu (which sits beside `Delete` and `Share`) and the surfer drag-and-drop.
+- **`Load new board copy`** copies the loaded board. It is a deliberate way to make unlocked copies,
+  so originals never go through save-as-copy.
+- **Size controls:** Length → L, W, T, V; Width → W, T, V; Volume → T, V. Together they give three
+  independent shape changes (scale, width, thickness).
+- **`Export…STL`:** binary STL of board, nose, tail or five wood-kit parts. The save dialog defaults
+  to the Desktop. It is a new geometry source.
+
+### Round 9 — the surfer-mass axis (item 2b) is closed, and the resize is saved
+- **Item 2b FAILED:** `blueTreck_Copy_3` (65 kg) vs `blueTreck_Copy_2` (80 kg), same hull → all 53
+  operating points identical (lift, drag, roll, area). The stored speed (15 vs 10) and radius
+  (100000 vs −825) also differ between them, with no effect. **The hydroscan depends on hull geometry
+  (and water density) only.** No surfer, speed or radius axis exists, and **geometry is the only axis
+  a batch can vary.**
+- **The resize is saved by the scan:** `DanielThomson_ModernPlaningHull_Copy_1`, 2006.6 → 2106.6 mm,
+  volume ×1.1574 (a pure scale-up predicts ×1.1570). At drift 0° the forces jump (lift 0.12–1.40×,
+  drag 0.15–10.4×, friction ~1.0×). One angle only; check before planning a sweep.
+- **Water parameters:** User Setting → General → Water Parameters.
+- ~~**OPEN:** `blueTreck_Copy_2`'s reports are gone~~ **Resolved (round 10):** Benjamin deleted them
+  (and `Copy_1`'s). Separately, **SWD re-runs a scan on a scanned board with no warning**, so the
+  back-up-before-scan rule in `WP3-STEP-4-batch-driver.md` § 4 stands.
+
+### Test boards — keep out of the corpus
+The 2026-09-29 hand-test scans were for testing only; Benjamin's decision is that they never enter
+`SWD/data/`:
+- `blueTreck_Copy_3` — 11 reports, identical to the deleted `Copy_2`;
+- `DanielThomson_ModernPlaningHull_Copy_1` — drift 0° only, scaled to 2106.6 mm.
+
+**`swd_extract.ps1` extracts every board that has reports**, so the next real re-extraction will pull
+them in (778 rows instead of 720). Before regenerating `SWD/data/`, either exclude these two by name
+or move their reports out of the library by hand. The library is Benjamin's, so Claude never deletes
+from it.
+
+---
+
+## Fact-finding round 2, 2026-09-30 — fins are not a scan input
+
+- **Test:** `blueTreck_Copy_4` (all fins removed; `.fynbs` 631,847 B) against `blueTreck_Copy_3`
+  (quad, 1,576,313 B), same hull. Scratch extraction: all 53 operating points and all 470 element
+  rows are identical in every physical column; only `board_speed_setting_ms` differs.
+  **Fins do not enter the static hydroscan.** This matches the file structure: reports carry only
+  hull elements, and every `_fins_global_*` field is `[NonSerialized]`.
+- **Where fins do appear:** only in SWD's runtime solver. With Board Dynamics ON and a fin selected,
+  the Fins tab shows per-fin L/D at the *set* flow speed (e.g. 10 m/s, drift 15°, attack 14°,
+  L/D 4.27); `fins_global_*` appear while a wave plays. Nothing is saved, and fins are locked during
+  a wave.
+- **So fin forces could only ever be computed data:** `fin_polars.csv` + each fin's geometry
+  (`ailerons`) + SWD's fin model (a decompile). That is Benjamin's decision.
+  `SWD/tools/probe_fins.ps1` (read-only `ailerons` dump) is written but not SQA'd or run, and stays
+  off `SQA-LOG.md` unless that route is chosen. *(2026-10-01: it was on the log after all and has now
+  had its SQA pass, with 22 new tests in `SWD/tools/tests/probe_fins.Tests.ps1`. It has still never
+  been run on the real library.)*
+- **Test boards to keep out of the corpus:** add `blueTreck_Copy_4`.
+- **Fixed today:** E84. `swd_extract.ps1` now deletes the sentinel only after the
+  `-TrustCurrentLibrary` exit. A new regression test fails on the old order and passes on the new.
+  Not yet SQA'd (`SQA-LOG.md`). *(2026-10-01: SQA'd. `swd_extract` 153/0; see `AI-USE.md` § 2.)*
+
+## Part B, 2026-09-30 — STL export is a sound geometry source; import is not
+
+- **Export is repeatable and consistent.**
+  - A repeat export is byte-identical.
+  - Board meshes are closed once zero-area triangles are dropped; all have 18,388 triangles, in
+    metres.
+  - `default_fish` STL volume = SWD's 44.913 L exactly.
+  - Exact point-for-point correspondence between boards is **not** established (welded vertex counts
+    differ), so any STL features have to be computed per mesh (rocker, outline, thickness), not taken
+    as vertex vectors.
+  - Fin STL works for **static fins only**.
+- **Import is lossy.** Re-importing `default_fish`'s STL and scanning it gave 37.0 L vs 44.9 L,
+  with 0 of 49 rows identical.
+  - The scan kept asking for a new board file until the board was saved inside `biblio/Boards`.
+  - **Test boards to exclude:** `Fyn_STL_board_default_fish`, `Fyn_STL_board_default_fish_5deg`,
+    `Fyn_STL_board_default_fish_10deg`, plus `blueTreck_Copy_4`.
+- **Data-integrity findings (AI-USE E86, E87):**
+  - `default_shortboard`'s stored `volume_shape_l` (24.009 L, used in training) is stale; the app
+    and its STL show 24.86 L. It is unknown which volume its scan used.
+  - The repo's reconstructed absolute dimensions for `default_fish` are 1.7% long (2171 vs 2134 mm),
+    beyond the 1.56% bound stated in `README.md` § 5 and `src/geometry.py`.
+  - STL gives exact absolute dimensions, but it describes the board *as it is now*, which need not
+    be what was scanned.
+
+## Input sweep, 2026-10-01/02: what every input affects
+
+Unattended overnight run of `swd_probe.ps1 -Probe Sweep` on `default_shortboard_Copy_1` (58 inputs,
+230 paired trials, 15 speed and slope levels, 5 ladders). The library was unchanged. Detail:
+`docs/plans/SWD-AUTOMATION-PROBES.md` § Input sweep; the answer is wiki *SWD Input-Output
+Sensitivity Map*.
+
+- **A second calculator exists.** With Board Dynamics ON, the analysis grid is a live single-point
+  trim solver. It responds to `flow ms` (5–20 m/s), Slope and geometry with **no scan**: friction
+  33 → 445 N and drag 127 → 617 N from 5 to 20 m/s, with lift held at 807 N. Nothing is saved to
+  disk; it is read from the screen through MSAA.
+- **Apply situation presses once per SWD session**, and its values persist in SWD's settings file.
+- **The bold Dynamics rows are stored values** and recompute nothing. **Fins** move only the fin
+  readout (through cant). **Rail force and yaw moment** respond erratically to small geometry
+  changes.
+- **Yours to decide:**
+  - whether the project uses the single-point solver, and over which inputs;
+  - W7 (`Applied` semantics).
+- **Owed:** an SQA pass over the sweep code (`SQA-LOG.md`).
+
+## Live-solver pilot, 2026-10-05/06: speed × slope × scan position
+
+Stage 1 of the campaign Benjamin chose on 2026-10-05 (`AI-USE.md` § 4), run overnight as
+`swd_probe.ps1 -Probe Sweep -Pass SolverPilot | SolverLoop | SolverRestore` on
+`default_shortboard_Copy_1`. The library was unchanged on every chunk. Detail:
+`docs/plans/SWD-AUTOMATION-PROBES.md` § Live-solver pilot; wiki *SWD Live-Solver Pilot 2026-10-05*.
+
+- **No relaunch per level.** Typing a speed or slope and pressing Apply situation re-solves, in one
+  session (E110 corrects E107).
+- **Every scan position can be read live:** 272 at drift ≤ 20° (picked through the hydroscan's
+  drift list), re-solved at the applied speed and slope. Loop test: 2,448 reads (3 speeds × 3
+  slopes), all 9 block controls matched, and 146 repeat reads matched every row. The median read
+  takes 1.9 s.
+- **An `elements.csv` row is one scan position, not a mesh slice** (272 = 272; E111). So
+  `operating_points.csv` rows sum about 12 attitudes.
+- **Many positions do not converge:** 52–53 % at 5 m/s, 78–80 % at 10 m/s, 88–89 % at 20 m/s.
+- **Small order effect:** reading positions in reverse moved drag by ≤ 0.15 % and planing angle by
+  ≤ 1.3 % (pilot P4).
+- **Data:** `%LOCALAPPDATA%\swd-probe\2026-10-05\solver\solver_points.csv` (key rows) and
+  `solver_points_all.csv` (all 73). Not copied to `SWD/data/`: that is Benjamin's call.
+- **Yours to decide:** Stage 2's speed and slope levels, boards and drift range; whether to remove
+  the order effect with an anchor read (about 2× the time); the training table (E111).
+- **Owed:** re-run the 2026-10-01 "no effect" inputs that have no Apply button, with a refresh (E110).
+
+## Live-solver campaign, Stage 2, 2026-10-06/07: `default_shortboard`, one 80 kg surfer
+
+Benjamin's levels (`AI-USE.md` § 4, 2026-10-06): `default_shortboard` alone; speeds 1–10 m/s in
+1 m/s steps; slopes −10° to +20° in 5° steps; drift ≤ 20° (282 positions); order speed → slope →
+(Apply once) → drift → Pos Y → Pos X. 70 blocks, 19,740 reads plus 70 block controls. Split by
+night: each night ends on a block boundary by 06:50 and closes SWD before the laptop leaves at
+07:30.
+
+- **New code** (pre-SQA, owner override): `-Board` opens a board through Files → Open Board and the
+  file picker; the solver passes alone may run on `default_shortboard` (an original);
+  `-EndBy` ends a night on a block boundary; `swd_solver_driver.ps1` runs a night, started
+  detached, and always restores SWD. Pester 450/0 before the pilot, PSScriptAnalyzer 0.
+- **Pilot (P10), 2026-10-06 21:45–22:06:** Files → Open Board loaded the board in 19.6 s with no
+  other dialog and no cursor movement; board-grid volume 24.858 L; tree positions per drift
+  45/46/49/47/47/48 = `elements.csv`; surfer 80 kg (caption) and a weight plateau of 802.0–802.6 N
+  (80 + 1.74 kg). Low-speed smoke (1 and 2 m/s × −10° and +20°, drift 0): 180/180 element
+  matches, 4/4 block controls, median 1.84 s a read; 0 of 90 converge at 1 m/s, 7 of 90 at 2 m/s.
+- **Fix during the pilot (E123):** after a board is opened the Elements;analysis grid stays empty
+  until its element is selected; the reader now selects the element tree's root item once.
+- **Night 1 started 22:06** (detached driver; data `%LOCALAPPDATA%\swd-probe\stage2-campaign\solver\`).
+  Expected ~11.7 h in all at ~6 blocks an hour; the rest runs on night 2.
+- **Night 2 (2026-10-07 21:27 → 2026-10-08 01:08):** resumed at read 14,100 (8 m/s, −5°) and completed
+  the campaign: **19,740 reads, 70/70 block controls, 0 element mismatches, library unchanged on all 28
+  chunks**; SWD restored and closed at 06:45 (night 1) and 01:08 (night 2). The settings file differs from
+  the 2026-09-30 backup only in the two wave-view distances, as before Stage 1.
+- **Results** (lift within 1 % of the 802.2 N weight plateau = converged): 0 of 282 positions converge at
+  1 m/s, 8–16 at 2 m/s, 104–120 at 5 m/s, 187–197 at 10 m/s; downhill slope adds a few. Over converged
+  positions at 0°: planing angle 40.3° → 20.9° → 12.2°, friction 3.7 → 13.1 → 34.7 N at 2, 5, 10 m/s; each
+  +5° of slope lowers median total drag by 72–94 N (W·sin 5° = 70 N). The first X station of every
+  (drift, Pos Y) group never converges, even at 10 m/s. Data and report:
+  `%LOCALAPPDATA%\swd-probe\stage2-campaign\` (`solver_points.csv`, `solver_points_all.csv`,
+  `solver_report.md`); wiki *SWD Live-Solver Campaign 2026-10-06*. Not copied to `SWD/data/` (Benjamin's call).
+- **SQA pass (2026-10-08, SWD closed):** agy → Devin → `sqa-lead` C=1 W=8 S=9 → `code-reviewer`; final
+  C=0 W=0 S=4. The driver now bounds every child with a wall-clock limit and force-stops SWD before 07:00 as a
+  last resort; STOP skips the restore and only closes SWD (agy's STOP bypass reverted, E125); `-Board` accepts
+  only a copy or the listed original. swd_probe 496/0, new driver suite 53/0, all phase2 suites 1,018/0. The
+  fixes have not run live yet. Report: `%LOCALAPPDATA%\sqa-loop\runs\hfin-stage2-2026-10-08.filed\report.md`.
+- **Decided 2026-10-08 (Benjamin):** keep the unconverged reads and publish both sections; tables copied to
+  `SWD/data/live_solver/default_shortboard/` (`all_reads/` 19,740 rows, `converged/` 7,745; see its README);
+  the position campaign stays on this one board for now; `C:\fake` deleted by Benjamin.
+- **Still yours:** whether a driver started after 07:00 should be refused rather than run up to 14 h.

@@ -120,7 +120,13 @@ if ((Test-SwdGeometryMsgApi).Count -gt 0) {
 $script:GeometryAxes = @{
     Length = @{ Group = 'Board Length'; Apply = 'Apply Length'; Unit = 'mm';     Tolerance = 0.5   }
     Width  = @{ Group = 'Board Width';  Apply = 'Apply Width';  Unit = 'mm';     Tolerance = 0.5   }
-    Volume = @{ Group = 'Board Volume'; Apply = 'Apply Volume'; Unit = 'litres'; Tolerance = 0.005 }
+    Volume = @{ Group = 'Board Volume'; Apply = 'Apply Volume'; Unit = 'litres'; Tolerance = 0.005
+                # 'Apply Volume' is only the caption until the target box is first edited; SWD
+                # then renames the button to 'Set <N> liters volume to board' for the rest of the
+                # session, which is what users normally see (Benjamin, 2026-09-30: "Apply volume
+                # never existed"). Matching only the literal made the whole panel unresolvable,
+                # so every axis - Length included - was refused after one volume edit.
+                ApplyLike = '^Set \S+ liters volume to board$' }
 }
 
 # The Configuration label's fields, in one place: ConvertFrom-SwdConfigurationText
@@ -251,8 +257,12 @@ function Resolve-SwdGeometryControl {
         # conversions (feet, inches) that would silently accept a write and not apply.
         $edits = @($within | Where-Object {
             $_.Class -like '*EDIT*' -and [bool]$_.Enabled -and [bool]$_.Visible })
+        # Ordinal: -eq is case-insensitive and linguistic, so 'apply length' and a caption with
+        # an ignorable character in it both matched (S10).
         $buttons = @($within | Where-Object {
-            $_.Class -like '*BUTTON*' -and $_.Text -eq $spec.Apply })
+            $_.Class -like '*BUTTON*' -and $_.Text -and
+            ([string]::Equals($_.Text, $spec.Apply, [StringComparison]::Ordinal) -or
+             ($spec.ContainsKey('ApplyLike') -and $_.Text -cmatch $spec.ApplyLike)) })
 
         if ($edits.Count -ne 1)   { $missing += "$axis enabled EDIT: found $($edits.Count)" }
         if ($buttons.Count -ne 1) { $missing += "$axis '$($spec.Apply)' button: found $($buttons.Count)" }
@@ -670,6 +680,22 @@ function Set-SwdGeometry {
         # the claim that cannot be made. Re-read it instead, or report $null.
         $out.After = Read-SwdGeometryState -Controls $controls -Resolved $resolved
         $out.Reason = "box-write-failed: $($written.Reason)"
+        return [pscustomobject]$out
+    }
+
+    # BOUND TO THE CLICK (S10). The Apply caption was matched BEFORE the box write, and a box
+    # write can rename a button (T9: 'Apply Volume' became 'Set N liters volume to board').
+    # The panel is resolved again here, after the write and just before the click, and the
+    # click goes ahead only if the SAME handle still carries this axis's caption, which
+    # Resolve-SwdGeometryControl compares ordinally.
+    $fresh = $null; $freshWhy = ''
+    try { $fresh = Resolve-SwdGeometryControl } catch { $freshWhy = " ($($_.Exception.Message))" }
+    $freshApply = if ($fresh -and $fresh.PSObject.Properties[$Axis] -and $fresh.$Axis) { $fresh.$Axis.Apply } else { $null }
+    if ($null -eq $freshApply -or [int64]$freshApply -ne [int64]$target.Apply) {
+        $out.After = Read-SwdGeometryState -Controls $controls -Resolved $resolved
+        $out.Reason = ("apply-click-refused: after the box write, '$($spec.Apply)' no longer resolves " +
+                       "to handle $($target.Apply)$freshWhy. THE BOX WAS WRITTEN and still holds " +
+                       "$Value $($spec.Unit).")
         return [pscustomobject]$out
     }
 

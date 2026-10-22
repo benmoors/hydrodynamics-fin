@@ -28,6 +28,7 @@ foreach ($e in (Get-Content -Raw -LiteralPath $TrustManifest | ConvertFrom-Json)
 
 $onResolve = [System.ResolveEventHandler] {
     param($src, $e)
+    $null = $src # ResolveEventHandler delegate signature
     $n = ($e.Name -split ',')[0]
     foreach ($a in [AppDomain]::CurrentDomain.GetAssemblies()) { if ($a.GetName().Name -eq $n) { return $a } }
     return $null
@@ -73,7 +74,7 @@ foreach ($rf in $files) {
         if (-not $case) { continue }
         $names = @()
         $sumFT = 0.0; $sumPT = 0.0; $sumFZ = 0.0
-        $g_FT = [double]::NaN; $g_PT = [double]::NaN; $g_FZ = [double]::NaN
+        $g_FT = [double]::NaN; $g_PT = [double]::NaN
         for ($ei = 0; $ei -lt $case.Count; $ei++) {
             $el = $case[$ei]
             if (-not $el) { continue }
@@ -94,7 +95,7 @@ foreach ($rf in $files) {
             }
             if ($nm -eq 'global') {
                 $nGlobal++
-                $g_FT = Get-D $el $FT; $g_PT = Get-D $el $PT; $g_FZ = Get-D $el $FZ
+                $g_FT = Get-D $el $FT; $g_PT = Get-D $el $PT
             } else {
                 $sumFT += (Get-D $el $FT); $sumPT += (Get-D $el $PT); $sumFZ += (Get-D $el $FZ)
             }

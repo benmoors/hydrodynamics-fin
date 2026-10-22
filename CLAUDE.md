@@ -14,6 +14,9 @@ Downstream, the modelling informs firmware for a surfboard-fin sensor PCB (ICM-2
 MS5837-30BA + STM32). See [fin_sensor_pcb_overview.md](fin_sensor_pcb_overview.md). That is **later work** — the current focus is
 the machine learning.
 
+**Knowledge base:** the Obsidian wiki in `wiki/` is built for this project. Unit, brief/rubric, paper
+and data questions go through it first; see "Second brain" at the end of this file.
+
 ### Scope boundary — this matters
 
 `SWD/` is **data acquisition only**: getting SWD's hydrodynamic output into CSV/arrays.
@@ -85,7 +88,7 @@ points, where they must appear, and the rubric row.
 | **R1** | **`AI-USE.md` is the single AI-use record.** Sections: tools (name, version, model, access-date range, what it did); task log; approximate contribution; decisions that remained mine; errors ledger; prompt appendix. **Append-only** — an entry is corrected by a later entry, never edited away. |
 | **R2** | **Log a task entry whenever AI output ships into the repo or changes a design decision**: date, tool + version + model, the prompt verbatim, what was changed about the output, how it was verified. Tool calls, file reads and chat that produced nothing are not logged. |
 | **R3** | **Every correction, withdrawal or refuted premise gets an errors-ledger entry** — date, what was believed, what was true, how it was caught, who caught it — **in the same change that lands the correction.** Never delete one. The strikethrough convention (`~~…~~`) stays in the source documents; the ledger is the index. |
-| **R4** | **The prompt appendix is generated, never typed:** `python tools/extract_prompts.py`. Transcripts live in `~/.claude/projects/` and are pruned, so extract early and re-run before every submission. The script redacts the home directory and flags licence/registry patterns; **a human reviews the output for anything else before it is committed.** |
+| **R4** | **The prompt appendix is generated, never typed:** `python tools/extract_prompts.py`. It reads all three CLIs, each labelled with its version and model: Claude Code (`~/.claude/projects/`), agy (`~/.gemini/antigravity-cli/`) and Devin (`%APPDATA%\Devin\cli\transcripts\`). A session opened above the repo (e.g. `UNIVERSITY/`) contributes only the turns whose prompt or tool calls named HYDRODYNAMICS-FIN. All three stores are pruned, so extract early and re-run before every submission. A re-run never loses a committed prompt: sessions no longer on disk are carried forward from the existing appendix, and the script refuses to shrink it without `--allow-shrink` (E81). Sessions that only brushed the repo are listed in `_EXCLUDED` with a reason. Claude Code keeps transcripts 365 days (`cleanupPeriodDays`). Times render in Melbourne local time, labelled AEST/AEDT; entries in §§ 1–5 written before 2026-09-29 cite UTC. The script redacts the home directory and flags licence/registry patterns. **Since 2026-09-29 a `SessionEnd` hook (`tools/prompt_appendix_hook.py`) regenerates and commits § 6 with no human read before the commit** (the author's decision, § 4). It holds on a new prompt matching a licence, registry, home or tenant pattern, and on uncommitted `AI-USE.md` edits. The `SessionStart` hook prints any hold. It never pushes, so **a human reviews § 6 before every push**. |
 | **R5** | **The README `## 🤖 AI Acknowledgment` and the report's reflection are written from `AI-USE.md`, never from memory.** All eight brief bullets must be answerable from the log. |
 | **R6** | **State the approximate AI contribution per component**, as a rough share plus who made the decision (`AI-USE.md` § 3). The brief asks for "approximate"; a number, however rough, beats prose. |
 | **R7** | **Interview rule: nothing in the repo the student cannot explain unaided.** AI-written code or analysis the student cannot explain is learned or removed before submission (p. 6 bans AI in the interview; p. 8 says the mark rests on answering questions). Every module gets an explicit "can I explain this" pass, recorded in `AI-USE.md` § 4. |
@@ -147,6 +150,7 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
 
     HYDRODYNAMICS-FIN/              also the Obsidian vault root
     |- CLAUDE.md                    this file
+    |- GEMINI.md                    Antigravity / Gemini CLI root config & SQA protocol
     |- AI-USE.md                    the AI-use record -- section 3
     |- memory/                      Claude Code auto memory, committed and shared
     |- .claude/
@@ -156,7 +160,9 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
     |- .mcp.json                    Local REST API MCP server (key from OBSIDIAN_API_KEY)
     |- .obsidian/                   shared vault config (workspace and plugin data.json ignored)
     |- tools/extract_prompts.py     regenerates AI-USE.md's prompt appendix
-    |- Project/                     unit materials (gitignored)
+    |- Project/                     unit materials (gitignored); Week NN/ = unit notebooks
+    |- wiki/                        MMA3001 project second brain (gitignored) -- CLAUDE.md query card,
+    |                               SCHEMA.md full schema, rubric.base; searched by qmd (local MCP)
     |- SWD/                         data acquisition
     |   |- TODO.md                  live progress checklist
     |   |- tools/swd_extract.ps1    SWD binary -> CSV
@@ -218,14 +224,18 @@ the item's full narrative in the body.
 | "begin Step 4", "the batch driver", "write swd_scan" | [SWD/docs/plans/WP3-STEP-4-batch-driver.md](SWD/docs/plans/WP3-STEP-4-batch-driver.md) |
 | "begin Step 5", "Step 6", "Step 7", "run the batch" | [SWD/docs/plans/WP3-STEP-5-7-batch-run.md](SWD/docs/plans/WP3-STEP-5-7-batch-run.md) |
 | "WP1", "WP2", "the supplementary data", "the metrics document" | [SWD/docs/plans/WP1-WP2-paper-data-and-metrics.md](SWD/docs/plans/WP1-WP2-paper-data-and-metrics.md) |
-| "the equations", "the paper's metrics", "Board-Jerk", "Radicality", "what should this number be", "the validation targets" | [SWD/docs/performance-metrics.md](SWD/docs/performance-metrics.md) |
-| "what can SWD give us", "what data can be extracted", "why is the speed stuck at 20" | [SWD/docs/what-swd-can-yield.md](SWD/docs/what-swd-can-yield.md) |
-| "what inputs can I use", "what features", "how does this map to the paper's equations", "the IMU channels" | [SWD/docs/project-io-spec.md](SWD/docs/project-io-spec.md) |
+| "the equations", "the paper's metrics", "Board-Jerk", "Radicality", "what should this number be", "the validation targets" | `wiki-query`, or wiki pages *Board-Jerk*, *Radicality Indicator*, *Project Validation Evidence and Limits*; the audit detail is in [SWD/docs/performance-metrics.md](SWD/docs/performance-metrics.md) |
+| "what can SWD give us", "what data can be extracted", "why is the speed stuck at 20" | `wiki-query`, or wiki *ShaperWaveDynamics*; the full account is in [SWD/docs/what-swd-can-yield.md](SWD/docs/what-swd-can-yield.md) |
+| "what inputs can I use", "what features", "how does this map to the paper's equations", "the IMU channels" | `wiki-query`, or wiki *SWD Operating Points Dataset*; the full catalogue is in [SWD/docs/project-io-spec.md](SWD/docs/project-io-spec.md) |
 | "what went wrong in the live run", "the SQA findings from the scan" | [SWD/tools/phase2/LIVE-RUN-FINDINGS.md](SWD/tools/phase2/LIVE-RUN-FINDINGS.md) |
 | "the scan dialogs", "what dialogs does the scanner raise" | [SWD/tools/phase2/SCAN-FLOW.md](SWD/tools/phase2/SCAN-FLOW.md) |
+| "the probes", "fiddling", "the side-effect rig", "the evening run" | [SWD/docs/plans/SWD-AUTOMATION-PROBES.md](SWD/docs/plans/SWD-AUTOMATION-PROBES.md); evidence in wiki *SWD Automation Technique Register* |
 | "the AI acknowledgement", "AI use", "the prompt log", "what did the AI get wrong" | [AI-USE.md](AI-USE.md), rules in section 3 and `.claude/rules/ai-use-requirements.md` |
 | "what is next", "what should I do now" | this section, then the [worklist notes](SWD/docs/worklist/worklist.base) |
 | "the memory", "what do you remember", "tidy the notes", "broken links" | [memory/MEMORY.md](memory/MEMORY.md) and `/obsidian-memory` |
+| "the wiki", "second brain", "what does my wiki say", "what did the unit teach about", "which week covers", "Obsidian" | the "Second brain" section at the end of this file; `wiki-query` |
+| "I'm thinking of…", "what if we switch to…", "new direction", "would X work for the rubric" | the **Direction-check protocol** (end of this file) |
+| "ingest this", "Weeks 10–11 are out", "lint the wiki" | `wiki/SCHEMA.md` §6 and `%LOCALAPPDATA%\uni-sync\mma3001-ingest\RESUME.md` |
 
 **Never start a stage whose prerequisite has not passed.** Each file names its own in a callout at
 the top. Step 4 in particular is gated on the verification scan's recovered `scan_speed_ms` reading
@@ -240,16 +250,64 @@ worth automating.
 `/compact` before leaving a long run unattended is worth it — `autoCompactEnabled` is `false`, so a
 long transcript only grows and each cold wake pays full freight on it.
 
-## Memory & knowledge base (Obsidian)
+## Second brain for the MMA3001 project (wiki, unit content, Obsidian)
 
-The repo root is an Obsidian vault. Project memory lives in [memory/](memory/MEMORY.md), committed and
-shared; each person points `autoMemoryDirectory` at their own absolute path to it in
-`.claude/settings.local.json`. Memory notes keep `[[name]]` links; every other doc uses relative
-Markdown links so they render on GitHub.
+The repo root is an Obsidian vault. **Its knowledge base, `wiki/`, exists primarily to serve this
+project**: goal §1, rubric §2. Treat it as the first place to look for anything about the unit, the
+brief or rubric, the paper, the SWD data limits, validation or Colab portability. Hub:
+`wiki/entities/Virtual Surfer Project.md`. The rubric is in `wiki/sources/MMA3001 Project Brief.md`
+and `wiki/syntheses/Rubric Criteria Map.md`.
 
-- **Link-graph work → `/obsidian-memory`:** `unresolved`, `orphans`, `backlinks` before a rename or
-  delete, `move to=` for renames (a raw file move breaks links), `base:query` for the worklist.
-- **MCP server `obsidian`** (Local REST API plugin) is live only while this vault is open in Obsidian.
-  Delete, binary-write and command-execute tools are denied in `.claude/settings.json`.
-- **Never write note content through the CLI** — use Write/Edit. Its backslash-t escape silently turns
+**Where things live:**
+- **Unit notebooks:** `Project/Week NN/`, mirrored to `UNIVERSITY/…/MMA3001/Week NN/`, fetched by
+  `%LOCALAPPDATA%\uni-sync\mma3001_notebooks.py`.
+- **Wiki:** `wiki/`, gitignored (the repo is public), no git history. `wiki/CLAUDE.md` is the query card
+  and auto-loads; `wiki/SCHEMA.md` is read only for ingest, lint or schema changes.
+- **Ingest toolkit:** `%LOCALAPPDATA%\uni-sync\mma3001-ingest\` (registry, writer spec, digests,
+  `merge_contrib.py`, `wiki_lint.py`, `RESUME.md`).
+- **Memory:** [memory/](memory/MEMORY.md), committed and shared. Memory holds how to work with
+  Benjamin; the wiki holds knowledge. Never duplicate across the two.
+
+**Query protocol (token-lean).**
+1. Delegate to the **`wiki-query`** agent (Haiku, read-only). It returns a short cited answer.
+2. For a single known fact, use **qmd** (`qmd query "…" -n 5 -l 20`, or MCP `qmd` at local scope) or
+   Grep `^aliases:|^# |^rubric:`. Read with `limit: 40` (frontmatter, definition, `## Summary`), then only
+   the needed section.
+3. Never read `wiki/log.md`; open `wiki/index.md` only to browse; open repo docs only for audit-level
+   detail.
+4. If the wiki doesn't cover something, say so, then answer from sources, flagged "not yet compiled".
+
+**Direction-check protocol.** This fires when Benjamin proposes or asks about a new direction: a method,
+data source, features, scope, validation or baseline approach, or a pipeline change.
+1. **Gather** via `wiki-query`, reading Summaries only: *Virtual Surfer Project*,
+   *MMA3001 Project Brief*, *Rubric Criteria Map* (plus pages whose `rubric:` includes the affected
+   criteria), *Project Validation Evidence and Limits*, *SWD Operating Points Dataset*,
+   *Unit Methods Relevant to the Project*.
+2. **Return a fit table**, one row per rubric criterion 1–6: what the direction gives, what it still
+   needs, and any Poor-band risk. Then check:
+   - the brief's non-negotiables: a compared baseline (p.5); validation must-states, including what
+     it cannot establish (p.5); a technique taught in the unit (p.7); I/O units and domains (p.4)
+   - data limits: one flow speed; group by board
+   - unit gaps: no jerk stencil; no double integration
+   - timeline: Test 3 in Week 12, and the interview
+3. **Cite wiki pages** and label inference. **Never decide** (R12). When Benjamin decides, record it in
+   `AI-USE.md` § 4. File the check as a `wiki/syntheses/` page only on request.
+
+**Upkeep:**
+- **Ingest** (e.g. Weeks 10–11) follows `wiki/SCHEMA.md` §6 and the toolkit `RESUME.md`. It ends with
+  `qmd update && qmd embed`.
+- **Lint** with `python "%LOCALAPPDATA%\uni-sync\mma3001-ingest\wiki_lint.py"`.
+- **Known tracked-doc errors** (fix only with an R3 ledger entry): `SWD/docs/performance-metrics.md`
+  §6 "five phases" (the paper has six); `SWD/docs/project-io-spec.md` §3 "rubric's heaviest item" (the
+  rubric is unweighted).
+
+**Obsidian:**
+- **Links:** memory notes and wiki pages use `[[name]]`; other repo docs use relative Markdown links
+  so they render on GitHub.
+- **Link-graph work goes through `/obsidian-memory`** (Obsidian CLI, app open): `unresolved`,
+  `orphans`, `backlinks` before a rename or delete, `move to=` for renames, `base:query` for
+  `SWD/docs/worklist/worklist.base` and `wiki/rubric.base`.
+- **The `obsidian` MCP server** (Local REST API) is live only while the vault is open, and is not used
+  for lookups. Delete, binary-write and command-execute are denied in `.claude/settings.json`.
+- **Never write note content through the CLI.** Use Write/Edit: the CLI's backslash-t escape turns
   LaTeX `\times` into a tab followed by `imes`.

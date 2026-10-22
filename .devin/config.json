@@ -1,0 +1,47 @@
+{
+  // Devin CLI project config. AGENTS.md + .agents/skills/ are the instruction surface.
+  // Claude import is OFF so Devin does not also load CLAUDE.md (~23 KB) and the global
+  // ~/.claude/CLAUDE.md on every turn; AGENTS.md points at the sections it needs instead.
+  "read_config_from": {
+    "claude": false
+  },
+  // Audit-and-fix: edits are allowed only where AGENTS.md scopes them. A deny always
+  // beats an allow, and the denies also bind Accept Edits mode, which otherwise
+  // auto-approves every edit in the workspace.
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write(src/**)",
+      "Write(tests/**)",
+      "Write(SWD/tools/**)",
+      "Write(tools/**)",
+      "Write(AI-USE.md)",
+      "Exec(py -3.14 -m pytest)",
+      "Exec(py -3.14 tools/extract_prompts.py --dry-run)",
+      "Exec(git status)",
+      "Exec(git diff)",
+      "Exec(git log)",
+      "Exec(git show)"
+    ],
+    "deny": [
+      "Exec(git commit)",
+      "Exec(git push)",
+      "Exec(git reset)",
+      "Exec(git checkout)",
+      "Read(**/*.reg)",
+      "Write(.gitignore)",
+      "Write(SWD/data/**)",
+      "Write(Project/**)",
+      "Write(wiki/**)",
+      "Write(memory/**)",
+      "Write(CLAUDE.md)",
+      "Write(README.md)",
+      "Write(AGENTS.md)",
+      "Write(GEMINI.md)",
+      "Write(pyproject.toml)",
+      "Write(.claude/**)",
+      "Write(.agents/**)",
+      "Write(.devin/**)"
+    ]
+  }
+}

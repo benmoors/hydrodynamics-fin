@@ -260,3 +260,8 @@ be closed only by a probe on a control whose caption changes.**
 * Whether the failed board save (§ 3) left `_vitesse_flux_relatif_ms` stale in the copy's `.fynbs`.
   Metadata only — [`CLAUDE.md`](../../../CLAUDE.md) § 6 already records the stored setting is not the scan speed — but the
   next extraction should be read with this in mind.
+
+* **2026-09-29:** surfers are changed by dragging one onto the Shape Room view, not through the
+  library's right-click → Open. The 50 kg reading is still unexplained. The speed question in § 0 was
+  re-run cleanly on an unlocked copy and still extracted at 20.000 m/s ([`SWD/TODO.md`](../../TODO.md)
+  "Hand-run fact-finding").

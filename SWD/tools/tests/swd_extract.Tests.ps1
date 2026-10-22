@@ -33,6 +33,23 @@ BeforeAll {
     $script:PolarBadTokens = 0
     $script:PolarTruncated = 0
 
+    # $SENTINEL_LIMIT and the tally ConvertTo-Measurement writes to.
+    $script:SENTINEL_LIMIT = 1e30
+    $script:SentinelHits   = @{}
+    $SENTINEL_LIMIT        = $script:SENTINEL_LIMIT
+
+    # SENTINEL_LIMIT is lifted too, so the test cannot drift from the script.
+    $slAssign = $ast.Find({
+        param($x)
+        $x -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+        $x.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+        $x.Left.VariablePath.UserPath -eq 'SENTINEL_LIMIT'
+    }, $true)
+    if ($slAssign) {
+        . ([scriptblock]::Create($slAssign.Extent.Text))
+        $script:SENTINEL_LIMIT = $SENTINEL_LIMIT
+    }
+
     # Top-level Add-Type blocks are lifted as well - Get-CanonicalDirectory is
     # P/Invoke and is useless without the script's own SwdPath.Native definition.
     # Lifted from the target, never re-declared here, so the tests cannot pass
@@ -180,6 +197,24 @@ Describe 'the script under test' {
             "$($x.Member)" -eq 'ReadToFollowing'
         }, $true)
         $calls.Count | Should -Be 0
+    }
+    It 'deletes the completion sentinel only AFTER the -TrustCurrentLibrary exit (E84)' {
+        # Above the exit, a trust-only run deleted SWD/data/extract_manifest.json.
+        $errs = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($script:Target, [ref]$null, [ref]$errs)
+        $trustExit = $ast.FindAll({
+            param($x)
+            $x -is [System.Management.Automation.Language.IfStatementAst] -and
+            $x.Clauses[0].Item1.Extent.Text -match '^\$TrustCurrentLibrary$'
+        }, $true)
+        $trustExit.Count | Should -Be 1
+        $deletes = $ast.FindAll({
+            param($x)
+            $x -is [System.Management.Automation.Language.CommandAst] -and
+            $x.GetCommandName() -eq 'Remove-Item' -and $x.Extent.Text -match '\$manifestPath'
+        }, $true)
+        $deletes.Count | Should -Be 1
+        $deletes[0].Extent.StartOffset | Should -BeGreaterThan $trustExit[0].Extent.EndOffset
     }
     It 'does not export shaper_name' {
         $src = Get-Content -Raw -LiteralPath $script:Target
@@ -542,6 +577,45 @@ public class SwdTestProbe {
     It 'the plain cast it replaced would have produced a fake zero' {
         # documents WHY the helper exists
         [double]$null | Should -Be 0.0
+    }
+}
+
+Describe 'ConvertTo-Measurement: sentinels, missing, null and valid values' {
+    BeforeEach { $script:SentinelHits = @{} }
+
+    It 'passes a valid float through' {
+        ConvertTo-Measurement -Value 12.34 -Name 'test_field' | Should -Be 12.34
+        $script:SentinelHits.Count | Should -Be 0
+    }
+    It 'preserves a genuine zero' {
+        $v = ConvertTo-Measurement -Value 0.0 -Name 'zero_field'
+        [double]::IsNaN($v) | Should -BeFalse
+        $v | Should -Be 0.0
+        $script:SentinelHits.Count | Should -Be 0
+    }
+    It 'maps null to NaN without counting as a sentinel' {
+        $v = ConvertTo-Measurement -Value $null -Name 'null_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits.Count | Should -Be 0
+    }
+    It 'maps boolean to 1.0 or 0.0' {
+        ConvertTo-Measurement -Value $true -Name 'bool_t' | Should -Be 1.0
+        ConvertTo-Measurement -Value $false -Name 'bool_f' | Should -Be 0.0
+    }
+    It 'detects Single.MaxValue as a sentinel and maps to NaN' {
+        $v = ConvertTo-Measurement -Value ([float]::MaxValue) -Name 'sentinel_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits['sentinel_field'] | Should -Be 1
+    }
+    It 'detects infinity as a sentinel' {
+        $v = ConvertTo-Measurement -Value ([double]::PositiveInfinity) -Name 'inf_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits['inf_field'] | Should -Be 1
+    }
+    It 'detects NaN as a sentinel hit' {
+        $v = ConvertTo-Measurement -Value ([double]::NaN) -Name 'nan_field'
+        [double]::IsNaN($v) | Should -BeTrue
+        $script:SentinelHits['nan_field'] | Should -Be 1
     }
 }
 
@@ -966,5 +1040,101 @@ Describe 'SUGGESTION - roll min/max never leak infinity' {
         $rollMin | Should -Be -0.25
         $rollMax | Should -Be 0.75
         ($rollSum / $rollCount) | Should -Be (1.0 / 3.0)
+    }
+}
+
+Describe 'provenance gate: trust is checked on the OPEN stream, never by path (SQA S5)' {
+    # Hash-by-path then reopen is the TOCTOU shape removed from every live path; an uncalled
+    # helper of that shape is one call away from coming back. Parsed only, never executed.
+    BeforeAll {
+        $script:Tools = Split-Path -Parent $PSScriptRoot
+        function Get-ScriptAst([string]$Path) {
+            $errs = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$errs)
+            if ($errs) { throw "does not parse: $Path" }
+            return $ast
+        }
+    }
+    It 'every trust-check function in <name> takes the open stream' -ForEach @(
+        @{ name = 'swd_extract.ps1' }
+        @{ name = 'census_board.ps1' }
+        @{ name = 'extract_board.ps1' }
+    ) {
+        $path = if ($name -eq 'swd_extract.ps1') { $script:Target } else { Join-Path $script:Tools $name }
+        $ast = Get-ScriptAst $path
+        $trust = @($ast.FindAll({ param($x) $x -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $x.Name -like '*Trusted*' }, $true))
+        $trust.Count | Should -BeGreaterThan 0
+        foreach ($f in $trust) {
+            @($f.Body.ParamBlock.Parameters | ForEach-Object { $_.StaticType.FullName }) |
+                Should -Contain 'System.IO.Stream' -Because "$($f.Name) must hash the stream it deserialises"
+        }
+    }
+    It 'swd_extract.ps1 hashes by path only to build the manifest (-TrustCurrentLibrary)' {
+        $ast = Get-ScriptAst $script:Target
+        $block = @($ast.FindAll({ param($x) $x -is [System.Management.Automation.Language.IfStatementAst] -and
+                                  $x.Clauses[0].Item1.Extent.Text -match '^\$TrustCurrentLibrary$' }, $true))
+        $block.Count | Should -Be 1
+        $calls = @($ast.FindAll({ param($x) $x -is [System.Management.Automation.Language.CommandAst] -and
+                                  $x.GetCommandName() -eq 'Get-Sha256Hex' }, $true))
+        $calls.Count | Should -BeGreaterThan 0
+        foreach ($c in $calls) {
+            ($c.Extent.StartOffset -gt $block[0].Extent.StartOffset -and $c.Extent.EndOffset -lt $block[0].Extent.EndOffset) |
+                Should -BeTrue -Because 'a path hash outside the manifest builder is the TOCTOU shape'
+        }
+    }
+    It '<name> defines no path-hashing helper at all' -ForEach @(
+        @{ name = 'census_board.ps1' }
+        @{ name = 'extract_board.ps1' }
+    ) {
+        $ast = Get-ScriptAst (Join-Path $script:Tools $name)
+        @($ast.FindAll({ param($x) $x -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $x.Name -eq 'Get-Sha256Hex' }, $true)).Count |
+            Should -Be 0
+        @($ast.FindAll({ param($x) $x -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and
+                         "$($x.Member)" -eq 'ReadAllBytes' }, $true)).Count | Should -Be 0
+    }
+}
+
+Describe 'row lists are ArrayLists, never arrays grown with += (SQA S21)' {
+    It '$<name> is created once as an ArrayList and never reassigned or grown with +=' -ForEach @(
+        @{ name = 'boardRows' }
+        @{ name = 'opRows' }
+        @{ name = 'elemRows' }
+    ) {
+        $errs = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($script:Target, [ref]$null, [ref]$errs)
+        $want = $name
+        $assigns = @($ast.FindAll({ param($x) $x -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                                    $x.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+                                    $x.Left.VariablePath.UserPath -eq $want }.GetNewClosure(), $true))
+        $assigns.Count | Should -Be 1
+        "$($assigns[0].Operator)" | Should -Be 'Equals'
+        $assigns[0].Right.Extent.Text | Should -BeExactly 'New-Object System.Collections.ArrayList'
+    }
+    It 'Write-CsvNoBom writes the same bytes from an ArrayList as from an array' {
+        $rowsA = @(1..3 | ForEach-Object { [pscustomobject][ordered]@{ board = "b$_"; drift_deg = [double]$_; roll_case = 0; value = 0.5 * $_ } })
+        $rowsL = New-Object System.Collections.ArrayList
+        foreach ($r in $rowsA) { [void]$rowsL.Add($r) }
+        $pa = Join-Path $script:Tmp 's21-array.csv'; $pl = Join-Path $script:Tmp 's21-list.csv'
+        Write-CsvNoBom -Rows $rowsA -Path $pa | Out-Null
+        Write-CsvNoBom -Rows $rowsL -Path $pl | Out-Null
+        [BitConverter]::ToString([IO.File]::ReadAllBytes($pl)) | Should -BeExactly ([BitConverter]::ToString([IO.File]::ReadAllBytes($pa)))
+    }
+    It 'an empty ArrayList is reported and not written, as an empty array is' {
+        $p = Join-Path $script:Tmp 's21-empty.csv'
+        Write-CsvNoBom -Rows (New-Object System.Collections.ArrayList) -Path $p -WarningAction SilentlyContinue | Out-Null
+        Test-Path -LiteralPath $p | Should -BeFalse
+    }
+    It 'Add takes the operating-point row shape: an [ordered] literal whose values are statements' {
+        $l = New-Object System.Collections.ArrayList
+        $caseRhos = @(1023.0); $rollCount = 0
+        [void]$l.Add([pscustomobject][ordered]@{
+            board    = 'b'
+            rho_kgm3 = $(if ($caseRhos.Count -eq 1) { @($caseRhos)[0] } else { [double]::NaN })
+            roll_rad = if ($rollCount -gt 0) { 1.0 } else { [double]::NaN }
+        })
+        $l.Count | Should -Be 1
+        ($l[0].PSObject.Properties.Name -join ',') | Should -BeExactly 'board,rho_kgm3,roll_rad'
+        $l[0].rho_kgm3 | Should -Be 1023.0
+        [double]::IsNaN($l[0].roll_rad) | Should -BeTrue
     }
 }

@@ -136,7 +136,7 @@ def load_boards(data_dir: Path = DATA_DIR) -> pd.DataFrame:
     boards["length_over_width"] = aspect_ratio(
         boards["x_min"], boards["x_max"], boards["y_min"], boards["y_max"]
     )
-    boards["thickness_over_length"] = boards["epaisseur_relative_au_wide_point"]
+    boards["thickness_over_length"] = boards["relative_thickness_at_wide_point"]
     boards = boards.rename(columns={"volume_shape_litres": "volume_shape_l"})
 
     length, width, thickness = reconstruct_dimensions(

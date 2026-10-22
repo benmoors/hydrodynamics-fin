@@ -21,6 +21,7 @@ from tools.extract_prompts import (
     Session,
     END,
     load_agy_sessions,
+    load_claude_ancestors,
     load_devin_sessions,
     load_sessions,
     main,
@@ -233,6 +234,25 @@ def test_agy_session_inside_the_repo_keeps_every_prompt(tmp_path: Path) -> None:
     assert [p.text for p in session.prompts] == ["Audit fetch", "/plan Audit splits"]
     # before any model switch, the model comes from the generation metadata, whole ids only
     assert session.prompts[0].model == "gemini-3.8-flash"
+
+
+# --- the repo moved out from under home (C:\dev, 2026-10-22, E129) ----------------------
+
+MOVED = Path("C:/dev/HYDRODYNAMICS-FIN")
+
+
+def test_claude_session_where_the_repo_used_to_live_still_counts(tmp_path: Path) -> None:
+    rows = [
+        _record(type="user", timestamp="2026-10-22T01:00:00Z", message={"content": "Fix fetch"}),
+        _record(type="user", timestamp="2026-10-22T02:00:00Z",
+                message={"content": "Move HYDRODYNAMICS-FIN to C:\\dev"}),
+    ]
+    folder = tmp_path / "C--Users-someone-UNIVERSITY"
+    folder.mkdir()
+    (folder / "22222222.jsonl").write_text("\n".join(rows), encoding="utf-8")
+    [session] = load_claude_ancestors(repo=MOVED, projects=tmp_path, home=HOME)
+    assert session.scope == "via UNIVERSITY"
+    assert [p.text for p in session.prompts] == ["Move HYDRODYNAMICS-FIN to C:\\dev"]
 
 
 def test_devin_keeps_repo_turns_with_cli_version_and_model(tmp_path: Path) -> None:

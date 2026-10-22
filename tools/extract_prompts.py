@@ -304,18 +304,32 @@ def load_sessions(
     return sessions
 
 
+# Folders under home the repo used to sit in, until it moved to C:\dev on 2026-10-22 (AI-USE.md E129).
+# Sessions are still opened there, so they are read even though the repo is no longer below them.
+_FORMER_PARENTS = (("UNIVERSITY", "Mechanical Engineering"), ("UNIVERSITY",), ())
+
+
 def load_claude_ancestors(
     repo: Path = REPO_ROOT, projects: Path = CLAUDE_PROJECTS, home: Path | None = None
 ) -> list[Session]:
-    """Claude Code sessions opened in a folder above the repo (``UNIVERSITY/``, home)."""
+    """Claude Code sessions opened in a folder above the repo, or in one it used to sit
+    under (``UNIVERSITY/``, home). Each project folder is read once."""
     home = home or Path.home()
-    sessions: list[Session] = []
+    folders: list[Path] = []
     for parent in repo.parents:
-        folder = projects / _claude_folder(parent)
-        if folder.is_dir():
-            sessions += load_sessions(folder, home, scope=f"via {parent.name or parent}")
+        folders.append(parent)
         if parent == home:
             break
+    folders += [home.joinpath(*parts) for parts in _FORMER_PARENTS]
+    sessions: list[Session] = []
+    seen: set[str] = set()
+    for parent in folders:
+        key = _claude_folder(parent)
+        if key.lower() in seen:  # the drive letter's case varies; Windows folders don't care
+            continue
+        seen.add(key.lower())
+        if (projects / key).is_dir():
+            sessions += load_sessions(projects / key, home, scope=f"via {parent.name or parent}")
     return sessions
 
 

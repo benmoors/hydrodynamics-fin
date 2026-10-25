@@ -149,6 +149,32 @@ write-free escalation, if needed, is to invoke the top-level `File` item and re-
 | D.4 | `project-io-spec.md:130`, `DATA-DICTIONARY.md:33-36` — sentinel filter stale | ⬜ |
 | D.5 | **[`CLAUDE.md`](CLAUDE.md) § 5 friction-velocity bullet is misleading** — measured 2026-09-01: using stored `board_speed_setting_ms` gives ratio 0.243 (76% error); scan speed gives 0.941. SWD overwrites the field before solving | ⬜ |
 
+## Report — equation sources owed (E1–E27 pre-work deck)
+
+Each E slide in `MMA3001_Project_E1-E27.pptx` now carries the equation's standard name and its source.
+These are the ones without a textbook source. Check every citation exists before using it (R8).
+E16 (slope schedule) has no standard name and needs no citation.
+
+| # | Slide | Equation and what is missing | Status |
+|---|---|---|---|
+| S.1 | E1–E7, E9–E12 | Confirm every White & Majdalani equation and page number on these slides against the PDF. They were copied from the `wiki/concepts/` pages, not re-read from the book (R8) | ⬜ |
+| S.2 | E3 | **Secant method** (shooting alternative) — not in the unit notes; no source | ⬜ |
+| S.3 | E8 | **Picard (fixed-point) iteration** to linearise the finite-difference Blasius system — no source. Also check whether the unit notes give the one-sided second-order stencil for g′(0) | ⬜ |
+| S.4 | E13 | **Prandtl's one-seventh-power law + Blasius's turbulent wall-shear correlation** (the C_τ constant) — not in White & Majdalani ch. 4; needs a turbulent boundary-layer text | ⬜ |
+| S.5 | E14 | **Mixed laminar–turbulent flat-plate friction** (area split at x_tr, Re_crit = 5×10⁵) — only SWD's `friction_force`; needs a textbook treatment of transition on a flat plate | ⬜ |
+| S.6 | E15 | **Newton's second law, one-degree-of-freedom equation of motion** — standard result; a citation is probably optional | ⬜ |
+| S.7 | E17 | **Classical fourth-order Runge–Kutta (RK4)** — unit notes 7.4 only | ⬜ |
+| S.8 | E18 | **Observed order of accuracy (Richardson-type estimate)** — unit notes 7.1.8, 7.4.7 only | ⬜ |
+| S.9 | E19 | **Separation of variables, power-law drag decay** — no source | ⬜ |
+| S.10 | E20 | **Uniform quantisation noise** (rounding-error variance) — no source | ⬜ |
+| S.11 | E21 | **Specific force** (accelerometer measurement model) — no source | ⬜ |
+| S.12 | E22 | **Nondimensionalisation (scaling)** of the equation of motion for the PINN — no source | ⬜ |
+| S.13 | E23 | **Physics-informed neural network (PINN) composite loss** — unit notes 10.3 only; original PINN paper not yet sourced | ⬜ |
+| S.14 | E24 | **Nonlinear least-squares parameter estimation** — unit notes 7.2.15 only | ⬜ |
+| S.15 | E25 | **Signal-to-noise ratio of a chi-squared difference (Δχ²)** — no source | ⬜ |
+| S.16 | E26 | **FLOP count, arithmetic intensity (roofline model)** — unit notes (M11, W02 optimisation and profiling) only | ⬜ |
+| S.17 | E27 | **Model-form error: parameter bias from a misspecified model** — no source | ⬜ |
+
 ## ⚠️ Observable-behaviour changes needing sign-off before the live run
 
 The fixes changed surfaces you can see. All were required by the findings, none weaken a guard.

@@ -117,7 +117,15 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-10-23/24 | Claude Code 2.1.309–2.1.310 (`claude-opus-5-5`), session `6461fe50`, with fourteen general-purpose subagents: a full wiki ingest of chapter 4, "Laminar Boundary Layers", of White and Majdalani, *Viscous Fluid Flow*, 4th ed. (2022), the source chosen in § 4 (2026-10-23). Nothing tracked changed except this row and the § 4 row. PyMuPDF, absent from every local Python, was installed in a scratchpad venv to render the 155 PDF pages. Nine subagents digested every page, equations from the images and prose from the text layer (one stalled on the problems and was replaced by two); five wrote 13 concept pages from the digests; the main session wrote the source page and *Boundary-Layer Separation*, rewrote *Blasius Boundary Layer* and *Von Karman Momentum Integral*, and updated three unit pages. 15 pages created, 5 updated (gitignored; `wiki/log.md` 2026-10-24). For the project: the book's main scaling is η = y√(U/(2νx)), f‴ + ff″ = 0, f″(0) = 0.46959999 (Eq. 4-64, p. 170); the footnote to that equation (p. 248) and Prob. 4-60 give the PINN's f‴ + ½ff″ = 0 with f″(0) = σ/√2 ≈ 0.3320573362151963. The general momentum integral, C_f/2 = dθ/dx + (2 + H)(θ/U)dU/dx (Eq. 4-143, p. 193), matches the form written from memory on 2026-10-22 | Benjamin chose the book and asked for "a full ingest of the chapter", then "go ahead with the full ingest i.e., finish it off" | Blasius Eqs. (4-57) to (4-71), (4-63) and the ‡ footnote were re-read by the main session from the page images and matched the digests. The digests record about 90 printing issues in the chapter, each left as printed in the wiki; the ones that change a number are listed on the source page. The 1/7-power turbulent claim of the row above stays unverified: this chapter is laminar only | Prompts 2026-10-23/24 (§ 6), verbatim: "I am using Whites Fluid Mechanics chaper 4 for laminar boundary layers chapter. Have a look at it, and do a full ingest of the chapter." / "go ahead with the full ingest i.e., finish it off" |
 | 2026-10-24 | Claude Code 2.1.310 (`claude-opus-5-5`), session `d85b9dcc`, on the new branch `Screening-for-Inverse-PINN` (cut from `blasiusReference` at `b222ccf`): the identifiability screen for the planned inverse PINN. New `SWD/model/identifiability_screen.py`: a `FrictionScaledPolar` subclass whose `drag()` scales only the friction term (planing stays `drag_n − friction_n`); a copy of `trajectory.simulate`'s loop with `k`, `V0` and the grid end free; the mmc1 parser, reading the archive in place; dt halving; the quiet-window search; the step 6 metrics; the Monte Carlo with a 30-minute timing gate; the plots. New `tests/test_identifiability_screen.py` (5 cases, one parametrised over both fit sets); `matplotlib>=3.11` added to `requirements.txt`; one row in `computed-data/README.md`. `trajectory.py` unchanged. Outputs in `SWD/data/default_shortboard/computed-data/identifiability_screen/`: `delta_a.csv`, `summary.csv`, `monte_carlo_fits.csv`, two Δa plots, two overlays, `fitted_k_hist.png`. **Results, with no verdict (the author decides):** dt 0.0025 s for both durations. Friction ±10 % moves a_x by at most 0.409 m/s², at t = 0, where it is the step in friction drag (0.11 × 304.1 N / 81.741 kg), and a_z by at most 0.40–0.47 m/s², late in the run: 0.80 σ (x) and 0.40–0.46 σ (z) at the upper bound, 14–16 σ at the lower bound. Δa_y is 1e-15 to 2.4e-8 m/s² (Eq 64; § 5 E131). The friction and V0 Δa_x curves correlate at 0.95–0.98 in magnitude, Δa_z at 0.75–0.76 (3 s) and 0.49–0.54 (10.055 s). Monte Carlo sd of the fitted k, set (a)/(b): 0.0465/0.0468 (3 s, N 400 → 800) and 0.0278/0.0278 (10.055 s, N 200 → 400) at the upper bound, i.e. 0.42 and 0.25 of FRICTION_SHIFT × PLANTED, mean k 1.103 and 1.102; 0.00161/0.00170 and 0.00083/0.00086 at the lower bound, mean k 1.1000–1.1001. corr(k, V0) in set (b): −0.10 and −0.03 (upper), +0.33 and +0.22 (lower). All 4,800 fits converged. In this polar friction is 85.2 % of the drag at V0 and zero roll, and every friction Δa scales with that share | The author wanted to know whether a friction-only change is identifiable from IMU-style data before writing any Blasius, von Kármán, RK4 or PINN code | 6 new tests pass, including bit-for-bit agreement with `trajectory.simulate` at k = 1 and noise-free recovery of k to 1e-6 relative in both fit sets. Full suite 121 passed with pytest's `--basetemp` in the session scratchpad; under the default temp folder the 17 tests that use `tmp_path` erred with `PermissionError` on `%TEMP%\pytest-of-moors`, a sandbox restriction, not a test failure. `git diff` shows `trajectory.py` untouched. The quiet-window search is re-run on every run and asserted to land on the confirmed index 22. The t = 0 maximum was reproduced by hand from the polar (0.4093 m/s², after a slip, § 5 E132). Repeat runs reproduced `delta_a.csv` and `monte_carlo_fits.csv` byte for byte (SHA-256). The CSVs have no BOM, 772 Δa rows (4 runs × (45 + 148) samples) and 4,800 fits. The palette passed the dataviz validator, and the plots were inspected and their legends moved off the data. Found while running: a cp1252 crash printing σ and √, fixed with `sys.stdout.reconfigure`, and the a_y premise (§ 5 E131) | Prompts 2026-10-24 (§ 6), verbatim, lines joined with " / " and the table pipes escaped: "Goal: build a quick identifiability screen for the planned inverse PINN, before any Blasius, von Kármán, RK4-function or PINN work. The questions it answers: if only the friction part of the drag is shifted, does the board's acceleration change by enough, at the paper's ~15 Hz IMU sample times, to be seen above that IMU's noise? Does that change look different from the change caused by shifting the starting speed? And how precisely could a least-squares fit recover the friction multiplier from noisy data sampled like this? / Read first: CLAUDE.md, SWD/model/trajectory.py (whole file), SWD/data/paper-supplementary/SOURCE.md, .claude/rules/swd-technical-facts.md. / Settings (mine; don't change them without asking): / - PLANTED = 1.10 (friction multiplier k: friction 10% above SWD's) / - FRICTION_SHIFT = 0.10 / - V0_SHIFT = 0.20 / - SLOPE_DEG = 10 / - Roll schedule = trajectory.py default / - Aggregate measure = the Monte Carlo spread of the fitted k (step 7). Do NOT derive or implement an analytic aggregate measure; I will derive that myself later. / Build SWD/model/identifiability_screen.py: / 1. Forward model. Use trajectory.py's load_polar() and simulate() (forward Euler, default_shortboard hydroscan polar, constant slope, raised-cosine roll). Add a friction multiplier k that scales ONLY the friction part of the drag. Pitfall: BoardPolar.drag() computes planing as drag_n - friction_n, so scaling friction_n directly would also change planing. Scale the friction term inside drag instead. Also allow the starting speed V0 to be overridden (simulate currently starts at equilibrium_speed). Prefer a wrapper in the new file. If trajectory.py must change, use keyword-only arguments whose defaults reproduce the current output, prove it by regenerating computed-data/trajectory.csv and comparing SHA-256 before and after, and confirm _self_check() still passes. / 2. Runs. Run a baseline (k = PLANTED, V0 = default equilibrium speed), friction shifted (k = PLANTED x (1 +/- FRICTION_SHIFT)) and starting speed shifted (V0 x (1 +/- V0_SHIFT), k = PLANTED). Do this for two durations: trajectory.py's default 3.0 s, and mmc1's span (10.055 s). np.arange stops short of the duration, so make sure each run covers the last sample time it is compared at. / 3. Step size. Halve dt from 0.01 s until the acceleration differences at the sample times change by less than 1% of their maximum. Report the dt used for each duration. / 4. Measurement times. Parse mmc1 as SOURCE.md describes: drop the ';'-prefixed echo lines (148 data rows remain). Fields are t;SG1..SG5;ax;ay;az;Rx;Ry;Rz. Time is in ms and runs backwards: reverse it and shift it to start at 0. Keep the uneven spacing. For the 3 s run, use the sample times that fall within 3 s. Interpolate each run's accel_x, accel_y and accel_z onto those times (linear is fine at the fine dt). / 5. Noise level. Accelerometer units are g with gravity included; convert to m/s^2. Find a candidate quiet window in mmc1: the lowest rolling standard deviation after removing a linear trend, with the window length stated. Report where the window is and the standard deviation per axis. Label it an upper bound on sensor noise, since it includes real motion. STOP and ask me to confirm the window before using it. / 6. Comparison, per channel and for each duration: / - delta-a at the sample times (friction shift minus baseline; V0 shift minus baseline) / - max \|delta-a\| / sigma / - fraction of samples where delta-a has the same sign / - correlation between the friction delta-a curve and the V0 delta-a curve (shape similarity) / Do not give a pass/fail verdict. I decide that. / 7. Monte Carlo aggregate, for each duration: / - Take the baseline run's accel_x, accel_y and accel_z at the sample times. Add independent Gaussian noise with the confirmed per-channel sigma. Use a fixed random seed and report it. / - Fit with scipy.optimize.least_squares around the same forward model, using all three channels together (each residual divided by its channel's sigma). Start from k = PLANTED x (1 + FRICTION_SHIFT), not from the true value. Bound k > 0, and V0 > 0 where it is fitted. / - Two fit sets: (a) V0 fixed at its true value, k fitted; (b) k and V0 fitted jointly, with V0 starting at V0_true x (1 + V0_SHIFT). / - Start with N = 200 noise draws. Double N until the standard deviation of the fitted k changes by less than 5% between N and 2N. Report both values. / - Report: the mean and standard deviation of the fitted k; that standard deviation divided by (FRICTION_SHIFT x PLANTED); the fraction of fits that converged. For set (b), also report the mean and standard deviation of the fitted V0 and the correlation between fitted k and fitted V0 across draws. / - Before the full loop, time 5 fits and project the total runtime. If it exceeds 30 minutes, STOP and propose speed-ups without implementing them (for example a coarser dt that still passes step 3, or precomputing the model on a grid of k and V0 and interpolating). / 8. Outputs go to SWD/data/default_shortboard/computed-data/identifiability_screen/ (computed data only, never the extracted folders): / - one CSV of the delta-a curves, one CSV of the step 6 summary, one CSV of every Monte Carlo fit (draw index, set, fitted k, fitted V0, converged flag) / - plots of delta-a at the sample times with a +/- sigma band (friction and V0 shifts separately, per channel) / - the two normalised delta-a curves overlaid / - histograms of the fitted k for sets (a) and (b), with the planted value and the +/- FRICTION_SHIFT x PLANTED band marked / Print these assumptions with the results. State them; don't try to fix them: / - An IMU reads specific force in the board frame, while trajectory.py's accelerations are in the path frame. Gravity cancels between runs with the same attitude, so the differences are comparable but the absolute values are not. / - The noise sigma is an upper bound (the quiet window includes real motion), so the Monte Carlo spread is pessimistic. / - The noise is assumed independent between samples; report the lag-1 autocorrelation of the detrended quiet-window signal per axis so I can judge that. / - mmc1's board, surfer and wave differ from default_shortboard and the 80 kg surfer. / - The friction speed exponent is trajectory.py's EXP_FRICTION placeholder. / Code standards: NumPy-style docstrings on every function; inline comments explain intent, not mechanics. Tests go in tests/test_identifiability_screen.py, against cases with known answers: / - the mmc1 parser returns 148 ascending rows spanning 10.055 s / - k = 1 with the default V0 reproduces trajectory.simulate() exactly / - two identical runs give zero difference / - the interpolation reproduces a linear signal exactly / - a least_squares fit on noise-free data recovers k = PLANTED to within 1e-6 relative / Run the full pytest suite and report the result. / Rules: no web sources. Don't decide anything listed under Settings. Log the task in AI-USE.md section 2 per R2, with this prompt verbatim. In section 4, record my settings above as my decisions, including that the aggregate measure is the Monte Carlo spread for now, with the analytic derivation deferred to me. Don't commit until I've reviewed." / and, sent mid-turn: "Use git to make a new branch, called Screening for Inverse PINN, and only committing the outputs produced for this task". Answers in the 2026-10-24 subsection below; plan `~/.claude/plans/pasted-content-id-8d2c-goal-build-vast-wren.md` |
 | 2026-10-24 | Claude Code 2.1.310 (`claude-opus-5-5`), session `d85b9dcc`, branch `Screening-for-Inverse-PINN`: the **second identifiability screen, a feasibility screen only**. It re-runs the first with forces from one live-solver attitude (slope 0, drift 0, converged reads, lift held at the weight), because the first took `trajectory.py`'s `load_polar()`, which sums 7–12 scan positions per roll case (§ 5 E133). New `SWD/model/identifiability_screen_live.py`. It imports the first screen's mmc1 parser, sample times and metrics, which are unchanged, and it is not the project's forward model. D(V) = k·friction + planing + rail, each a non-extrapolating PCHIP in speed; m dV/dt = m g sin 10° − D with m = 802.21 N / g; RK45 at rtol 1e-10 with terminal events at the range edges; a_x is taken from the right-hand side, so V is never differentiated. Also new: `tests/test_identifiability_screen_live.py` (4 tests, 6 cases) and `SWD/data/default_shortboard/computed-data/identifiability_screen_live/` (7 CSVs, 4 plots, a README). No existing model file was edited. **Rule-based defaults, pending Benjamin's review (not decisions of his, so not in § 4):** attitude **pos_y 0, pos_x 0.450**, converged over 2–10 m/s. It ranks first on the rule and tied on width with pos_x 0.467, winning on the pos_x nearest the median, 0.30. Starting speed **V0 = 8.3 m/s**: 59 grid values qualify, 39 stay in range for the full 10.055 s, and 8.3 has the largest change (to 7.05 m/s). **Results, with no verdict:** 11 of 169 slope-0, drift-0 reads dropped by the 1 % decomposition check. At this attitude friction is 1 % of drag at 2 m/s and 51 % at 10 m/s, and D = m g sin 10° at 4.40 and 7.22 m/s (SWD's total, k = 1) or 4.63 and 6.60 m/s (k = 1.10), the lower one unstable. Every run covered its whole duration. Friction ±10 % moves a_x by at most 0.090 m/s², at t = 0 (0.18 σ upper, 3.2 σ lower); V0 ±20 % moves it by 0.27–0.42 m/s². Every curve keeps one sign, and the friction and V0 curves correlate at 0.994–0.9999 in magnitude. Monte Carlo (seed 20261024, a_x only; every set settled within 5 %, the 60-minute cap never bound): set (a) sd k 0.130 (3 s) and 0.106 (10.055 s) at the upper σ, 1.19 and 0.96 of FRICTION_SHIFT × PLANTED, with 59 % and 68 % of fits inside that band; 0.0072 and 0.0059 at the lower σ, all inside. Set (b) sd k 0.53 and 0.39 at the upper σ (16 % and 6 % inside the band, 28 % and 34 % ending on a bound, corr(k, V0) −0.47 and −0.93); 0.28 and 0.11 at the lower σ (19 % and 75 % inside, corr −0.997 for both). The first screen's set (b) gave 0.047 and 0.028 at the upper σ, from three channels and summed forces. **Conservative readings taken where the brief was open:** the median pos_x is over the kept rows (the median over positions gives the same pick); equilibria are reported for both SWD's total and the model; trial stages hold the force at the range edge, and runs are cut there; Δa uses only the samples all runs share; a fit trial that leaves the range is penalised at 1e3 σ, and a fit that ends outside it counts as not converged; mean and sd use converged fits, and the band fraction counts non-converged fits as outside; the time cap includes the timing fits, shared equally across the combinations left; `diff_step` is 1e-6; the comparison notes that the first screen's fits used three channels | Benjamin asked whether the first screen's answer survives forces at their physical scale, before any inverse-PINN work | The 6 new cases pass: the filter, the PCHIP at its grid speeds (1e-12), a c·Vⁿ drag against its closed form (1e-8, n = 2 and 13/7), and noise-free recovery of k to 1e-6 in both sets. Full suite 127 passed with `--basetemp` (the sandbox issue in memory). `git diff` shows `trajectory.py`, `identifiability_screen.py` and the first screen's outputs unchanged. Tightening rtol 10× moved Δa by 4.7e-8 of its maximum. The attitude, V0, row-drop count and equilibria were measured read-only before planning, and the script reproduced them. Repeat runs reproduced every CSV byte for byte, except 8 of 4,000 fitted k, which differ by ≤ 4.4e-16 (1 ulp), probably from threaded linear algebra (an inference); the fits file is now sorted, because the timing order of the combinations had changed its row order. The CSVs have no BOM; 772 Δa rows and 4,000 fits. The plots were inspected and two legends moved. README given one humanizer pass, its AI Acknowledgment untouched (R10); all 22 frozen figures checked present after it | Prompt 2026-10-24 (§ 6), verbatim, lines joined with " / " and the table pipes escaped: "Goal: a feasibility screen ONLY. The question: with the data I already have, could an inverse fit recover a friction multiplier from ~15 Hz acceleration data, using single-attitude forces with lift held at the weight? Nothing built here is the project's forward model. Don't reuse it as one, describe it as one, or edit any existing model file. This re-runs the first identifiability screen with physically scaled forces, because the first screen used trajectory.py's load_polar(), which sums 7-12 scan positions per roll case. / Run this end to end without stopping or asking questions. Where something is ambiguous, take the more conservative reading, state it in the results, and continue. / Read first: CLAUDE.md, SWD/data/live_solver/README.md, SWD/model/identifiability_screen.py (reuse its mmc1 parser and sample-time handling by importing them; do not modify it), SWD/data/default_shortboard/computed-data/identifiability_screen/summary.csv (for the confirmed sigma values). / Settings (mine; don't change them): / - PLANTED = 1.10 (friction multiplier k: friction 10% above SWD's) / - FRICTION_SHIFT = 0.10 / - V0_SHIFT = 0.20 / - SLOPE_DEG = 10 / - Noise: reuse the confirmed x-axis sigmas from the first screen. Upper bound = the 20-sample quiet window (t = 1.498-2.795 s); lower bound = the 0.028 m/s^2 resolution floor. Do not re-select a window. / - Straight run at drift 0 at one fixed attitude, so no roll schedule. / - Aggregate measure = the Monte Carlo spread of the fitted k. Do NOT derive or implement an analytic measure; I will do that later. / Build SWD/model/identifiability_screen_live.py: / 1. Forces. From SWD/data/live_solver/default_shortboard/converged/solver_points.csv, take slope_deg == 0 and drift_deg == 0. Drop rows where \|drag_total_n - (friction_n + fx_planing_n + fx_rail_n)\| > 1% of \|drag_total_n\|, and report how many were dropped. / 2. Attitude, chosen by rule (provisional; I will review it). Choose the (pos_y, pos_x) with the widest continuous converged speed range. Break ties by the smallest \|pos_y\|, then by pos_x nearest the median converged pos_x. Also report the top 5 candidates with: / - the converged speed range; / - friction_n, fx_planing_n and fx_rail_n at its ends; / - the speed where m*g*sin(10 deg) equals the total drag, if it falls in range. / 3. V0, chosen by rule (provisional; I will review it). Grid-search V0 over the chosen attitude's converged range in 0.1 m/s steps, keeping only values where V0 x (1 +/- V0_SHIFT) is also in range. Pick the V0 whose 10.055 s baseline run stays in range longest. Break ties by the largest change in V over the run, since that is what separates friction from planing. If no V0 qualifies, move to the next candidate attitude. If no attitude qualifies, produce every other output you can and report this as the main finding. / 4. Model (feasibility only). Mass m = 802.21 N / G (the live solver's weight plateau). For the chosen attitude, interpolate friction, planing and rail against speed with scipy PchipInterpolator (no overshoot between the 1 m/s grid points); never extrapolate. Use: / D(V) = k * friction(V) + planing(V) + rail(V) / m dV/dt = m*g*sin(SLOPE_DEG) - D(V) / Gravity is a separate term because 0-degree-slope forces don't contain the slope's weight component. Lift is held at the weight, so the vertical acceleration is zero. The sideways acceleration carries no friction information (Eq 64: V^2/R = g*tan(phi)). Only the along-path acceleration x is compared. / 5. Integration. Use solve_ivp (RK45, rtol 1e-10, small atol, dense output). Evaluate a(t) at the sample times directly from the right-hand side, without differentiating V. Check: tightening rtol by 10x must change delta-a at the sample times by less than 1% of its maximum; report the result. If V leaves the converged speed range, end the run there, use only the samples covered, and report the time reached and the sample count. Flag prominently any run that covers less than half its intended duration. / 6. Runs. Baseline (k = PLANTED, V0 from step 3); k x (1 +/- FRICTION_SHIFT); V0 x (1 +/- V0_SHIFT). Two durations: 3.0 s and 10.055 s, on mmc1's uneven sample times as in the first screen. / 7. Comparison, x channel only, for each duration and both sigma bounds: / - max \|delta-a\| / sigma / - majority_sign_fraction within each delta-a curve / - correlation between the friction delta-a curves and the V0 delta-a curves (all four pairings) / Do not give a pass/fail verdict. / 8. Monte Carlo, x channel only, for each duration and both sigma bounds: / - Add independent Gaussian noise (fixed seed, reported) to the baseline a(t) at the sample times. Fit with scipy.optimize.least_squares. / - Set (a): V0 fixed, k fitted, starting from PLANTED x (1 + FRICTION_SHIFT). / - Set (b): k and V0 fitted jointly, V0 starting at V0_true x (1 + V0_SHIFT). Bound k > 0 and V0 inside the converged range. / - Start with N = 200 draws and double until the std of the fitted k changes by less than 5% between N and 2N. / - Time 5 fits first. Cap the total Monte Carlo time at 60 minutes by limiting N. If the cap stops the doubling early, say so next to the result. / - Report: the mean and std of the fitted k; std / (FRICTION_SHIFT x PLANTED); the fraction within +/- FRICTION_SHIFT x PLANTED of the truth; the convergence fraction. For set (b), also the mean and std of the fitted V0 and the correlation of fitted k with fitted V0. / - Add a table putting these next to the first screen's Monte Carlo results (from its monte_carlo_fits.csv), labelled "first screen: summed attitudes, untrimmed lift". / 9. Outputs go to SWD/data/default_shortboard/computed-data/identifiability_screen_live/ (new folder; don't touch the first screen's outputs): / - CSVs of the forces used, the delta-a curves, the summary and every Monte Carlo fit / - plots: V(t) for all runs; delta-a at the sample times with +/- sigma bands; normalised friction and V0 delta-a overlaid; histograms of the fitted k for sets (a) and (b) with the planted value and the +/- band marked / - a short README.md listing the rule-based attitude and V0 choices at the top, marked "provisional, pending my review" / Print these assumptions with the results; don't try to fix them: / - One attitude for the whole run; the live solver's trim and attitude are not varied with speed. / - A path-frame model compared against board-frame IMU noise. / - mmc1's board, surfer and wave differ from default_shortboard with an 80 kg surfer. / - The noise sigma bounds are carried over from the first screen. / Code standards: NumPy-style docstrings; comments explain intent. Tests in tests/test_identifiability_screen_live.py against known answers: / - the outlier filter keeps rows whose components sum to the total / - the PCHIP interpolant reproduces the grid values exactly at the grid speeds / - with D(V) replaced by c*V^n, solve_ivp matches the closed form V(t) = [V0^(1-n) + (n-1)*c*t/m]^(1/(1-n)) (zero slope) to 1e-8 relative / - a noise-free least_squares fit recovers k = PLANTED to 1e-6 relative / Run the full pytest suite and report. / Rules: no web sources. Log the task in AI-USE.md section 2 per R2, with this prompt verbatim. Record the attitude and V0 there as rule-based defaults pending my review, NOT in section 4 as my decisions. Add one errors-ledger entry in section 5 (R3): SWD/model/trajectory.py load_polar() sums elements.csv rows across scan positions (7-12 per roll case), the same defect E111 records for operating_points.csv. It inflates the forces in trajectory.py's outputs, including its Board-Jerk and Radicality values, and in the first identifiability screen. Found 2026-10-24 by Claude while interpreting the first screen. It is not fixed in this task. Don't commit until I've reviewed." Plan `~/.claude/plans/pasted-content-id-8d2c-goal-build-vast-wren.md` (overwritten from the first screen's plan) |
-
+| 2026-10-25 | Antigravity CLI (agy, model per settings `Gemini 4` Medium), session `64682724`: second-source audit and fix of `friction-function/blasius-shooting/shooting_blasius.py` and `friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb`. Prompt verbatim (lines joined with " / "): "Use the `audit` skill (.agents/skills/audit/SKILL.md) on friction-function/blasius-shooting/shooting_blasius.py and friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb (it imports the .py). / Goal: rk4_solve is a correct fourth-order RK4 (checked on y''+4y=0: E(h)/E(h/2) -> 16, Oberkampf p_obs -> 4), the Blasius profile matches White Table 4-3 to its 5 decimals, and f''(0) has settled under eta_max=20 and step halving. / shooting_blasius.py is the student's graded code: REPORT findings on it, never edit it. Fixes only in the notebook. / Guard (must stay exit 0): .venv\Scripts\python.exe friction-function\blasius-shooting\shooting_blasius.py && wsl -e bash -lc \"source ~/sci-env/bin/activate && cd /mnt/c/dev/HYDRODYNAMICS-FIN/friction-function/blasius-shooting && jupyter nbconvert --to notebook --execute --stdout rk4_blasius_checks_cc.ipynb > /dev/null\" / Allowed writes: friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb, tests/, AI-USE.md. Nothing else. / Audit, then fix. Keep the report short." **Reported on `shooting_blasius.py` (untouched):** W1 (`secant_for_shooting` silently returns an unconverged iterate if `max_iter` is exhausted without `\|f_new\| < precision`) and W2 (`exact_blasius` accepts any `eta` within `STEP_SIZE` ≈ 0.0707 of a table row and returns the nearest row without interpolation). **Fixed in `rk4_blasius_checks_cc.ipynb` + `tests/test_blasius_shooting_checks.py`:** W3 (§ 5 E134) — cell `c06` lacked an `assert` enforcing the 5-decimal table half-ulp bound `0.5e-5 * [√2, 1, 1/√2]`, cell `c12` lacked an `assert` on `p_obs` for `f''(0)` being near 4, and cells `c05`/`c06` described the converted table as uniformly spaced every 4th grid point (`0.2√2`) whereas rows at η_book = 3.3, 3.4, 3.5 are spaced every 2nd grid point (`0.1√2`). | Independent second-source audit of the RK4 and Blasius shooting verification notebook and its imported module | Added `tests/test_blasius_shooting_checks.py` (4 tests); `test_notebook_enforces_table_and_settle_assertions` failed before the fix and passed after; full pytest suite 127 → 131 passed (`--basetemp`); guard (`shooting_blasius.py` + `jupyter nbconvert --execute rk4_blasius_checks_cc.ipynb`) exited 0 before and after; `git diff` confirmed `shooting_blasius.py` untouched | `friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb`; `tests/test_blasius_shooting_checks.py`; § 5 E134 |
+| 2026-10-25 | Claude Code 2.1.310 (`claude-opus-5-5`), session `e6bdf8be`, branch `VonKarman`, with Antigravity CLI and Devin CLI (`swe-1-7`) run as checkers through `sqa_cli_pass.py` (agy's own row is above). (1) In `friction-function/blasius-shooting/shooting_blasius.py`, a copy of the code cells of Benjamin's `shooting_for_blasius.ipynb`, moved the RK4 loop out of `F(s)` into `rk4_solve(rhs, initial, eta_array, step_size)`. The loop is unchanged apart from the globals becoming parameters. `F` gained optional `eta_array` and `step_size` arguments, the secant run went under `if __name__ == "__main__":`, and the CSV path is now found from the file's own folder. Nothing else in the file changed, and `shooting_for_blasius.ipynb` is untouched. (2) New `rk4_blasius_checks_cc.ipynb` (84 code lines), which imports the module: y'' + 4y = 0 (y = cos 2t) through `rk4_solve`; the Blasius profile at s* against White and Majdalani Table 4-3 by maximum error, through `exact_blasius`; E(h)/E(h/2) and Oberkampf's p_obs over six halvings of h; f″(0) re-shot at η_max = 20 and at h/2 and h/4 with secant precision 1e-12. The Oberkampf equation number is left as `Eq. ___` for Benjamin, since no copy is in the repo (R8). (3) After the CLI passes: widened agy's table assertion (notebook cell `c06` and `tests/test_blasius_shooting_checks.py`) by 1e-6 for the RK4's own error (§ 5 E135), and added two limits to the notebook: at h = 0.2/√2 and η_max = 20 the second guess s = 5 overflows, and both test equations are autonomous. Prompt verbatim: `Can you check that RK4 actually solves an ODE correctly, I want you to do this with y''+4*y = 0. Use the same RK4 code that I have produced for blasius., and compare the exact solution to what we got with Blasius using the maximum error. Then check whether the RK4 ive written is correct and has fourth order stepping. Run the previous step halving h comparing (as an output in array) against the exact solution at each h. From the textbook Oberkampf on this topic, he found e18 to be E9h)/E(h/2) = 2**p, and p_obs = log_2(abs(y_h-y_h/2)/abs(y_h/2-y_h/4). Verify these. Then check the error ration comes out this way. Then also rerun the shooting with eta-max at 20 (double) and a smaller step to check that f''(0) has settled. Put these all into a separate notebook labelled rk4_blasius_checks_cc.ipynb. But firstly convert my shooting_for_blasius.ipynb into a py file to be called, move rk4_solve out of F(s), then let F(s) call rk4_solve,  then call it and ensure that there are as much of my written code as possible. Then make sure that your code is as efficient as possible. Your written code should only be about 100 lines. Run agy and devin as checkers after produced, then verify yourself` | The author asked for the checks and set the test equation, both order formulas and the η_max and step cases (§ 4); AI wrote the module split and the notebook | E(h)/E(h/2) 15.65–15.96, p 3.97–4.00, p_obs 3.97–3.99. Table maximum error f 6.6e-6, f′ 5.0e-6, f″ 3.4e-6, which is the table's 5-decimal floor. f″(0) changes by −1.1e-9 (η_max 10 → 20), −2.0e-9 (h → h/2) and −1.3e-10 (h/2 → h/4), and p_obs of f″(0) is 3.95. The split module reproduces the notebook's s* = 0.3320573507984425 in 7 iterations exactly. An independent cross-check outside the repo, `solve_ivp` (DOP853, rtol 1e-13) with `brentq`, gives 0.33205733621519 at η_max = 20 against the notebook's 0.33205733622406. Mutants of `rk4_solve` with wrong weights, a wrong stage input or a wrong k4 fail the notebook's asserts; one passing the wrong η to k2 survives (recorded as a limit). The notebook runs in WSL sci-env (nbconvert) and under `.venv`; `pytest tests` 131 passed. agy C=0 W=3 S=2 (one Claude Code error, § 5 E134, fixed by agy); Devin C=0 W=2 S=1, no edits. Both reported, independently, two Warnings on `shooting_blasius.py` that are Benjamin's to decide (report-only, his choice): `secant_for_shooting` returns an unconverged root without raising once `max_iter` runs out, and `exact_blasius` returns the nearest row for any η within `STEP_SIZE`. humanizer over the notebook prose: no change | Plan `~/.claude/plans/can-you-check-that-breezy-wreath.md`; run folder `%LOCALAPPDATA%\sqa-loop\runs\rk4-blasius-checks-2026-10-25\`; prompt 2026-10-25 (§ 6) |
+| 2026-10-25 | Claude Code 2.1.310 (`claude-opus-5-5`), same session (`e6bdf8be`), at Benjamin's prompt `Yes, add it to the wiki Blasius page. Also remove the text cells from the notebook, they are not working with pycharm`: (1) removed all 11 markdown cells from `rk4_blasius_checks_cc.ipynb`, leaving its 5 code cells (85 lines) and their saved outputs unchanged. The text those cells carried is no longer in the notebook: the section headings, the derivation of both order formulas, the Oberkampf `Eq. ___` placeholder, the limits (including the two added in the row above) and the notebook's `## 🤖 AI Acknowledgment`. A one-line disclosure comment now opens the first code cell and points here. (2) Wiki: added the verification results and limits to *Blasius Boundary Layer* (a new *Project shooting verification* block, a Summary clause, the project path corrected under an Updated note) and to its `index.md` line, logged it, and re-embedded `qmd`. The wiki is gitignored, so nothing tracked changed apart from the notebook and this row | Benjamin's request: "they are not working with pycharm" | Guard (module run + nbconvert execute) exit 0; `tests/test_blasius_shooting_checks.py` 4 passed, its cell-id check still finds `c06` and `c12`; `wiki_lint.py`: no problems, no unresolved links | Prompt 2026-10-25 (§ 6) |
+| 2026-10-25 | Claude Code 2.1.310 (`claude-opus-5-5`), same session (`e6bdf8be`), at Benjamin's prompt `Put the limits back in as comments`: the notebook's limits, removed with the markdown cells in the row above, are back as `# Limit:` comments in the code cells they apply to (scope of the checks, cell 1; linear and autonomous test equations, cell 2; table precision, cell 3; η_max tested at 10 and 20 only and the overflow at h = 0.2/√2, cell 5), worded as before. The notebook is now 97 code lines; the code itself and its saved outputs are unchanged | Benjamin's request | Guard (module run + nbconvert execute) exit 0; `tests/test_blasius_shooting_checks.py` 4 passed | Prompt 2026-10-25 (§ 6) |
+| 2026-10-25 | Claude Code 2.1.310 (`claude-opus-5-5`), same session (`e6bdf8be`), with Antigravity CLI and Devin CLI as review-only checkers through `sqa_cli_pass.py`: a central-difference solution of the Blasius equation to compare with the RK4 shooting. Benjamin set the method: g = f′, g″ + ½ f g′ = 0, g(0) = 0, g(η_max) = 1, f(0) = 0, h = η_max/N, the tridiagonal form a_i g_{i−1} + b_i g_i + c_i g_{i+1} = 0, f″(0) ≈ (−3g_0 + 4g_1 − g_2)/(2h), Picard iteration with a cumulative trapezoid for f, 20 iterations, the RK4 step and η_max, the max norm and timeit medians. The Picard iteration came from a Claude chat (claude.ai), per the prompt; `extract_prompts.py` does not read that app, so the conversation is not in § 6 (Benjamin to add it under "Prompts given to other AI tools"). Before building, Claude Code re-derived the coefficients and found ¼ where the derivation had ½ (§ 5 E136). New `friction-function/blasius-shooting/fd_blasius.py` (`thomas`, the W02 §2.3.6 Thomas algorithm; `blasius_fd`; NumPy docstrings; a `__main__` self-check against `np.linalg.solve`) and `fd_vs_shooting_cc.ipynb` (3 code cells, no markdown cells, limits as `# Limit:` comments). `shooting_blasius.py` is unchanged. Prompt verbatim: `I now want you to construct the finite-difference for Blasius, which we will use to compare with RK4 and shooting. I have done the calc.ns and given that g=f' (u/U). The ODE is: g'' + 1/2f*g' = 0. ICs are g(0)=0,g(eta_max)=1 and f(0)=0,  specifically calculate the accuracy and cost of central-diff compared to shooting of f''(0). Thus f''(0) = g'(0) ~ (-3g_0+4g_1-g_2)/(2h), where h=eta_max/N, i=0,...N. What i found was a_i = 1- 1/2*f_i*h, b_i = -2, and c_i = 1/2*f_i*h+1. where a_i*g_i-1 + b_i*g_i + c_i*g_i+1 = 0. Stop if your derivation disagrees, and bring it up with me. Make sure to use variables I have supplied, in the way I have written them. Given this ODE is non-linear, I want you to use Picard, iteration (found with Claude chat): freeze f, solve for g, then rebuild f with cumulative trap at f(0) = 0, repeat, stop after 20 iterations, as this is just a comparison. Due to the low amount of data for this, I chose central-diffrence method, ensure you keep the step size the same as what was used for RK4 as well as the same eta_max, as the roundoff error will not be signficant there, and we can actually check the accuracy. For acc. test compare the results of this, and the results of shooting to the exact value, using the error norm described in w10.1. Calc it with max norm which we have already used for RK4. Cost is measured by timeit and median of repeats. Now: Ensure shooting_blasius is unchanged, is has Numpy equivalent docstrings, do not commit until ive reviewd it, and state what it cant establish, without the use of md cells within the ipynb files you procure. Use agy and devin as reviewers of the code, then fix up their responses. Ask any questions I have left vague` | The author asked for the comparison and set the scheme, the iteration and the measures (§ 4); AI wrote the code | Against 0.3320573362151963 (White and Majdalani p.248): central difference f″(0) = 0.332074725114, max-norm error 1.74e-5; shooting 0.332057350798, 1.46e-8. Cost: 2.3 ms against 10.2 ms per solve (median of 7 repeats of 10), that is 20 Thomas solves of 140 unknowns against 9 RK4 integrations of 141 steps. The Picard change in f″(0) is below 1e-6 from iteration 13 and 8.1e-11 at iteration 20. `h == STEP_SIZE` exactly. In scratch, halving h three times gives error ratios 4.65, 4.35 and 4.17 (p → 2.06); the ½-coefficient mutant fails the notebook's assert (f″(0) = 0.4697); three Thomas mutants fail the module's self-check once its right-hand side is non-zero in every row (§ 5 E137). A two-point g′(0) mutant passes: g″(0) = f‴(0) = 0 at the wall, so that formula is second order here too. The notebook runs in WSL sci-env and under `.venv`. agy (review only) C=0 W=0 S=2: the `thomas` docstring called `c[-1]` unused although it is read (it never changes the solution), and the `blasius_fd` docstring did not say that N and h must change together to keep η_max fixed; Claude Code fixed both docstrings. Devin (review only) C=0 W=0 S=0; it reproduced the order study (2.22, 2.12, 2.06) and found a residual of 1.2e-13 in the discretised equation. Neither CLI wrote a file. After the fixes: guard exit 0, `pytest tests` 131 passed, and `shooting_blasius.py` is unchanged against `b8650c4`. | Plan `~/.claude/plans/can-you-check-that-breezy-wreath.md`; run folder `%LOCALAPPDATA%\sqa-loop\runs\fd-blasius-2026-10-25\`; prompt 2026-10-25 (§ 6) |
+| 2026-10-26 | Claude Code 2.1.310 (`claude-opus-5-5`), same session (`e6bdf8be`), branch `blasiusReference`, with Antigravity CLI and Devin CLI as review-only checkers through `sqa_cli_pass.py`: the Blasius thicknesses as their own module. Benjamin derived δ99/x, δ*/x and θ/x from White's definitions. Claude Code re-derived them (½ scaling, y/x = η/√Re_x, u/U = f′) and raised three discrepancies before building (§ 5 E138); Benjamin's final forms are δ99/x = η_99/√Re_x, δ*/x = (η_max − f(η_max))/√Re_x and θ/x = (h/2)Σ[f_i′(1 − f_i′) + f_{i+1}′(1 − f_{i+1}′)]/√Re_x on the RK4 grid (h = STEP_SIZE), with H = δ*/θ. New `friction-function/blasius-shooting/blasius_thickness.py`: `blasius_coefficients()` (η_99 by his `secant_for_shooting` on one partial RK4 step; cached, so nothing runs at import), `thicknesses(Re_x)` (an (n, 3) array and H; `ValueError` unless Re_x is one value or a non-empty 1-D array of finite, positive values), NumPy docstrings, `# Limit:` comments, and a `__main__` comparison with White. New `tests/test_blasius_thickness.py` (11 tests): η_99 against Table 4-3's edge row, H, δ*/δ99 and θ/δ99 against Table 4-4, the coefficients and H unchanged whether Re_x is passed as an array or one value at a time, and invalid Re_x rejected. `shooting_blasius.py` is unchanged. Prompts verbatim (joined with " / "): `Based on the definitions from White, I've found delta_99/x = eta_99/sqrt(Re_x), delta*/x = sqrt(Re_x)*(eta_99-f(eta_max)), and theta/x=h/2 * sum(fi'*(1-fi') + f_i+1'(1-f_i+1') where h = eta_99/N.  Derive these equations yourself, and raise it with me if you find a discrepency. These values appear in white's tables., so use them as a point for comparison for you.  I want this to be its own .py file, to be used later. Quickly run it through agy and devin after it is done. / Apologies, I have two typos here, firstly, delta*/x should be dividing by sqrtRe_x), secodnly, all I have here is the integral for theta/x, it should also include /sqrt(Re_x). Use my step i used in RK4, for theta too / Change cutting off at eta_99 to eta_max, the error would be too great. Compute eta_99 against 4-3 edge row, and eta_max to table 4-4. Also, make an automated test under /tests/ called test_blasius_thickness.py, testing eta_99, H, against the book. Make sure that all the coefficients remain the same bw rows of the outputted array (with delta_99/x, dela*/x and theta/x) when multiplied by the denominator sqrt(Re_x). A way you could do this is to call the array (thicknesses), at different Re_x values, passing once as array, once as inidivudal values on at a time, then multiply each by sqrt(Re_x) to get the coeff vsalue. Check that these match what you have defined as blasius_coefficients(). Check H comes back unchanged.`; and, during the questions, `Any qs raise them` / `Reraise these questions I was typing` / `COntiue with how I answered the first time, this was before you reasked them` | The author asked for the module and set the formulas, the grid, the comparison and the test design (§ 4); AI wrote the code | η_99 = 4.909988810 against the Table 4-3 edge row's 4.909989513 (rel −1.4e-7). Against Table 4-4: δ*/δ99 0.350466664 (0.35047), θ/δ99 0.135229671 (0.13526, rel −2.2e-4), H 2.591640291 (2.59110, rel +2.1e-4). An independent check outside the repo, `solve_ivp` (DOP853, rtol 1e-13) with `quad` on the same η_max, gives η_99 4.909989387, η_max − f(η_max) 1.720787636, θ 0.664114656 and H 2.5911002, so the θ and H gaps are the trapezoid's error at the RK4 step and nothing else. Five mutants (a wrong √Re_x power, θ without h/2, δ* at η_99, a 0.995 edge, Re_x = 0 accepted) each fail a test. agy (review only) C=0 W=2 S=2: `thicknesses` accepted an empty array and crashed unclearly on a 2-D Re_x (fixed: a clear `ValueError`, two new test cases), and the tests checked only η_99 and H = c/d, so a factor common to δ* and θ would pass (fixed: a new test of δ*/δ99 and θ/δ99 against Table 4-4, and that mutant now fails); its suggestion to find the edge row by f′ = 0.99 rather than a column index was applied, and the one on `np.float64` return types was rebutted (`np.float64` is a subclass of `float`). Devin (review only) C=0 W=0 S=0; it wrote three repro scripts into the repo's literal `%TEMP%` folder, which the wrapper removed as out-of-scope writes. After the fixes: 11 tests in the new file, `pytest tests` 142 passed, and seven mutants each fail a test. | Plan `~/.claude/plans/can-you-check-that-breezy-wreath.md`; run folder `%LOCALAPPDATA%\sqa-loop\runs\bl-thickness-2026-10-26\`; prompts 2026-10-26 (§ 6) |
+| 2026-10-26 | Claude Code 2.1.310 (`claude-opus-5-5`), session `7c3fea72`, branch `blasiusReference`: brought § 6 up to date at Benjamin's prompts "Can you update AI-Use .md with prompts, it seems to have missed a lot" and "Use those from clis, i will update for claude chat soon". § 6 had stopped at 2026-09-30, for two reasons (§ 5 E139). In `tools/extract_prompts.py`, the markers are now matched only on a line of their own (`_span`, used by `parse_appendix` and `splice`), with a new test, and four sessions were added to `_EXCLUDED` (`7012645c`, `8ea56016`, `dc20c342`, `d475ebcf`: other units' wiki ingests, 7 prompts; § 4). Then the extractor was re-run: 324 prompts in 30 sessions became 424 in 48, 2026-08-26 to 2026-10-26. The hook is unchanged (§ 4). § 6 covers the three CLIs only: the Claude chat (claude.ai) prompts are not in it, and Benjamin is adding them. | Benjamin asked for it; § 6 is only ever written by the extractor (R4). | The new test fails on the old extractor and passes on the new; `tests/test_extract_prompts.py` and `tests/test_prompt_appendix_hook.py`, 31 passed. A trial run on a scratch copy before the real one: all 324 committed prompts present after it, `c253c200` carried forward, none of the four excluded sessions present, the text outside the markers byte-identical, and 0 new prompts matching the hook's R9 patterns. | `%LOCALAPPDATA%\hydrofin-prompts\hook.log`; plan `~/.claude/plans/can-you-update-ai-use-jiggly-swan.md`; § 6 |
+| 2026-10-26 | Claude Code 2.1.310 (`claude-opus-5-5`), session `e90e01ba`, branch `blasiusReference`, with Antigravity CLI and Devin CLI as review-only checkers through `sqa_cli_pass.py`: the Blasius wall shear, local skin-friction coefficient and average skin-friction coefficient from the shooting f″(0). An earlier build of the same file in session `e6bdf8be` was deleted and its plan rejected at Benjamin's request; three of its answers carry over (§ 2 answers, 2026-10-26). Claude Code checked his derivations in the ½ scaling (u = Uf′, ∂u/∂y at the wall = U f″(0)√Re_x/x): C_f = 2f″(0)/√Re_x and avg C_f = 4f″(0)/√Re_L are right; τ_w = νU f″(0)√Re_x/x has ν where μ = ρν belongs (§ 5 E140), so the code uses ρνU f″(0)√Re_x/x, his choice. New `friction-function/blasius-shooting/skin_and_shear.py`: `shoot(eta_max, h)` (his `secant_for_shooting` at `precision=1e-9`, cached, returning f″(0) and the size of the next secant step as its error estimate), `C_f`, `avg_C_f`, `shear_w` (Re_x = Ux/ν inside), `wall_slope` (the stencil of `fd_blasius.py`), `ValueError` outside 0 < Re ≤ 1e6 and on non-finite or non-positive inputs, NumPy docstrings, `# Note:` and `# Limit:` comments, and a `__main__` settle table at (10, h), (20, h), (20, h/2) compared with Eq. 4-64's σ/√2 against an error budget. New `tests/test_skin_and_shear.py` (37 tests). `shooting_blasius.py` and `blasius_thickness.py` are unchanged. The plan was rejected once, for two wrong claims (§ 5 E141, E142). Prompts verbatim (joined with " / "): `Make me a skin_and_shear.py file where you use the shooting reuslt for f''(0) to calculate shear_w, C_f, and avg. C_f. I have derived each, check the derivations: shear_w = nu * U * f''(0) * sqrt(Re_x) / x, Cf(x) = 2 * f''(0) / sqrt(Re_x), and avg.F_f = 4 * f''(0) / sqrt(Re_L), where L is the wetted length. Make this file, and a pytest file testing this code. Include NumPy docsrings, and a __main__ block to pint the table of f''(0), C_f*sqrt(Re_x) and avg.Cf_f*(sqrt(Re_L), at each eta_max,h), where we go, (10,h), (20,h), and (20,h/2) similar to what we did with blasius. Values should be comp.d to those in White, however, add the error from the book to the erro from RK4 to the error from secant to the error from the eta_max cutoff. Now for the design:  Use sigma from eq.4-64, add the rounding error as something of note. Keep wall slope for now. APpend pass precision to 1e-9 to secant inside skin_and_shear.py only. without modifying shooint_blasius or blasius thickness.py. Use blasiusReference branch, dont commit until I have checked the code, get agy and devin to check then fix, then I can commit, / Lower bound of L is 0 nd upper bound L is 10**6 form the book / Change 2.13e-9 from the actual error to the diff to 4-64's sigma. Record Re = 1e6 as my choice, and PRECISION is 1e-9 for secant, 1.34e-8 is NOT over budget` | The author asked for the module and set the formulas, the reference, the tolerance rule, the secant precision, the Re range and the settle cases (§ 4); AI wrote the code | f″(0) at (10, h) = 0.332057339505, 2.130e-9 from σ/√2 = 0.332057337374: a difference from a rounded reference, not the true error (§ 5 E142). Budget: the book's rounding 0.5e-8/√2 = 3.536e-9, the η_max cutoff \|s(10, h) − s(20, h)\| = 1.122e-9, RK4 (16/15)\|s(20, h) − s(20, h/2)\| = 2.162e-9 (Richardson, p = 4), the secant 9.9e-14; total 6.820e-9. C_f√Re_x and avg C_f√Re_L are 4.26e-9 and 8.52e-9 from 2σ/√2 and 4σ/√2, within 2× and 4× the budget. White's own τ_w form, μUσ√(U/(2νx)), agrees within the budget, which checks the √2 between the scalings. (1/L)∫C_f dx by `quad` matches avg C_f to round-off (relative difference 0). Eleven mutants each fail a test (2↔4 in C_f and avg C_f, ×x for ÷x and no ρ in τ_w, a 2-point stencil, no upper bound, an exclusive upper bound, no empty check, and each of the three new `wall_slope` checks); a secant at 1e-6 is not caught, because the budget's secant term grows with it (E141). agy (review only) C=0 W=1 S=2: `wall_slope` raised `IndexError` on fewer than 3 points and returned `nan` on a NaN (fixed: `ValueError`, five new test cases); an array `s_star` or `h` broadcasts, and `shoot(0.0, 0.1)` raises `IndexError` (rebutted: NumPy broadcasting gives each value its own result, and `shoot` fails loudly); the (20, h) and (20, h/2) grids end at η = 19.94 and 19.98 (no effect, by agy's own check); and `secant_for_shooting` returns without raising when `max_iter` runs out (in `shooting_blasius.py`, left unchanged and reported to Benjamin). Devin (review only) C=0 W=1 S=0: the same `wall_slope` finding; the wrapper removed its two repro scripts from the repo's literal `%TEMP%` folder. After the fix: guard exit 0, 37 tests in the new file, `pytest tests` 180 passed | Plan `~/.claude/plans/make-me-a-skin-and-shear-py-linked-avalanche.md`; run folder `%LOCALAPPDATA%\sqa-loop\runs\skin-shear-2026-10-26\`; prompts 2026-10-26 (§ 6) |
+ 
 ### Answers given to Claude Code's questions, 2026-09-29
 
 These answers were given through Claude Code's question tool, which `tools/extract_prompts.py`
@@ -585,6 +593,78 @@ A: Within each curve
 
 ---
 
+### Answers given to Claude Code's questions, 2026-10-25
+
+Session `e6bdf8be`, planning the RK4 and Blasius checks (`friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb`). Same handling as the 2026-09-29 subsection: the question is paraphrased and the answer is word for word.
+
+Q: agy and Devin will check the work. May they edit `shooting_blasius.py`, or only report findings on it? Claude Code recommended report-only, with fixes allowed in the new notebook alone.
+A: Report-only on .py (Recommended)
+
+Q: What happens to the original `shooting_for_blasius.ipynb` once the `.py` exists? Claude Code recommended leaving it untouched.
+A: Leave it untouched (Recommended)
+
+Later in the same session, planning the finite-difference comparison (`fd_blasius.py`, `fd_vs_shooting_cc.ipynb`):
+
+Q: Claude Code's derivation gives a_i = 1 − ¼ f_i h, c_i = 1 + ¼ f_i h, against the ½ in Benjamin's; ½ belongs to g″ + f g′ = 0. Which coefficients should the solver use?
+A: Use ¼ (Recommended)
+
+Q: h = η_max/N cannot equal the RK4 step with η_max = 10 (10/(0.1/√2) = 141.42). Which grid?
+A: N=141, η_max≈9.970 (Recommended)
+
+Q: What counts as the exact f″(0)?
+A: White p.248: 0.3320573362151963 (Recommended)
+
+Q: "Ensure shooting_blasius is unchanged, is has Numpy equivalent docstrings": NumPy docstrings on the new code only, or also on `shooting_blasius.py`?
+A: New code only (Recommended)
+
+---
+
+### Answers given to Claude Code's questions, 2026-10-26
+
+Session `e6bdf8be`, planning the boundary-layer thickness module (`blasius_thickness.py`). Same handling as the 2026-09-29 subsection: the question is paraphrased and the answer is word for word. Two later rounds of the same questions were withdrawn; Benjamin asked for the first answers to stand.
+
+Q: In δ*/x = (η_99 − f(η_max))/√Re_x the two terms sit at different points (−3.34): which was meant?
+A: η_99 − f(η_99) (later replaced by η_max, prompt 2026-10-26: "Change cutting off at eta_99 to eta_max, the error would be too great")
+
+Q: With the RK4 step, where should the θ sum stop?
+A: η_99, partial last step (later replaced by η_max, same prompt)
+
+Q: White's tables integrate to ∞; what should each result be compared against?
+A: Like-for-like plus tables (Recommended)
+
+Q: Which root-finder finds η_99 on the partial RK4 step?
+A: Your secant_for_shooting (Recommended)
+
+Q: What should the module return?
+A: Also H = δ*/θ
+
+Q: The trapezoidal θ puts H 2.1e-4 above Table 4-4's 2.59110: how should the H test work?
+A: Keep trapezoid, rel tol 1e-3 (Recommended)
+
+Session `7c3fea72`, bringing § 6 up to date, with the same handling:
+
+Q: Four new sessions opened in `UNIVERSITY/` worked on other units' wikis and named HYDRODYNAMICS-FIN only in subagent briefs telling them to skip it. Add them to `_EXCLUDED`, as was done for `34012d20`? Claude Code recommended excluding all four.
+A: Exclude all four (Recommended)
+
+Q: The `SessionEnd` hook held at all 40 session ends since 2026-10-01 because `AI-USE.md` had uncommitted edits. Should it change? Claude Code recommended splicing § 6 into the working copy without committing, instead of holding.
+A: Leave the hook as is
+
+Session `e6bdf8be`, planning `skin_and_shear.py`, with the same handling. That build was deleted and its plan rejected at Benjamin's request; these answers carry into the build in session `e90e01ba` (§ 2 row 2026-10-26):
+
+Q: Which wall-shear formula should shear_w use? Claude Code recommended τ_w = ρνU f″(0)√Re_x/x in Pa, since μ = ρν (§ 5 E140).
+A: τ_w = ρνU f″(0)√Re_x / x (Recommended)
+
+Q: shear_w needs Re_x = U·x/ν, but U, x and ν are already its inputs. How should Re_x enter?
+A: Computed inside (Recommended)
+
+Q: Where should f″(0) come from in these functions?
+A: Shooting by default, mark this as a decision after looking at the data from RK4 and shooting to be better than finite difference despite increased comp.n time
+
+Q: The Majdalani–Xuan quartic is an approximation White puts 0.53 % above Blasius for C_f. What should the tests treat as exact?
+A: Neither — these are two separate tests. (a) Blasius: assert τ_w, C_f, C̄_f, δ₉₉, δ*, θ and H against White’s Blasius values (Eqs. 4-67 to 4-71, Table 4-4). Set the tolerance from the digits the book prints. This part is as in option 1. (b) Integration check: feed the quartic profile g(η̂) = (5η̂ − 3η̂³ + η̂⁴)/3, η̂ = y/δ, with g = 1 beyond η̂ = 1, into the same thickness and wall-slope functions. Assert they return the profile’s own exact values, my E10 θ/δ, g′(0) and δ*/δ: [your fractions]. These are exact by construction. Set the tolerance from step-halving, not 1 %. Leave η₉₉ out, because E10 doesn’t give the quartic’s 99 % point. The Kármán C_f from E11–E12 is the alternative method. Compute it and report its gap from Blasius, checked against Table 4-1, but don’t assert the gap as an error. If any assertion in (a) or (b) fails, report which one and by how much. Don’t change the expected values or the tolerances. (Later narrowed, prompt 2026-10-26: "this is for shear, and skin coeff.s only, drop  thicknesses these have been done", and the tolerance became the book's rounding plus the measured numerical errors; only the g′(0) part of (b) remains, as `wall_slope`'s test.)
+
+---
+
 ## 📂 3. Approximate level of AI contribution `[REVIEW]`
 
 The brief asks for an approximate level. The basis for these estimates is the transcript record
@@ -602,6 +682,10 @@ author must adjust to what they know to be true.
 | `SWD/data/**` — the dataset | 0% AI | Physics from SWD, a licensed solver. AI wrote the extractor; it never generated a value |
 | `GEMINI.md` — root configuration & SQA auditor protocol | ~90% | Author defined auditor persona, rubric constraints, and SQA report schema; AI synthesized context and drafted file |
 | `AI-USE.md` § 6 — the prompt appendix | 0% AI | Generated from the author's own prompts by `tools/extract_prompts.py` |
+| `friction-function/blasius-shooting/` — `shooting_blasius.py`, `rk4_blasius_checks_cc.ipynb`, `tests/test_blasius_shooting_checks.py` | `.py` ~10% (the 2026-10-25 `rk4_solve` split, `__main__` guard and CSV path; the rest is the shooting notebook's code, copied unchanged); notebook ~100%; test file ~100% (agy, one bound adjusted by Claude Code) | Author's shooting notebook supplied the RK4, secant and table code; author chose the test equation, the order formulas, the η_max and step cases, and report-only checking of the `.py`; AI implemented the checks |
+| `friction-function/blasius-shooting/fd_blasius.py`, `fd_vs_shooting_cc.ipynb` — finite difference against shooting | ~100% of the code | Author derived the scheme (g = f′, the tridiagonal form, the f″(0) stencil) and chose central differences, Picard with 20 iterations, the grid, the norm, the timing and the exact value; AI corrected the coefficients (§ 5 E136, the author's choice) and implemented it |
+| `friction-function/blasius-shooting/blasius_thickness.py`, `tests/test_blasius_thickness.py` — boundary-layer thicknesses | ~100% of the code | Author derived the formulas from White's definitions and chose the η_max cut-off, the RK4 step for θ, the comparison with Tables 4-3 and 4-4, his secant for η_99, H as an output, and the test design; AI corrected the formulas (§ 5 E138, the author's choices) and implemented them |
+| `friction-function/blasius-shooting/skin_and_shear.py`, `tests/test_skin_and_shear.py` — skin friction and wall shear | ~100% of the code | Author derived C_f, avg C_f and τ_w and chose σ (Eq. 4-64) as the reference, the four-term tolerance, the secant precision 1e-9, 0 < Re ≤ 1e6, the settle cases, the shooting default and keeping `wall_slope`; AI corrected τ_w (§ 5 E140, the author's choice of ρν), estimated the error terms and implemented them |
 | The written report and presentation | to be stated when written | Author |
 
 ---
@@ -648,7 +732,7 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-10-21 | Check every translation against several translation sources and current surf research, the Charles et al. 2026 paper above all | Prompt 2026-10-21, "Verify it with numerous sources of translation as well as understanding of current surf research, especially the article I have already linked" |
 | 2026-10-22 | The PINN's two ODEs are the **Blasius equation** (laminar flat plate, a third-order BVP with f″(0) = 0.332) and the **von Kármán momentum integral** (first order in x). Falkner–Skan, the third candidate, is dropped: SWD has no pressure gradient for it to describe. All three candidates came from Gemini (§ 2, 2026-10-22) | Prompt 2026-10-22 (§ 6), "Blasius and von Karman are the two ODEs chosen." |
 | 2026-10-22 | Assume a zero pressure gradient along the board bottom, dU_e/dx = 0: the von Kármán momentum integral is used in its flat-plate form, dθ/dx = C_f/2, so the gradient term, and with it Thwaites' method, drops out. This matches SWD, whose friction uses the free-stream speed; for a real planing board it is a limitation, since the bottom pressure gives a favourable gradient that matters most below about 5 m/s (§ 2, 2026-10-22) | Prompt 2026-10-22 (§ 6), "Okay for this lets go with the assumption that dU_e/dx = 0" |
-| 2026-10-23 | The PINN is built on the two ODEs chosen 2026-10-22, Blasius and the von Kármán momentum integral. The initial condition the Blasius equation needs, f″(0), is found first by the shooting method with RK4 (`blasius-shooting/shooting_for_blasius.ipynb`). The rest of the process is to be finalised later (§ 2, 2026-10-23) | Prompt 2026-10-23 (§ 6), "My plan is to use a PINN with these main two ODEs: Blasius and Von Karman, but to get the required initial condition for f''(0) i will need to use the shooting method RK4 initially. Make that as a decision, I will finalise the process more later on" |
+| 2026-10-23 | The PINN is built on the two ODEs chosen 2026-10-22, Blasius and the von Kármán momentum integral. The initial condition the Blasius equation needs, f″(0), is found first by the shooting method with RK4 (`friction function/blasius-shooting`). The rest of the process is to be finalised later (§ 2, 2026-10-23) | Prompt 2026-10-23 (§ 6), "My plan is to use a PINN with these main two ODEs: Blasius and Von Karman, but to get the required initial condition for f''(0) i will need to use the shooting method RK4 initially. Make that as a decision, I will finalise the process more later on" |
 | 2026-10-23 | The source for laminar boundary layers, Blasius and the momentum integral included, is chapter 4, "Laminar Boundary Layers", of White and Majdalani, *Viscous Fluid Flow*, 4th ed. (McGraw Hill, 2022, ISBN 978-1-260-59780-6), printed pp. 153–248 with problems. It replaces the Wikipedia page Claude Code had used unasked (§ 5 E130), and the whole chapter is ingested into the project wiki. Benjamin calls the book "White's Fluid Mechanics"; the copy on this machine is *Viscous Fluid Flow*, whose chapter 4 is the laminar-boundary-layer chapter. It is a different book from the White's *Fluid Mechanics* ch. 7 that earlier sessions quoted from memory | Prompts 2026-10-23 (§ 6), "I am using Whites Fluid Mechanics chaper 4 for laminar boundary layers chapter. Have a look at it, and do a full ingest of the chapter." / "Note this down as my choice" |
 | 2026-10-24 | Before any Blasius, von Kármán, RK4-function or PINN work, run an identifiability screen for the inverse PINN: does a friction-only drag shift change the board's acceleration enough, at mmc1's ~15 Hz sample times, to be seen above that IMU's noise, does it look different from a starting-speed shift, and how precisely does a least-squares fit recover the friction multiplier `k`. Settings: `PLANTED` = 1.10 (friction 10 % above SWD's), `FRICTION_SHIFT` = 0.10, `V0_SHIFT` = 0.20, `SLOPE_DEG` = 10, the `trajectory.py` default roll schedule. No pass/fail verdict from Claude Code; the author decides | Prompt 2026-10-24 (§ 6), "Settings (mine; don't change them without asking)" and "Do not give a pass/fail verdict. I decide that." |
 | 2026-10-24 | The aggregate measure is, for now, the Monte Carlo spread of the fitted `k`. The analytic aggregate measure is deferred to the author, who will derive it; Claude Code neither derives nor implements one | Prompt 2026-10-24 (§ 6), "Aggregate measure = the Monte Carlo spread of the fitted k (step 7). Do NOT derive or implement an analytic aggregate measure; I will derive that myself later." |
@@ -656,6 +740,20 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-10-24 | The "same sign" measure of step 6 is taken within each curve: the fraction of samples on the curve's majority sign. Claude Code had recommended a sample-by-sample comparison of the friction and V0 curves | Answer 2026-10-24 (§ 2), "Within each curve" |
 | 2026-10-24 | The screen goes on a new branch, and only the outputs produced for this task are committed, after the author has reviewed them | Prompt 2026-10-24 (§ 6), "Use git to make a new branch, called Screening for Inverse PINN, and only committing the outputs produced for this task"; "Don't commit until I've reviewed." |
 | 2026-10-24 | Re-run the identifiability screen as a **feasibility screen only**, with forces from one live-solver attitude (slope 0, drift 0, converged reads, lift held at the weight) instead of `trajectory.py`'s summed polar: a straight run at one fixed attitude with no roll schedule, the along-path acceleration only, the same `PLANTED`, `FRICTION_SHIFT`, `V0_SHIFT` and `SLOPE_DEG`, the first screen's x-axis σ bounds carried over without re-selecting a window, the Monte Carlo spread of `k` as the aggregate measure (analytic measure still deferred to the author), and the Monte Carlo capped at 60 minutes. Nothing built for it is the project's forward model. The attitude and V0 are **not** decisions of the author's: they are rule-based defaults, recorded in § 2 pending review | Prompt 2026-10-24 (§ 6), "Goal: a feasibility screen ONLY…", "Settings (mine; don't change them)" and "Record the attitude and V0 there as rule-based defaults pending my review, NOT in section 4 as my decisions." |
+| 2026-10-25 | Verify the RK4 before relying on f″(0): run the same RK4 code on y'' + 4y = 0 and compare it with the exact solution by maximum error; check fourth order by halving h, through E(h)/E(h/2) = 2^p and Oberkampf's p_obs = log2(abs(y_h − y_h/2)/abs(y_h/2 − y_h/4)); re-shoot with η_max doubled to 20 and a smaller step to check that f″(0) has settled. First turn the shooting notebook into an importable `.py` with `rk4_solve` outside `F(s)`, keeping as much of the author's code as possible, with the checks in about 100 lines | Prompt 2026-10-25 (§ 6), `Can you check that RK4 actually solves an ODE correctly, I want you to do this with y''+4*y = 0` |
+| 2026-10-25 | agy and Devin check the RK4 work but only report on `shooting_blasius.py`; fixes are allowed in the new notebook only. `shooting_for_blasius.ipynb` stays as it is | Answers 2026-10-25 (§ 2), "Report-only on .py (Recommended)" and "Leave it untouched (Recommended)" |
+| 2026-10-25 | Compare a central-difference solution of Blasius with the RK4 shooting for the accuracy and cost of f″(0): g = f′, g″ + ½ f g′ = 0, g(0) = 0, g(η_max) = 1, f(0) = 0, h = η_max/N, f″(0) = g′(0) ≈ (−3g_0 + 4g_1 − g_2)/(2h); Picard iteration (freeze f, solve for g, rebuild f by cumulative trapezoid from f(0) = 0), stopped after 20 iterations; central differences because there is little data; the RK4 step and η_max; accuracy by the max norm against the exact value; cost by timeit medians; NumPy docstrings; limits stated without markdown cells; agy and Devin as reviewers; no commit before the author's review | Prompt 2026-10-25 (§ 6), `I now want you to construct the finite-difference for Blasius, which we will use to compare with RK4 and shooting` |
+| 2026-10-25 | Coefficients a_i = 1 − ¼ f_i h, b_i = −2, c_i = 1 + ¼ f_i h (§ 5 E136); the grid N = 141 with η_max = ETA_ARRAY[−1] ≈ 9.970, so h equals the RK4 step; exact f″(0) = 0.3320573362151963 (White and Majdalani p.248); NumPy docstrings on the new code only, `shooting_blasius.py` unchanged | Answers 2026-10-25 (§ 2) |
+| 2026-10-26 | The Blasius thicknesses go in their own module for later use: δ99/x = η_99/√Re_x, δ*/x = (η_max − f(η_max))/√Re_x and θ/x = (h/2)Σ[f_i′(1 − f_i′) + f_{i+1}′(1 − f_{i+1}′)]/√Re_x with the RK4 step and η_max for both integrals (an η_99 cut-off is "too great" an error), H = δ*/θ, η_99 by his `secant_for_shooting`, η_99 compared with Table 4-3's edge row and the η_max quantities with Table 4-4, and a pytest file checking η_99 and H against the book and that the coefficients and H are the same whether Re_x is passed as an array or one value at a time; H's test tolerance is rel 1e-3 for the trapezoid's error | Prompts 2026-10-26 (§ 6) and answers 2026-10-26 (§ 2) |
+| 2026-10-26 | § 6 is brought up to date from the three CLIs only; the Claude chat (claude.ai) prompts are the author's to add | Prompt 2026-10-26 (§ 6), "Use those from clis, i will update for claude chat soon" |
+| 2026-10-26 | § 6 leaves out four sessions opened in `UNIVERSITY/` that worked on other units (ENG1012, MMA2003 and MMA2004 wiki ingests; MMA2003/MMA2004 test rule sets) and named the repo only to prune it, as `34012d20` already was. `569a4a91`, the MMA3001 weeks 9–11 ingest into this repo's `wiki/`, stays in | Answer 2026-10-26 (§ 2), "Exclude all four (Recommended)" |
+| 2026-10-26 | The `SessionEnd` hook stays as it is, still holding whenever `AI-USE.md` has uncommitted edits at session end, against Claude Code's recommendation to splice § 6 into the working copy instead | Answer 2026-10-26 (§ 2), "Leave the hook as is" |
+| 2026-10-26 | Skin friction and wall shear from the shooting f″(0) go in their own module, `skin_and_shear.py`: C_f = 2f″(0)/√Re_x, avg C_f = 4f″(0)/√Re_L over the wetted length L, and τ_w = ρνU f″(0)√Re_x/x (ρν for his ν, § 5 E140) with Re_x = Ux/ν worked out inside. Then a pytest file, NumPy docstrings, and a `__main__` table of f″(0), C_f√Re_x and avg C_f√Re_L at (η_max, h) = (10, h), (20, h), (20, h/2) | Prompt 2026-10-26 (§ 6), "Make me a skin_and_shear.py file…"; answers 2026-10-26 (§ 2, `e6bdf8be`) |
+| 2026-10-26 | f″(0) comes from the RK4 shooting by default, because on the finite-difference comparison it was more accurate (max-norm error 1.46e-8 against 1.74e-5) despite the longer computation (10.2 against 2.3 ms per solve) | Answer 2026-10-26 (§ 2, `e6bdf8be`), "Shooting by default, mark this as a decision…" |
+| 2026-10-26 | The White reference is σ = 0.46959999 (Eq. 4-64), σ/√2 in the project's scaling, with its rounding noted. The tolerance is the book's rounding plus the RK4, secant and η_max-cutoff errors, ×2 for C_f√Re_x and ×4 for avg C_f√Re_L. The secant runs at `PRECISION = 1e-9` in `skin_and_shear.py` only; `shooting_blasius.py` and `blasius_thickness.py` stay unchanged | Prompt 2026-10-26 (§ 6), "Values should be comp.d to those in White, however, add the error from the book to the erro from RK4 to the error from secant to the error from the eta_max cutoff. Now for the design:  Use sigma from eq.4-64, add the rounding error as something of note." and "PRECISION is 1e-9 for secant" |
+| 2026-10-26 | The Reynolds-number range is 0 < Re ≤ 1e6, the author's choice, from the book (laminar layers become unstable at Re_x = O(10⁶), p.165). It applies to Re_L and, as the approved plan stated, to Re_x | Prompts 2026-10-26 (§ 6), "Lower bound of L is 0 nd upper bound L is 10**6 form the book" and "Record Re = 1e6 as my choice" |
+| 2026-10-26 | `wall_slope`, the (−3g_0 + 4g_1 − g_2)/(2h) stencil, stays in the module for now, tested on the quartic (g′(0) = 5/3, step-halving) and on 2ξ − ξ² (exact) | Prompt 2026-10-26 (§ 6), "Keep wall slope for now" |
+| 2026-10-26 | agy and Devin check the code, review only, then Claude Code fixes; nothing is committed until the author has checked it | Prompt 2026-10-26 (§ 6), "dont commit until I have checked the code, get agy and devin to check then fix, then I can commit" |
 
 **Interview readiness** (`CLAUDE.md` R7 — nothing in the repo I cannot explain unaided). To be
 ticked by the author, not by AI:
@@ -671,6 +769,15 @@ ticked by the author, not by AI:
 | `src/predict.py` | ☐ | ☐ | ☐ |
 | `src/profiling.py` | ☐ | ☐ | ☐ |
 | `SWD/tools/extract_board.ps1` (provenance gate) | ☐ | ☐ | ☐ |
+| `friction-function/blasius-shooting/shooting_blasius.py` (`rk4_solve`, secant, table lookup) | ☐ | ☐ | ☐ |
+| `friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb` | ☐ | ☐ | ☐ |
+| `tests/test_blasius_shooting_checks.py` | ☐ | ☐ | ☐ |
+| `friction-function/blasius-shooting/fd_blasius.py` | ☐ | ☐ | ☐ |
+| `friction-function/blasius-shooting/fd_vs_shooting_cc.ipynb` | ☐ | ☐ | ☐ |
+| `friction-function/blasius-shooting/blasius_thickness.py` | ☐ | ☐ | ☐ |
+| `tests/test_blasius_thickness.py` | ☐ | ☐ | ☐ |
+| `friction-function/blasius-shooting/skin_and_shear.py` | ☐ | ☐ | ☐ |
+| `tests/test_skin_and_shear.py` | ☐ | ☐ | ☐ |
 
 ---
 
@@ -815,6 +922,15 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E131 | 2026-10-24 | Claude Code, session `d85b9dcc`, in the approved plan for the identifiability screen: Δa_y is pure round-off, because Eq 64 makes a_y = g·tan φ independent of speed, so an absolute floor of 1e-9 m/s² in the step-3 dt criterion keeps a_y from deciding dt | `trajectory.turn_radius` clips R to 1e9 m where tan φ < 1e-6, which is φ = 0 at the start and end of the carve, and there a_y = V²/1e9 does depend on speed: Δa_y reaches about 1e-9 m/s² for the friction runs and 2.4e-8 m/s² at t = 0 for the V0 runs. At dt 0.01 → 0.005 the a_y curves failed the criterion (1.02× and 2.45× the allowance) while x and z passed (0.41×), so a_y alone forced the extra halving to 0.0025 s in both runs. The dt used is finer than x and z needed, not coarser, and Δa_y stays about 7 orders of magnitude below the lower-bound σ | The screen's own step-3 log (Claude Code, same session); the log now also prints the worst x or z curve | `SWD/model/identifiability_screen.py` `choose_dt`; § 2, 2026-10-24 |
 | E132 | 2026-10-24 | Claude Code, same session, in a hand check of where the friction runs' largest Δa_x sits: the predicted value at t = 0 is 0.4502 m/s² | The step in k is FRICTION_SHIFT × PLANTED = 0.11, and the check multiplied by PLANTED a second time. 0.11 × 304.13 N / 81.741 kg = 0.4093 m/s², the screen's own value | Claude Code, comparing the check with the screen's output in the same step | Chat only; nothing was written from the wrong value |
 | E133 | 2026-10-24 | `SWD/model/trajectory.py` `load_polar()` gives one board's lift, drag and friction against roll: it groups `elements.csv` by `roll_case` and sums each group | Each `elements.csv` row is a whole-board scan position (E111), so `load_polar()` sums 7–12 positions per roll case, the same defect E111 records for `operating_points.csv`. Measured at drift 0 on `default_shortboard`: 12, 10, 8, 8 and 7 rows for roll cases 0–4, each with lift of about 490–500 N, summed to 2,885–5,910 N per roll case. It inflates the forces in `trajectory.py`'s outputs, including its Board-Jerk and Radicality values and `computed-data/trajectory.csv`, and in the first identifiability screen (`SWD/model/identifiability_screen.py`, § 2 2026-10-24): its 304 N friction at V0, its 7.37 m/s equilibrium speed and every Δa and fitted-k spread rest on the summed polar | Found 2026-10-24 by Claude while interpreting the first screen; the row counts and lifts were measured by Claude Code, session `d85b9dcc`, from `elements.csv` | **Not fixed in this task.** The second screen (`SWD/model/identifiability_screen_live.py`) takes one live-solver attitude's forces instead; `trajectory.py` and the first screen's outputs are unchanged |
+| E134 | 2026-10-25 | Claude Code (`rk4_blasius_checks_cc.ipynb`, cells `c05`, `c06`, `c12`): the converted White & Majdalani Table 4-3 is uniformly spaced `0.2√2` in η ("every 4th" grid step), and printing `blasius_error` in Section 2 and `p_obs` for `f''(0)` in Section 4 without assertions is sufficient for an executable verification notebook | Rows at η_book = 3.3, 3.4, 3.5 are spaced `0.1√2` (every 2nd step: `np.diff(idx[on_grid])` has four `2`s), and without `assert` statements on `blasius_error` in `c06` or `p_obs` in `c12`, `jupyter nbconvert --execute` exits 0 even if the profile error exceeds the 5-decimal table bound or the nonlinear order degrades | Antigravity CLI (`Gemini 4` Medium), session `64682724`, inspecting `np.diff(idx[on_grid])` and cells `c06`/`c12`; regression test `test_notebook_enforces_table_and_settle_assertions` | `friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb` (`c05`, `c06`, `c12`); `tests/test_blasius_shooting_checks.py` |
+| E135 | 2026-10-25 | Antigravity CLI (`Gemini 4` Medium), session `64682724`, in its E134 fix: the Blasius profile should agree with White and Majdalani Table 4-3 to within the table's rounding alone, 0.5e-5 × [√2, 1, 1/√2] for f, f′, f″ (`rk4_blasius_checks_cc.ipynb` cell `c06`, `tests/test_blasius_shooting_checks.py`) | The error is the table's rounding plus the RK4's own error. At h = 0.1/√2 the f′ error is 4.996e-6 against the 5e-6 bound, a margin of 4e-9, and at h = 0.2/√2 the f″ error is 3.83e-6 against 3.54e-6, so the assert fails although the RK4 is fourth order. Both asserts now allow 1e-6 more | Claude Code, session `e6bdf8be`, re-running section 2 at h = 0.2/√2 during its verification | `rk4_blasius_checks_cc.ipynb` (`c06`); `tests/test_blasius_shooting_checks.py` |
+| E136 | 2026-10-25 | Benjamin's derivation (prompt 2026-10-25, § 6): the central-difference coefficients for g″ + ½ f g′ = 0 are a_i = 1 − ½ f_i h, b_i = −2, c_i = ½ f_i h + 1 | Substituting (g_{i−1} − 2g_i + g_{i+1})/h² and (g_{i+1} − g_{i−1})/(2h), then multiplying by h², gives a_i = 1 − ¼ f_i h and c_i = 1 + ¼ f_i h. The ½ form belongs to g″ + f g′ = 0 (White's f‴ + ff″ = 0). A scratch run of 20 Picard iterations on the RK4 grid gave f″(0) = 0.4696549 with ½ (the book form's 0.4696, √2 above the shooting) against 0.3320747 with ¼ | Claude Code, session `e6bdf8be`, re-deriving before building, as the prompt asked ("Stop if your derivation disagrees"); Benjamin chose ¼ | `fd_blasius.py`; answers 2026-10-25 (§ 2) |
+| E137 | 2026-10-25 | Claude Code, session `e6bdf8be`: a `thomas` self-check against `np.linalg.solve` on a Blasius-shaped system, whose right-hand side is zero until the last row, tests the Thomas algorithm | With that right-hand side the forward sweep on d carries only zeros, so a sign error in the d update gave the same answer and passed. The self-check now uses a right-hand side that is non-zero in every row, and that mutant and two others fail it | Claude Code, a mutation run in scratch before the CLI review | `fd_blasius.py` (`__main__`) |
+| E138 | 2026-10-26 | Benjamin's derivation (prompt 2026-10-26, § 6): δ*/x = √Re_x·(η_99 − f(η_max)) and θ/x = (h/2)Σ[f_i′(1 − f_i′) + f_{i+1}′(1 − f_{i+1}′)] with h = η_99/N | Both thicknesses divide by √Re_x, as δ99/x does. δ* = (x/√Re_x)[η − f] between the same two limits, so η_99 paired with f(η_max) gives −3.34, a negative thickness. Stopping θ at η_99 gives 0.6592, 0.7 % below White's 0.664114672, because f′(1 − f′) is still 0.0099 there | Claude Code, session `e6bdf8be`, re-deriving before building, as the prompt asked; Benjamin called the √Re_x points typos, then chose η_max for both integrals and his RK4 step for θ | `blasius_thickness.py`; answers 2026-10-26 (§ 2) |
+| E139 | 2026-10-26 | R4 and the § 2 row of 2026-09-29: the `SessionEnd` hook keeps § 6 current, and a held run is reported at the next session start | § 6 had stopped at 2026-09-30 (324 prompts) and was 100 prompts and 18 sessions short. (1) The hook held at all 40 session ends from 2026-10-01 04:58 to 2026-10-26 04:55, each time because `AI-USE.md` had uncommitted edits; the SessionStart line reported the hold each time, and nothing acted on it. (2) Without the hold, every write would still have failed: since `446bf79` (2026-10-01) § 2, and later E121, quote `<!-- prompts:end -->` above the real marker, and `splice` and `parse_appendix` took the first occurrence in the file, so `splice` refused to write. That refusal is a `SystemExit`, which the worker's `except Exception` does not catch, so it would have died without logging. `--dry-run` never reaches `splice`, which is why the 2026-10-22 dry run looked healthy | Benjamin ("it seems to have missed a lot"); Claude Code read `hook.log` for (1) and found (2) in a trial run on a scratch copy | `tools/extract_prompts.py` `_span`; `tests/test_extract_prompts.py` `test_markers_quoted_in_prose_are_not_the_markers`; § 2 row 2026-10-26 (`7c3fea72`) |
+| E140 | 2026-10-26 | Benjamin's derivation (prompt 2026-10-26, § 6): τ_w = ν U f″(0)√Re_x/x | τ_w = μ ∂u/∂y at the wall, and μ = ρν. As written, νU f″(0)√Re_x/x has units of m²/s², which is τ_w/ρ, not a stress. The code uses ρνU f″(0)√Re_x/x, which equals ½ρU²C_f. The same premise in session `e6bdf8be` also had ×x for ÷x, which this prompt had corrected | Claude Code, sessions `e6bdf8be` and `e90e01ba`, checking the derivation as the prompt asked; Benjamin chose ρν (answers 2026-10-26, § 2) | `skin_and_shear.py` `shear_w` |
+| E141 | 2026-10-26 | Claude Code, session `e90e01ba`, in the plan for `skin_and_shear.py`: a secant stopped at 1e-6 instead of 1e-9 would put the (10, h) f″(0) 1.34e-8 from σ/√2, over the budget, so a test would catch it | The budget includes the secant's own error estimate, which at 1e-6 grows to 1.13e-8 and brings the total to 2.04e-8, so 1.34e-8 is within it and no test fails. A mutation run confirmed it: with `PRECISION = 1e-6` all 32 tests then in the file passed | Benjamin, rejecting the plan ("1.34e-8 is NOT over budget") | § 2 row 2026-10-26 (`e90e01ba`) |
+| E142 | 2026-10-26 | Claude Code, session `e90e01ba`, in the same plan: 2.13e-9 is "the actual error" of the (10, h) f″(0) | It is the difference from Eq. 4-64's σ/√2, which is itself rounded at its 8th digit (up to 3.5e-9 in this scaling; 1.6e-9 above Abbasbandy and Bervillier's 0.469599988361013, also p.170). The module's note, its table and the tests call it a difference from White | Benjamin, rejecting the plan ("Change 2.13e-9 from the actual error to the diff to 4-64's sigma") | `skin_and_shear.py` (`# Note:`, `__main__`) |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn
@@ -833,7 +949,7 @@ transcripts Claude Code keeps outside the repo. Regenerate with `python tools/ex
 the home directory is redacted to `~`. Nothing between the markers is edited by hand.
 
 <!-- prompts:begin -->
-324 prompts across 30 sessions (Claude Code 314, Devin 2, agy 8), 2026-08-26 to 2026-09-30. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only). Generated by `tools/extract_prompts.py`; do not edit by hand.
+424 prompts across 48 sessions (Claude Code 408, Devin 2, agy 14), 2026-08-26 to 2026-10-26. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
 
 | Session | CLI | Version | Model | Scope | First | Last | Prompts |
 |---|---|---|---|---|---|---|---:|
@@ -866,7 +982,25 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 | `1d4adb88` | Claude Code | 2.1.283 | claude-opus-5-5 | via UNIVERSITY | 2026-09-27 09:56 AEST | 2026-09-27 10:36 AEST | 7 |
 | `69d0bedf` | Claude Code | 2.1.283, 2.1.284, 2.1.285 | claude-opus-5-5 | via UNIVERSITY | 2026-09-29 09:00 AEST | 2026-09-30 17:31 AEST | 28 |
 | `90afee07` | Claude Code | 2.1.284 | claude-opus-5-5 | via UNIVERSITY | 2026-09-29 16:46 AEST | 2026-09-29 17:23 AEST | 5 |
-| `92540da4` | Claude Code | 2.1.285 | claude-opus-5-5 | via UNIVERSITY | 2026-09-30 17:57 AEST | 2026-09-30 22:20 AEST | 19 |
+| `92540da4` | Claude Code | 2.1.285 | claude-opus-5-5 | via UNIVERSITY | 2026-09-30 17:57 AEST | 2026-10-01 05:42 AEST | 21 |
+| `e809d28b` | agy | ? | Gemini 3.1 Pro (High) | via ? | 2026-09-30 22:41 AEST | 2026-09-30 22:41 AEST | 1 |
+| `c7c12a00` | Claude Code | 2.1.286, 2.1.289, 2.1.292 | claude-opus-5-5 | via UNIVERSITY | 2026-10-01 19:34 AEST | 2026-10-08 10:24 AEDT | 22 |
+| `a1675463` | agy | ? | Gemini 3.1 Pro (High) | via ? | 2026-10-06 01:50 AEDT | 2026-10-06 01:50 AEDT | 1 |
+| `c5842b60` | agy | ? | Gemini 3.1 Pro (High) | via ? | 2026-10-08 01:23 AEDT | 2026-10-08 01:23 AEDT | 1 |
+| `569a4a91` | Claude Code | 2.1.301 | claude-opus-5-5 | via UNIVERSITY | 2026-10-17 11:00 AEDT | 2026-10-17 11:00 AEDT | 1 |
+| `163c6944` | Claude Code | 2.1.302 | claude-opus-5-5 | repo | 2026-10-21 18:47 AEDT | 2026-10-22 11:21 AEDT | 7 |
+| `83d4f55b` | Claude Code | 2.1.302 | claude-opus-5-5 | repo | 2026-10-22 11:39 AEDT | 2026-10-22 12:53 AEDT | 6 |
+| `31e106dc` | Claude Code | 2.1.306 | claude-opus-5-5 | repo | 2026-10-22 13:41 AEDT | 2026-10-22 13:43 AEDT | 3 |
+| `2f68b25f` | Claude Code | 2.1.307 | claude-opus-5-5 | via moors | 2026-10-22 14:18 AEDT | 2026-10-22 14:18 AEDT | 1 |
+| `afbb016f` | Claude Code | 2.1.308 | claude-opus-5-5 | via dev | 2026-10-22 18:24 AEDT | 2026-10-22 18:29 AEDT | 2 |
+| `1278f436` | Claude Code | 2.1.308 | claude-opus-5-5 | repo | 2026-10-22 20:54 AEDT | 2026-10-22 21:17 AEDT | 6 |
+| `6461fe50` | Claude Code | 2.1.308 | claude-opus-5-5 | repo | 2026-10-23 10:37 AEDT | 2026-10-24 18:55 AEDT | 11 |
+| `d85b9dcc` | Claude Code | 2.1.309 | claude-opus-5-5 | repo | 2026-10-24 16:28 AEDT | 2026-10-25 09:26 AEDT | 5 |
+| `e6bdf8be` | Claude Code | 2.1.310 | claude-opus-5-5 | repo | 2026-10-25 17:40 AEDT | 2026-10-26 17:54 AEDT | 26 |
+| `64682724` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-25 18:01 AEDT | 2026-10-25 18:01 AEDT | 1 |
+| `d24835f4` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-25 21:49 AEDT | 2026-10-25 21:49 AEDT | 1 |
+| `3f714f1c` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-26 16:32 AEDT | 2026-10-26 16:32 AEDT | 1 |
+| `7c3fea72` | Claude Code | 2.1.310 | claude-opus-5-5 | repo | 2026-10-26 18:08 AEDT | 2026-10-26 18:08 AEDT | 2 |
 
 ### 2026-08-26 22:38 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
@@ -2725,6 +2859,568 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 ### 2026-09-30 22:20 AEST · Claude Code 2.1.285 · claude-opus-5-5 · `92540da4` · `master`
 
 > Actually I will swap back to an elevated terminal to run this, but run agy and devin through non-elevated terminals if possible
+
+### 2026-09-30 22:23 AEST · Claude Code 2.1.285 · claude-opus-5-5 · `92540da4` · `master`
+
+> Run this plan now
+
+### 2026-09-30 22:41 AEST · agy · Gemini 3.1 Pro (High) · `e809d28b`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on these 10 whole files, also listed in SQA-LOG.md:
+> SWD/tools/swd_extract.ps1, SWD/tools/tests/swd_extract.Tests.ps1, SWD/tools/probe_fins.ps1, SWD/tools/census_board.ps1, SWD/tools/extract_board.ps1, SWD/tools/phase2/swd_probe.ps1, SWD/tools/phase2/tests/swd_probe.Tests.ps1, SWD/tools/phase2/swd_diff.py, SWD/tools/phase2/swd_geometry.ps1, SWD/tools/phase2/tests/swd_geometry.Tests.ps1
+> Goal: functionality and security. The extraction and probe code must do what it claims, the provenance gate must stay intact, and swd_probe's click allowlist and denylist must stay sound.
+> Guard, which must stay green (run from the repo root): powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\sqa-loop\runs\hfin-sqa-log-2026-09-30\guard.ps1"
+> Allowed writes: the 10 files above, new tests in SWD/tools/tests/ and SWD/tools/phase2/tests/, and appends to AI-USE.md. Nothing else.
+> Run these scripts only through their tests: never against the real SWD install or library, and never with SWD open.
+> Audit, then fix. Keep the report short.
+
+### 2026-10-01 05:42 AEST · Claude Code 2.1.285 · claude-opus-5-5 · `92540da4` · `master`
+
+> add the wiki update, then commit
+
+### 2026-10-01 19:34 AEST · Claude Code 2.1.286 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Could you free up my RAM again, like you did yesterday for SWD
+
+### 2026-10-01 19:39 AEST · Claude Code 2.1.286 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> the full SWD fiddling suite*
+
+### 2026-10-01 19:41 AEST · Claude Code 2.1.286 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> The code has been run through SQA, but if a certain part of the code isnt working, and would have gains, feel free to fix the code yourself and continue, treat this lightly though, as it will be handsoff, make sure that the code does not break anything
+
+### 2026-10-01 19:53 AEST · Claude Code 2.1.286 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Do you not have the ability to open and close apps?
+
+### 2026-10-05 20:42 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Giv me a rundown of what the app has as inputs and outputs and what could be extracted for the project
+
+### 2026-10-05 20:59 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Given this, would a viable option be: Inputs: eother board geometry or board position (both too), and outputs: interaction and reactions to/with the wave? (i.e., forces)
+
+### 2026-10-05 21:01 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Would these be applicable to a stm32 for an icm20948?
+
+### 2026-10-05 21:04 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> What data is in fin_polars
+
+### 2026-10-05 21:13 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> If I go back to the original goal, of being able to input geometry of a board, and the drift and roll angles, and it predicts the boards response to that surface, is this still a viable direction? Is there more we can do with it with the new data we have?
+
+### 2026-10-05 21:24 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Could you elaborate on the problem for the solver speed and slope, explain to me so i can check if it needs to be relaunched to get the right data, walk me through it
+
+### 2026-10-05 21:31 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Let me know if I should continue testing, but i did tests 1 and 2. It does not seem you need to relaunch the app, as I explain earlier, to update the values, you need to click each cell in the table, for them to reset.
+
+### 2026-10-05 21:41 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> 1 worked. Givne this it would likely be most efficient and advantageous to go by change the flow ms -> go through every x position, go to the next y position, then change the speed again. Or if you think there is a gain to it, do the same with slope and speed, going through every realistic slope value, for a speed, then swapping speed.
+
+### 2026-10-05 21:51 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Shows 803.7166 for flow ms of 14
+
+### 2026-10-05 22:00 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Carry out this plan
+
+### 2026-10-05 22:01 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> There's a;lready a plan made
+
+### 2026-10-05 22:26 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> fold a commit into the plan after stages 1 and sqa and stage 2
+
+### 2026-10-06 01:50 AEDT · agy · Gemini 3.1 Pro (High) · `a1675463`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on these 5 whole files, listed in SQA-LOG.md as owed a pass:
+> SWD/tools/phase2/swd_probe.ps1, SWD/tools/phase2/tests/swd_probe.Tests.ps1, SWD/tools/phase2/swd_uia3.py, SWD/tools/phase2/swd_sweep_matrix.py, SWD/tools/phase2/swd_solver_table.py
+> Goal: functionality and safety. swd_probe.ps1 drives the licensed SWD app: its click/tab/MSAA allowlists, denylist, never-Yes dialog policy, board guard, kill switch and cursor guard must stay sound; the 2026-10-05 live-solver passes (SolverPilot/SolverLoop/SolverRestore) and the CSV tools must do what they claim.
+> Guard, which must stay green (run from the repo root): powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\sqa-loop\runs\hfin-sqa-log-2026-10-06\guard.ps1"
+> Allowed writes: the 5 files above, new tests in SWD/tools/phase2/tests/, and appends to AI-USE.md. Nothing else.
+> Run these scripts only through their tests: never against the real SWD install or library, and never launch SWD.
+> Audit, then fix. Keep the report short.
+
+### 2026-10-06 07:39 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `furtherSWDextract`
+
+> For the What went wrong overnight: You can press yes for this, it is about switching Board Dyanmics on
+
+### 2026-10-06 07:45 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `furtherSWDextract`
+
+> I will be using my computer, ignore the mouse pointer moving
+
+### 2026-10-06 07:48 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `furtherSWDextract`
+
+> commit it now
+
+### 2026-10-06 21:03 AEDT · Claude Code 2.1.289 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> Can you now have a look at Stage 2 of this plan, and edit it to include what I had stated about the order. This will be how the position , speed and angle of the board affects the forces (include all other outputs you got from the solver too.) for one surfer. Give me an estimate of how long this will take
+
+### 2026-10-07 21:26 AEDT · Claude Code 2.1.292 · claude-opus-5-5 · `c7c12a00` · `master`
+
+> resume the campaign
+
+### 2026-10-08 01:23 AEDT · agy · Gemini 3.1 Pro (High) · `c5842b60`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on the Stage 2 live-solver code: the changes to SWD/tools/phase2/swd_probe.ps1 and tests/swd_probe.Tests.ps1 since commit ec3192f (run `git diff ec3192f -- SWD/tools/phase2`), and the new SWD/tools/phase2/swd_solver_driver.ps1.
+> Goal: correctness and safety of the unattended night driver and the board-open path (Open-SwdSolverBoard, Assert-SwdProbeBoard -AllowOriginal, the -menu MSAA verbs, -EndBy, Select-SwdSolverElementRoot, Read-SwdSolverGrid). The driver must always restore and close SWD, stop on failure/library change/STOP, and never print a full library path.
+> Guard, which must stay green (run from the repo root): powershell.exe -NoProfile -ExecutionPolicy Bypass -File "~\AppData\Local\sqa-loop\runs\hfin-stage2-2026-10-08\guard.ps1"
+> Allowed writes: swd_probe.ps1, swd_solver_driver.ps1 and tests in SWD/tools/phase2/tests/. Do not edit AI-USE.md this time; the main session records the pass.
+> Run these scripts only through their tests: never against the real SWD install or library, and never launch SWD.
+> Audit, then fix. Keep the report short.
+
+### 2026-10-08 10:24 AEDT · Claude Code 2.1.292 · claude-opus-5-5 · `c7c12a00` · `furtherSWDextract`
+
+> Deleted C:\fake, keep the unconverged reads, but make one section of csvs with and one without converged reads. For now we will stick with this one board for the position campaign. Copy thjese new csvs into the SWD/data/
+
+### 2026-10-17 11:00 AEDT · Claude Code 2.1.301 · claude-opus-5-5 · `569a4a91` · `master`
+
+> Can you do a full ingest of weeks 9-11 of mma3001, look at the way the previous weeks were done
+
+### 2026-10-21 18:47 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> Where did the last bit of data we extracted land?
+
+### 2026-10-21 18:48 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> yes, commit it
+
+### 2026-10-21 18:51 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> Could you translate all the headings to English
+
+### 2026-10-21 18:52 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> Verify it with numerous sources of translation as well as understanding of current surf research, especially the article I have already linked
+
+### 2026-10-21 19:52 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> Commit these changes
+
+### 2026-10-21 20:02 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> yes, do the wiki ingest
+
+### 2026-10-22 11:21 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `163c6944` · `furtherSWDextract`
+
+> What is a qmd cleanup
+
+### 2026-10-22 11:39 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `83d4f55b` · `furtherSWDextract`
+
+> Would a PINN work for this goal of “how the position, speed and angle of the board affects the forces… for one surfer"
+
+### 2026-10-22 11:44 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `83d4f55b` · `furtherSWDextract`
+
+> My understanding of lift is that, when it equates to the weight, the board is not sinking, thus when non-converged, the board is sinking, but still a very real situation. Is this correct, or is the a more mathematical basis behind it in SWD
+
+### 2026-10-22 11:51 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `83d4f55b` · `furtherSWDextract`
+
+> Was planing angle one of the things we were changing?
+
+### 2026-10-22 12:10 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `83d4f55b` · `furtherSWDextract`
+
+> Is the data too similar for an MLP neural network?
+
+### 2026-10-22 12:29 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `83d4f55b` · `furtherSWDextract`
+
+> Have a look at the board data now, is there enough to base a PINN / SVR on? Purely with the idea of the force model
+
+### 2026-10-22 12:53 AEDT · Claude Code 2.1.302 · claude-opus-5-5 · `83d4f55b` · `furtherSWDextract`
+
+> Comment on the viability for using, the lasius equation, Falkner-Skan equation, and the Von Karman Momentum integral equation, which I extracted from Gemini. Blasius could help in connecting length of the board, and speed. as well as connecting the sheer stress to friction. Comment on how each of these could work and or not work for my given data. If these could work if I were to have more data that is easily extractable and would only take on night to extract, output that too.
+
+### 2026-10-22 13:41 AEDT · Claude Code 2.1.306 · claude-opus-5-5 · `31e106dc` · `furtherSWDextract`
+
+> I need to make a major move, moving this whole project completely out of my Onedrive. That is pimrarily due to the .venv I have now that is required for my PINNs. THis will be a big move. So I would also like you to move the WHOLE UNIVERSITY folder out. THis includes all headless paths, all paths in entirely within. All .git and .gitignore files, everything you can see. The UNIVERSTIY should now live in ~. Let me know if this will mess up any of my github actions or my repos, and if it is unattainable. If it is not unattainable. Give me a full step-by-step afterwards of things you could not complete that I need to do to ensure everything works still. Make sure there is a way to verify it.
+
+### 2026-10-22 13:43 AEDT · Claude Code 2.1.306 · ? · `31e106dc` · `furtherSWDextract`
+
+> Will this cause me to lose past sessions that i can use "claude --resume" for in terminal?
+
+### 2026-10-22 13:43 AEDT · Claude Code 2.1.306 · claude-opus-5-5 · `31e106dc` · `furtherSWDextract`
+
+> Ask me any required questions
+
+### 2026-10-22 14:18 AEDT · Claude Code 2.1.307 · claude-opus-5-5 · `2f68b25f` · `HEAD`
+
+> Have a look at the recent plan we made for a move of the UNVIERSITY folder in my one-drive. I have closed everything you required I beliueve. You have admin access
+
+### 2026-10-22 18:24 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `afbb016f` · `HEAD`
+
+> Run "OneDrive\Documents\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Claude outputs\pinn_timing_benchmark.py" in this folder
+
+### 2026-10-22 18:29 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `afbb016f` · `HEAD`
+
+> Yes it should be in venv
+
+### 2026-10-22 20:54 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `1278f436` · `pinn`
+
+> What were the two equations I had decided for ODEs in my PINN
+
+### 2026-10-22 20:55 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `1278f436` · `pinn`
+
+> Have a look at the wiki
+
+### 2026-10-22 21:00 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `1278f436` · `pinn`
+
+> von Karman seems to drop the dU/dx=0, that is the case for a flat plate but is it still the case in my moving surfboard?
+
+### 2026-10-22 21:06 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `1278f436` · `pinn`
+
+> Would there be anything from SWD to validate Thwaites' method?
+
+### 2026-10-22 21:10 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `1278f436` · `pinn`
+
+> Okay for this lets go with the assumption that dU_e/dx = 0
+
+### 2026-10-22 21:17 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `1278f436` · `pinn`
+
+> Blasius and von Karman are the two ODEs chosen.
+
+### 2026-10-23 10:37 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> From my undersatnding Blasius and von karman would both be around the response of the board to different inputs, is that not correct?
+
+### 2026-10-23 10:42 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> If I added the equation of motion into this PINN, would that aid me in actually extracting the board's response to the surface of the wave in force? Could I produce a PINN that shows my a magnitude and direction?
+
+### 2026-10-23 12:55 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> My plan is to use a PINN with these main two ODEs: Blasius and Von Karman, but to get the required initial condition for f''(0) i will need to use the shooting method RK4 initially. Make that as a decision, I will finalise the process more later on
+
+### 2026-10-23 12:56 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> Also update the wiki with all we have gone through ehre
+
+### 2026-10-23 13:19 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> Remove the source from wikipedia. That is useless, I did not tell you to use wikipedia
+
+### 2026-10-23 13:46 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> I am using Whites Fluid Mechanics chaper 4 for laminar boundary layers chapter. Have a look at it, and do a full ingest of the chapter.
+
+### 2026-10-23 13:46 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> Note this down as my choice
+
+### 2026-10-24 16:27 AEDT · Claude Code 2.1.308 · ? · `6461fe50` · `blasiusReference`
+
+> go ahead with the full ingest
+
+### 2026-10-24 16:27 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `blasiusReference`
+
+> i.e., finish it off
+
+### 2026-10-24 16:28 AEDT · Claude Code 2.1.309 · claude-opus-5-5 · `d85b9dcc` · `blasiusReference`
+
+> <pasted_content id="8d2c">
+> Goal: build a quick identifiability screen for the planned inverse PINN, before any Blasius, von Kármán, RK4-function or PINN work. The questions it answers: if only the friction part of the drag is shifted, does the board's acceleration change by enough, at the paper's ~15 Hz IMU sample times, to be seen above that IMU's noise? Does that change look different from the change caused by shifting the starting speed? And how precisely could a least-squares fit recover the friction multiplier from noisy data sampled like this?
+>
+> Read first: CLAUDE.md, SWD/model/trajectory.py (whole file), SWD/data/paper-supplementary/SOURCE.md, .claude/rules/swd-technical-facts.md.
+>
+> Settings (mine; don't change them without asking):
+> - PLANTED = 1.10 (friction multiplier k: friction 10% above SWD's)
+> - FRICTION_SHIFT = 0.10
+> - V0_SHIFT = 0.20
+> - SLOPE_DEG = 10
+> - Roll schedule = trajectory.py default
+> - Aggregate measure = the Monte Carlo spread of the fitted k (step 7). Do NOT derive or implement an analytic aggregate measure; I will derive that myself later.
+>
+> Build SWD/model/identifiability_screen.py:
+>
+> 1. Forward model. Use trajectory.py's load_polar() and simulate() (forward Euler, default_shortboard hydroscan polar, constant slope, raised-cosine roll). Add a friction multiplier k that scales ONLY the friction part of the drag. Pitfall: BoardPolar.drag() computes planing as drag_n - friction_n, so scaling friction_n directly would also change planing. Scale the friction term inside drag instead. Also allow the starting speed V0 to be overridden (simulate currently starts at equilibrium_speed). Prefer a wrapper in the new file. If trajectory.py must change, use keyword-only arguments whose defaults reproduce the current output, prove it by regenerating computed-data/trajectory.csv and comparing SHA-256 before and after, and confirm _self_check() still passes.
+>
+> 2. Runs. Run a baseline (k = PLANTED, V0 = default equilibrium speed), friction shifted (k = PLANTED x (1 +/- FRICTION_SHIFT)) and starting speed shifted (V0 x (1 +/- V0_SHIFT), k = PLANTED). Do this for two durations: trajectory.py's default 3.0 s, and mmc1's span (10.055 s). np.arange stops short of the duration, so make sure each run covers the last sample time it is compared at.
+>
+> 3. Step size. Halve dt from 0.01 s until the acceleration differences at the sample times change by less than 1% of their maximum. Report the dt used for each duration.
+>
+> 4. Measurement times. Parse mmc1 as SOURCE.md describes: drop the ';'-prefixed echo lines (148 data rows remain). Fields are t;SG1..SG5;ax;ay;az;Rx;Ry;Rz. Time is in ms and runs backwards: reverse it and shift it to start at 0. Keep the uneven spacing. For the 3 s run, use the sample times that fall within 3 s. Interpolate each run's accel_x, accel_y and accel_z onto those times (linear is fine at the fine dt).
+>
+> 5. Noise level. Accelerometer units are g with gravity included; convert to m/s^2. Find a candidate quiet window in mmc1: the lowest rolling standard deviation after removing a linear trend, with the window length stated. Report where the window is and the standard deviation per axis. Label it an upper bound on sensor noise, since it includes real motion. STOP and ask me to confirm the window before using it.
+>
+> 6. Comparison, per channel and for each duration:
+>    - delta-a at the sample times (friction shift minus baseline; V0 shift minus baseline)
+>    - max |delta-a| / sigma
+>    - fraction of samples where delta-a has the same sign
+>    - correlation between the friction delta-a curve and the V0 delta-a curve (shape similarity)
+>    Do not give a pass/fail verdict. I decide that.
+>
+> 7. Monte Carlo aggregate, for each duration:
+>    - Take the baseline run's accel_x, accel_y and accel_z at the sample times. Add independent Gaussian noise with the confirmed per-channel sigma. Use a fixed random seed and report it.
+>    - Fit with scipy.optimize.least_squares around the same forward model, using all three channels together (each residual divided by its channel's sigma). Start from k = PLANTED x (1 + FRICTION_SHIFT), not from the true value. Bound k > 0, and V0 > 0 where it is fitted.
+>    - Two fit sets: (a) V0 fixed at its true value, k fitted; (b) k and V0 fitted jointly, with V0 starting at V0_true x (1 + V0_SHIFT).
+>    - Start with N = 200 noise draws. Double N until the standard deviation of the fitted k changes by less than 5% between N and 2N. Report both values.
+>    - Report: the mean and standard deviation of the fitted k; that standard deviation divided by (FRICTION_SHIFT x PLANTED); the fraction of fits that converged. For set (b), also report the mean and standard deviation of the fitted V0 and the correlation between fitted k and fitted V0 across draws.
+>    - Before the full loop, time 5 fits and project the total runtime. If it exceeds 30 minutes, STOP and propose speed-ups without implementing them (for example a coarser dt that still passes step 3, or precomputing the model on a grid of k and V0 and interpolating).
+>
+> 8. Outputs go to SWD/data/default_shortboard/computed-data/identifiability_screen/ (computed data only, never the extracted folders):
+>    - one CSV of the delta-a curves, one CSV of the step 6 summary, one CSV of every Monte Carlo fit (draw index, set, fitted k, fitted V0, converged flag)
+>    - plots of delta-a at the sample times with a +/- sigma band (friction and V0 shifts separately, per channel)
+>    - the two normalised delta-a curves overlaid
+>    - histograms of the fitted k for sets (a) and (b), with the planted value and the +/- FRICTION_SHIFT x PLANTED band marked
+>
+> Print these assumptions with the results. State them; don't try to fix them:
+> - An IMU reads specific force in the board frame, while trajectory.py's accelerations are in the path frame. Gravity cancels between runs with the same attitude, so the differences are comparable but the absolute values are not.
+> - The noise sigma is an upper bound (the quiet window includes real motion), so the Monte Carlo spread is pessimistic.
+> - The noise is assumed independent between samples; report the lag-1 autocorrelation of the detrended quiet-window signal per axis so I can judge that.
+> - mmc1's board, surfer and wave differ from default_shortboard and the 80 kg surfer.
+> - The friction speed exponent is trajectory.py's EXP_FRICTION placeholder.
+>
+> Code standards: NumPy-style docstrings on every function; inline comments explain intent, not mechanics. Tests go in tests/test_identifiability_screen.py, against cases with known answers:
+> - the mmc1 parser returns 148 ascending rows spanning 10.055 s
+> - k = 1 with the default V0 reproduces trajectory.simulate() exactly
+> - two identical runs give zero difference
+> - the interpolation reproduces a linear signal exactly
+> - a least_squares fit on noise-free data recovers k = PLANTED to within 1e-6 relative
+> Run the full pytest suite and report the result.
+>
+> Rules: no web sources. Don't decide anything listed under Settings. Log the task in AI-USE.md section 2 per R2, with this prompt verbatim. In section 4, record my settings above as my decisions, including that the aggregate measure is the Monte Carlo spread for now, with the analytic derivation deferred to me. Don't commit until I've reviewed.
+> </pasted_content id="8d2c">
+
+### 2026-10-24 16:30 AEDT · Claude Code 2.1.309 · claude-opus-5-5 · `d85b9dcc` · `blasiusReference`
+
+> Use git to make a new branch, called Screening for Inverse PINN, and only committing the outputs produced for this task
+
+### 2026-10-24 17:12 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `Screening-for-Inverse-PINN`
+
+> yes to 1 and 2, copy the PDF into Project
+
+### 2026-10-24 18:45 AEDT · Claude Code 2.1.309 · claude-opus-5-5 · `d85b9dcc` · `Screening-for-Inverse-PINN`
+
+> commit it
+
+### 2026-10-24 18:47 AEDT · Claude Code 2.1.309 · claude-opus-5-5 · `d85b9dcc` · `Screening-for-Inverse-PINN`
+
+> <pasted_content id="8d2c">
+> Goal: a feasibility screen ONLY. The question: with the data I already have, could an inverse fit recover a friction multiplier from ~15 Hz acceleration data, using single-attitude forces with lift held at the weight? Nothing built here is the project's forward model. Don't reuse it as one, describe it as one, or edit any existing model file. This re-runs the first identifiability screen with physically scaled forces, because the first screen used trajectory.py's load_polar(), which sums 7-12 scan positions per roll case.
+>
+> Run this end to end without stopping or asking questions. Where something is ambiguous, take the more conservative reading, state it in the results, and continue.
+>
+> Read first: CLAUDE.md, SWD/data/live_solver/README.md, SWD/model/identifiability_screen.py (reuse its mmc1 parser and sample-time handling by importing them; do not modify it), SWD/data/default_shortboard/computed-data/identifiability_screen/summary.csv (for the confirmed sigma values).
+>
+> Settings (mine; don't change them):
+> - PLANTED = 1.10 (friction multiplier k: friction 10% above SWD's)
+> - FRICTION_SHIFT = 0.10
+> - V0_SHIFT = 0.20
+> - SLOPE_DEG = 10
+> - Noise: reuse the confirmed x-axis sigmas from the first screen. Upper bound = the 20-sample quiet window (t = 1.498-2.795 s); lower bound = the 0.028 m/s^2 resolution floor. Do not re-select a window.
+> - Straight run at drift 0 at one fixed attitude, so no roll schedule.
+> - Aggregate measure = the Monte Carlo spread of the fitted k. Do NOT derive or implement an analytic measure; I will do that later.
+>
+> Build SWD/model/identifiability_screen_live.py:
+>
+> 1. Forces. From SWD/data/live_solver/default_shortboard/converged/solver_points.csv, take slope_deg == 0 and drift_deg == 0. Drop rows where |drag_total_n - (friction_n + fx_planing_n + fx_rail_n)| > 1% of |drag_total_n|, and report how many were dropped.
+>
+> 2. Attitude, chosen by rule (provisional; I will review it). Choose the (pos_y, pos_x) with the widest continuous converged speed range. Break ties by the smallest |pos_y|, then by pos_x nearest the median converged pos_x. Also report the top 5 candidates with:
+>    - the converged speed range;
+>    - friction_n, fx_planing_n and fx_rail_n at its ends;
+>    - the speed where m*g*sin(10 deg) equals the total drag, if it falls in range.
+>
+> 3. V0, chosen by rule (provisional; I will review it). Grid-search V0 over the chosen attitude's converged range in 0.1 m/s steps, keeping only values where V0 x (1 +/- V0_SHIFT) is also in range. Pick the V0 whose 10.055 s baseline run stays in range longest. Break ties by the largest change in V over the run, since that is what separates friction from planing. If no V0 qualifies, move to the next candidate attitude. If no attitude qualifies, produce every other output you can and report this as the main finding.
+>
+> 4. Model (feasibility only). Mass m = 802.21 N / G (the live solver's weight plateau). For the chosen attitude, interpolate friction, planing and rail against speed with scipy PchipInterpolator (no overshoot between the 1 m/s grid points); never extrapolate. Use:
+>    D(V) = k * friction(V) + planing(V) + rail(V)
+>    m dV/dt = m*g*sin(SLOPE_DEG) - D(V)
+>    Gravity is a separate term because 0-degree-slope forces don't contain the slope's weight component. Lift is held at the weight, so the vertical acceleration is zero. The sideways acceleration carries no friction information (Eq 64: V^2/R = g*tan(phi)). Only the along-path acceleration x is compared.
+>
+> 5. Integration. Use solve_ivp (RK45, rtol 1e-10, small atol, dense output). Evaluate a(t) at the sample times directly from the right-hand side, without differentiating V. Check: tightening rtol by 10x must change delta-a at the sample times by less than 1% of its maximum; report the result. If V leaves the converged speed range, end the run there, use only the samples covered, and report the time reached and the sample count. Flag prominently any run that covers less than half its intended duration.
+>
+> 6. Runs. Baseline (k = PLANTED, V0 from step 3); k x (1 +/- FRICTION_SHIFT); V0 x (1 +/- V0_SHIFT). Two durations: 3.0 s and 10.055 s, on mmc1's uneven sample times as in the first screen.
+>
+> 7. Comparison, x channel only, for each duration and both sigma bounds:
+>    - max |delta-a| / sigma
+>    - majority_sign_fraction within each delta-a curve
+>    - correlation between the friction delta-a curves and the V0 delta-a curves (all four pairings)
+>    Do not give a pass/fail verdict.
+>
+> 8. Monte Carlo, x channel only, for each duration and both sigma bounds:
+>    - Add independent Gaussian noise (fixed seed, reported) to the baseline a(t) at the sample times. Fit with scipy.optimize.least_squares.
+>    - Set (a): V0 fixed, k fitted, starting from PLANTED x (1 + FRICTION_SHIFT).
+>    - Set (b): k and V0 fitted jointly, V0 starting at V0_true x (1 + V0_SHIFT). Bound k > 0 and V0 inside the converged range.
+>    - Start with N = 200 draws and double until the std of the fitted k changes by less than 5% between N and 2N.
+>    - Time 5 fits first. Cap the total Monte Carlo time at 60 minutes by limiting N. If the cap stops the doubling early, say so next to the result.
+>    - Report: the mean and std of the fitted k; std / (FRICTION_SHIFT x PLANTED); the fraction within +/- FRICTION_SHIFT x PLANTED of the truth; the convergence fraction. For set (b), also the mean and std of the fitted V0 and the correlation of fitted k with fitted V0.
+>    - Add a table putting these next to the first screen's Monte Carlo results (from its monte_carlo_fits.csv), labelled "first screen: summed attitudes, untrimmed lift".
+>
+> 9. Outputs go to SWD/data/default_shortboard/computed-data/identifiability_screen_live/ (new folder; don't touch the first screen's outputs):
+>    - CSVs of the forces used, the delta-a curves, the summary and every Monte Carlo fit
+>    - plots: V(t) for all runs; delta-a at the sample times with +/- sigma bands; normalised friction and V0 delta-a overlaid; histograms of the fitted k for sets (a) and (b) with the planted value and the +/- band marked
+>    - a short README.md listing the rule-based attitude and V0 choices at the top, marked "provisional, pending my review"
+>
+> Print these assumptions with the results; don't try to fix them:
+> - One attitude for the whole run; the live solver's trim and attitude are not varied with speed.
+> - A path-frame model compared against board-frame IMU noise.
+> - mmc1's board, surfer and wave differ from default_shortboard with an 80 kg surfer.
+> - The noise sigma bounds are carried over from the first screen.
+>
+> Code standards: NumPy-style docstrings; comments explain intent. Tests in tests/test_identifiability_screen_live.py against known answers:
+> - the outlier filter keeps rows whose components sum to the total
+> - the PCHIP interpolant reproduces the grid values exactly at the grid speeds
+> - with D(V) replaced by c*V^n, solve_ivp matches the closed form V(t) = [V0^(1-n) + (n-1)*c*t/m]^(1/(1-n)) (zero slope) to 1e-8 relative
+> - a noise-free least_squares fit recovers k = PLANTED to 1e-6 relative
+> Run the full pytest suite and report.
+>
+> Rules: no web sources. Log the task in AI-USE.md section 2 per R2, with this prompt verbatim. Record the attitude and V0 there as rule-based defaults pending my review, NOT in section 4 as my decisions. Add one errors-ledger entry in section 5 (R3): SWD/model/trajectory.py load_polar() sums elements.csv rows across scan positions (7-12 per roll case), the same defect E111 records for operating_points.csv. It inflates the forces in trajectory.py's outputs, including its Board-Jerk and Radicality values, and in the first identifiability screen. Found 2026-10-24 by Claude while interpreting the first screen. It is not fixed in this task. Don't commit until I've reviewed.
+> </pasted_content id="8d2c">
+
+### 2026-10-24 18:55 AEDT · Claude Code 2.1.308 · claude-opus-5-5 · `6461fe50` · `Screening-for-Inverse-PINN`
+
+> commit the AI-USE changes
+
+### 2026-10-25 09:26 AEDT · Claude Code 2.1.309 · claude-opus-5-5 · `d85b9dcc` · `Screening-for-Inverse-PINN`
+
+> commit it
+
+### 2026-10-25 17:40 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> Can you check that RK4 actually solves an ODE correctly, I want you to do this with y''+4*y = 0. Use the same RK4 code that I have produced for blasius., and compare the exact solution to what we got with Blasius using the maximum error. Then check whether the RK4 ive written is correct and has fourth order stepping. Run the previous step halving h comparing (as an output in array) against the exact solution at each h. From the textbook Oberkampf on this topic, he found e18 to be E9h)/E(h/2) = 2**p, and p_obs = log_2(abs(y_h-y_h/2)/abs(y_h/2-y_h/4). Verify these. Then check the error ration comes out this way. Then also rerun the shooting with eta-max at 20 (double) and a smaller step to check that f''(0) has settled. Put these all into a separate notebook labelled rk4_blasius_checks_cc.ipynb. But firstly convert my shooting_for_blasius.ipynb into a py file to be called, move rk4_solve out of F(s), then let F(s) call rk4_solve,  then call it and ensure that there are as much of my written code as possible. Then make sure that your code is as efficient as possible. Your written code should only be about 100 lines. Run agy and devin as checkers after produced, then verify yourself
+
+### 2026-10-25 18:01 AEDT · agy · Gemini 4 Argon (Medium) · `64682724`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on friction-function/blasius-shooting/shooting_blasius.py and friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb (it imports the .py).
+> Goal: rk4_solve is a correct fourth-order RK4 (checked on y''+4y=0: E(h)/E(h/2) -> 16, Oberkampf p_obs -> 4), the Blasius profile matches White Table 4-3 to its 5 decimals, and f''(0) has settled under eta_max=20 and step halving.
+> shooting_blasius.py is the student's graded code: REPORT findings on it, never edit it. Fixes only in the notebook.
+> Guard (must stay exit 0): .venv\Scripts\python.exe friction-function\blasius-shooting\shooting_blasius.py && wsl -e bash -lc "source ~/sci-env/bin/activate && cd /mnt/c/dev/HYDRODYNAMICS-FIN/friction-function/blasius-shooting && jupyter nbconvert --to notebook --execute --stdout rk4_blasius_checks_cc.ipynb > /dev/null"
+> Allowed writes: friction-function/blasius-shooting/rk4_blasius_checks_cc.ipynb, tests/, AI-USE.md. Nothing else.
+> Audit, then fix. Keep the report short.
+
+### 2026-10-25 19:10 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> Yes, add it to the wiki Blasius page. Also remove the text cells from the notebook, they are not working with pycharm
+
+### 2026-10-25 19:35 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> Put the limits back in as comments
+
+### 2026-10-25 19:37 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> commit this then push it
+
+### 2026-10-25 21:38 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> I now want you to construct the finite-difference for Blasius, which we will use to compare with RK4 and shooting. I have done the calc.ns and given that g=f' (u/U). The ODE is: g'' + 1/2f*g' = 0. ICs are g(0)=0,g(eta_max)=1 and f(0)=0,  specifically calculate the accuracy and cost of central-diff compared to shooting of f''(0). Thus f''(0) = g'(0) ~ (-3g_0+4g_1-g_2)/(2h), where h=eta_max/N, i=0,...N. What i found was a_i = 1- 1/2*f_i*h, b_i = -2, and c_i = 1/2*f_i*h+1. where a_i*g_i-1 + b_i*g_i + c_i*g_i+1 = 0. Stop if your derivation disagrees, and bring it up with me. Make sure to use variables I have supplied, in the way I have written them. Given this ODE is non-linear, I want you to use Picard, iteration (found with Claude chat): freeze f, solve for g, then rebuild f with cumulative trap at f(0) = 0, repeat, stop after 20 iterations, as this is just a comparison. Due to the low amount of data for this, I chose central-diffrence method, ensure you keep the step size the same as what was used for RK4 as well as the same eta_max, as the roundoff error will not be signficant there, and we can actually check the accuracy. For acc. test compare the results of this, and the results of shooting to the exact value, using the error norm described in w10.1. Calc it with max norm which we have already used for RK4. Cost is measured by timeit and median of repeats. Now: Ensure shooting_blasius is unchanged, is has Numpy equivalent docstrings, do not commit until ive reviewd it, and state what it cant establish, without the use of md cells within the ipynb files you procure. Use agy and devin as reviewers of the code, then fix up their responses. Ask any questions I have left vague
+
+### 2026-10-25 21:49 AEDT · agy · Gemini 4 Argon (Medium) · `d24835f4`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on friction-function/blasius-shooting/fd_blasius.py and friction-function/blasius-shooting/fd_vs_shooting_cc.ipynb (both import shooting_blasius.py).
+> Goal: a central-difference solution of g'' + 1/2 f g' = 0 (g = f', g(0) = 0, g(eta_max) = 1, f(0) = 0) by Picard iteration (freeze f, Thomas solve for g, rebuild f by cumulative trapezoid, 20 iterations), on the RK4 grid (N = 141, h = 0.1/sqrt(2)), compared with RK4 shooting for the accuracy (max-norm error against 0.3320573362151963) and cost (timeit median) of f''(0) = (-3g_0 + 4g_1 - g_2)/(2h). Coefficients a_i = 1 - 1/4 f_i h, b_i = -2, c_i = 1/4 f_i h + 1. NumPy docstrings; the notebook has no markdown cells by design, and its limits are comments.
+> REVIEW ONLY: report findings, edit no file at all (shooting_blasius.py included). Claude Code applies the fixes.
+> Guard (must stay exit 0): .venv\Scripts\python.exe friction-function\blasius-shooting\fd_blasius.py && wsl -e bash -lc "source ~/sci-env/bin/activate && cd /mnt/c/dev/HYDRODYNAMICS-FIN/friction-function/blasius-shooting && jupyter nbconvert --to notebook --execute --stdout fd_vs_shooting_cc.ipynb > /dev/null"
+> Throwaway repro scripts only in %TEMP%\hfin-audit\. Keep the report short.
+
+### 2026-10-26 15:30 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> Yes, add it to the wiki Blasius page, then commit it to the blasiusRef branch
+
+### 2026-10-26 15:31 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> swap to BR first, then commit, then swap back to VK
+
+### 2026-10-26 15:57 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Based on the definitions from White, I've found delta_99/x = eta_99/sqrt(Re_x), delta*/x = sqrt(Re_x)*(eta_99-f(eta_max)), and theta/x=h/2 * sum(fi'*(1-fi') + f_i+1'(1-f_i+1') where h = eta_99/N.  Derive these equations yourself, and raise it with me if you find a discrepency. These values appear in white's tables., so use them as a point for comparison for you.  I want this to be its own .py file, to be used later. Quickly run it through agy and devin after it is done.
+
+### 2026-10-26 16:02 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Apologies, I have two typos here, firstly, delta*/x should be dividing by sqrtRe_x), secodnly, all I have here is the integral for theta/x, it should also include /sqrt(Re_x). Use my step i used in RK4, for theta too
+
+### 2026-10-26 16:02 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Any qs raise them
+
+### 2026-10-26 16:04 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Reraise these questions I was typing
+
+### 2026-10-26 16:09 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> COntiue with how I answered the first time, this was before you reasked them
+
+### 2026-10-26 16:22 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Change cutting off at eta_99 to eta_max, the error would be too great. Compute eta_99 against 4-3 edge row, and eta_max to table 4-4. Also, make an automated test under /tests/ called test_blasius_thickness.py, testing eta_99, H, against the book. Make sure that all the coefficients remain the same bw rows of the outputted array (with delta_99/x, dela*/x and theta/x) when multiplied by the denominator sqrt(Re_x). A way you could do this is to call the array (thicknesses), at different Re_x values, passing once as array, once as inidivudal values on at a time, then multiply each by sqrt(Re_x) to get the coeff vsalue. Check that these match what you have defined as blasius_coefficients(). Check H comes back unchanged.
+
+### 2026-10-26 16:32 AEDT · agy · Gemini 4 Argon (Medium) · `3f714f1c`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on friction-function/blasius-shooting/blasius_thickness.py and tests/test_blasius_thickness.py.
+> Goal: Blasius delta_99/x = eta_99/sqrt(Re_x), delta*/x = (eta_max - f(eta_max))/sqrt(Re_x), theta/x = (h/2)*sum(f_i'(1-f_i') + f_{i+1}'(1-f_{i+1}'))/sqrt(Re_x) on the RK4 grid (h = 0.1/sqrt(2), eta_max ~ 9.970), H = delta*/theta, in the f''' + 1/2 f f'' = 0 scaling, compared with White Table 4-3 (edge row) and Table 4-4. The trapezoid theta is ~2e-4 low by design; the H test uses rel 1e-3 for that.
+> REVIEW ONLY: report findings, edit no file at all. Claude Code applies the fixes.
+> Guard (must stay exit 0): .venv\Scripts\python.exe friction-function\blasius-shooting\blasius_thickness.py && py -3.14 -m pytest tests\test_blasius_thickness.py -q -p no:cacheprovider
+> Repro scripts only in %TEMP%\hfin-audit\. Quick pass: keep it short.
+
+### 2026-10-26 16:43 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Add it to the wiki, then commit it to BR
+
+### 2026-10-26 16:46 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> git push origin blasiusReference
+
+### 2026-10-26 16:57 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Great, now we havee f''(0) from shooting, I want you to make a new .py file called skin_and_shear.py, where you use my derivations for C_f, avg.C_f and shear_w (wall shear). C_f = 2*f''(0)/sqrt(Re_x). avg.C_f = 4*f''(0)/sqrt(Re_L) where L is the wetted length. shear_w  = nu*U*f''(0)*sqrt(Re_x)*x. Check these derivations, then make a callable function for each of these. I do not believe you have written these, if you have, it is likely you did it without me asking, check you have not first. Continue the variable names we have used. Include a NumPy style docsrting for each function.
+
+### 2026-10-26 16:58 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Ask me any questions you have
+
+### 2026-10-26 17:08 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> I will answer pyrest question here as a prompt.
+
+### 2026-10-26 17:20 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Yes make this pytext. THe test should compare to the exact values, using Majdalani-Xuan's quartic from White's book, g(eta_hat)=5/3*eta_hat - eta_hat**3 + 1/3*eta_hat**4, where eta_hat = y/delta (i.e., the position across the layer from 0 (wall) to 1 (edge).Compute thing, according to white has shear_w = mu * U / delta * g'(0), thus deriving this (which I found to be g'(eta_hat) = 5/3-3*eta_hat**2 + 4/3 * eta_hat**3), and finding that point at 0, should help in finding the exact value to compare to. Then like we did for Blasius, double eta_99, and half the step size, to prove no change and find the amount of error
+
+### 2026-10-26 17:21 AEDT · Claude Code 2.1.310 · ? · `e6bdf8be` · `blasiusReference`
+
+> + run with devin and agy
+
+### 2026-10-26 17:33 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> run as in check*
+
+### 2026-10-26 17:40 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> sstop, undo this
+
+### 2026-10-26 17:40 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `blasiusReference`
+
+> Delete what was made
+
+### 2026-10-26 17:41 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> And return the plan to me as it was
+
+### 2026-10-26 17:50 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> The tolerance was way too small, add the current tolerance (the book rounding) to the measured numerical error from rk4, eta_max at 10 as sub for inf, and the secant. Further, this is for shear, and skin coeff.s only, drop  thicknesses these have been done.
+
+### 2026-10-26 17:54 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `e6bdf8be` · `VonKarman`
+
+> Delete this plan
+
+### 2026-10-26 18:08 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `7c3fea72` · `blasiusReference`
+
+> Can you update AI-Use .md with prompts, it seems to have missed a lot
+
+### 2026-10-26 18:08 AEDT · Claude Code 2.1.310 · claude-opus-5-5 · `7c3fea72` · `blasiusReference`
+
+> Use those from clis, i will update for claude chat soon
 
 <!-- prompts:end -->
 

@@ -3,4 +3,5 @@
 - [Run the full QA loop, fixer included](user-triggers-the-fixer-round.md) — the "user triggers the fixer" rule was WITHDRAWN 2026-09-02; follow global CLAUDE.md to the cap.
 - [Repo moved to C:\dev](repo-moved-out-of-onedrive.md) — 2026-10-22, out of OneDrive then out of UNIVERSITY; .venv rebuilt from a freeze; UNIVERSITY keeps a wiki junction; old paths in history are records.
 - [pytest --basetemp under the sandbox](pytest-basetemp-in-sandbox.md) — 17 tmp_path ERRORs are the sandbox refusing %TEMP%; re-run with --basetemp in the scratchpad.
+- [Difference from a reference, not error](difference-from-reference-not-error.md) — gap to a rounded book value is a difference; recompute a self-adjusting budget before predicting a failure (E141, E142).
 - [No unrequested web sources](no-unrequested-web-sources.md) — never use Wikipedia/web pages as a source unless asked; report the gap and ask (E130).

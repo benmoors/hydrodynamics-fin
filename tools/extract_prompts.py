@@ -100,6 +100,10 @@ _EXCLUDED = {
     "9bdca7c3": "resume-profile rule; edited only the gitignored wiki/ schema",
     "b95c1da1": "resume profile; read AI-USE.md, edited only the gitignored wiki/ schema",
     "34012d20": "ENG1090 wiki ingest; read the repo's wiki/ read-only",
+    "7012645c": "ENG1012 wiki ingest; a subagent brief named the repo only to prune it",
+    "8ea56016": "MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only",
+    "dc20c342": "MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it",
+    "d475ebcf": "MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it",
 }
 _CLIS = ("Claude Code", "agy", "Devin")
 
@@ -489,13 +493,24 @@ def _parse_heading_time(when: str, zone: str | None) -> datetime:
     return local.astimezone(timezone.utc)
 
 
+def _span(text: str) -> tuple[int, int]:
+    """Offsets of the two markers, each alone on its own line (-1 if absent).
+
+    Prose may quote a marker inline -- AI-USE.md § 2 and E121 do -- and a plain ``find``
+    took that quote for the marker (E139).
+    """
+    begin = re.compile(rf"^{re.escape(BEGIN)}$", re.M).search(text)
+    end = begin and re.compile(rf"^{re.escape(END)}$", re.M).search(text, begin.end())
+    return (begin.start() if begin else -1), (end.start() if end else -1)
+
+
 def parse_appendix(text: str) -> list[Session]:
     """Read a rendered appendix back into sessions -- the inverse of :func:`render`.
 
     Only the text between the markers is read. Times come back at minute resolution. A
     heading labelled AEST/AEDT is Melbourne time; an unlabelled one predates that and is UTC.
     """
-    start, stop = text.find(BEGIN), text.find(END)
+    start, stop = _span(text)
     block = text[start + len(BEGIN): stop] if 0 <= start < stop else text
     sessions: dict[str, Session] = {}
     current: Prompt | None = None
@@ -538,7 +553,7 @@ def parse_appendix(text: str) -> list[Session]:
 def splice(ai_use: Path, body: str) -> None:
     """Replace whatever sits between the markers in ``AI-USE.md``; keep the rest."""
     original = ai_use.read_text(encoding="utf-8")
-    start, stop = original.find(BEGIN), original.find(END)
+    start, stop = _span(original)
     if start < 0 or stop < 0 or stop < start:
         raise SystemExit(
             f"{ai_use} must contain the markers {BEGIN} and {END}, in that order; "

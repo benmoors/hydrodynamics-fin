@@ -135,6 +135,18 @@ def test_splice_replaces_only_between_markers(tmp_path: Path, transcripts: Path)
     assert "> Fix the failing test" in text
 
 
+def test_markers_quoted_in_prose_are_not_the_markers(tmp_path: Path, transcripts: Path) -> None:
+    # AI-USE.md § 2 quotes `<!-- prompts:end -->` above the real block (E139)
+    ai_use = tmp_path / "AI-USE.md"
+    head = f"# Record\n\nappended after `{END}` and `{BEGIN}`\n\n"
+    ai_use.write_text(f"{head}{BEGIN}\n{_pruned_session()}\n{END}\n\ntail\n", encoding="utf-8")
+    assert [len(s.prompts) for s in parse_appendix(ai_use.read_text(encoding="utf-8"))] == [2]
+    splice(ai_use, render(load_sessions(transcripts, home=HOME)))
+    text = ai_use.read_text(encoding="utf-8")
+    assert text.startswith(head) and text.endswith(f"{END}\n\ntail\n")
+    assert "> Fix the failing test" in text and "> First line" not in text
+
+
 def test_splice_refuses_a_file_without_markers(tmp_path: Path) -> None:
     ai_use = tmp_path / "AI-USE.md"
     ai_use.write_text("no markers here\n", encoding="utf-8")

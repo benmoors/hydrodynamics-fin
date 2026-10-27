@@ -128,6 +128,14 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), session `5af91cfa`, branch `VonKarman`, with Antigravity CLI (agy, Gemini 4 Argon, Medium) and Devin CLI (SWE-1.7 Max) as review-only checkers through `sqa_cli_pass.py`, and read-only `wiki-query`, `sqa-numerical` and `sqa-functional` subagents. (1) Checked Benjamin's hand derivation for the Majdalani–Xuan quartic g = (5ξ − 3ξ³ + ξ⁴)/3 (White and Majdalani 2022, Table 4-1, p.158): α = ∫g(1 − g)dξ = 13/20 − 1171/2268 = 379/2835, β = g′(0) = 5/3, δ = √(2νβx/(Uα)) from C_f/2 = dθ/dx with δ(0) = 0, θ = αδ, C_f = 2β/√(2β/α)/√Re_x, avg C_f = 4β/√(2β/α)/√Re_L. All hold, and all six quantities in the Table 4-1 row agree to ±0.0005. (2) A new folder `friction-function/von-karman/` (the old `vonkarman.ipynb` existed only in the deleted commits `b8650c4` and `7f9c383`, one empty cell): `von_karman.py` (closed-form `delta`, `theta`, `C_f`, `avg_C_f`, the profile, and `march_delta`, RK4 through the author's `rk4_solve` on dδ/dx = νβ/(Uαδ) from x0 > 0 with the closed-form start), `vonkarman.ipynb` (α by quad, β by `wall_slope`, the march with p_obs, the Table 4-1 row and the gap from Blasius; executed through WSL `sci-env`) and `tests/test_von_karman.py`. A march of z = φ(δ) with dz/dx = 1 was planned first and replaced (§ 5 E144). Benjamin's φ, z(x) and φ⁻¹ had arrived as blank placeholders; Claude Code wrote out the φ = Uαδ²/(2νβ) that his dz/dx = 1, z(0) = 0 and δ/x fix, he confirmed it, and it was then dropped, so it is not in the code. Before writing the march test, Claude Code ran p_obs for x0 = 1e-4 to 0.1 m and 4 to 1024 steps and showed the table; Benjamin chose the grid and tolerance (§ 4). (3) `friction-function/friction_force.py` (`F_f`, `wetted_geometry`) and `tests/test_friction_force.py`, to Benjamin's design (§ 4). From the data: ρ = 1025.000 at every speed from the live solver's mass flux/(frontal section × V), so SWD's salt water at 20 °C; the wetted area and length are constant in speed at all 1,276 converged attitudes (0.631094 m² and 1530.264 mm at the screen's attitude), a stated limitation. (4) `friction-function/rerun_live_screen_ff.py` and `tests/test_rerun_live_screen_ff.py`: Gate B, the live-solver screen re-run with F_f, with the screen file unchanged (its `load_forces`, `select` and `OUT_DIR` are replaced before its `main()` runs). (5) Checks, review-only, Claude Code applying the fixes: Kármán round, agy C0/W2/S2 and Devin clean, all four applied (`profile` beyond ξ = 1 untested, overflow far outside the layer, the whole-step test, missing negative cases); F_f round 1, agy C0/W1/S2 and Devin clean, applied (the laminar Re could round one ulp above Re_crit, now min(Re_L, Re_crit); ρ and μ must be scalars; repeated speeds refused), with the same rounding found in `physics_baseline` recorded, not fixed (§ 5 E147); a cleanup to the unit's documentation checklist (W01.3 and rubric criteria 2–3 via `wiki-query`: NumPy docstrings with a Usage block, intent comments, negative tests with `match=`, `pdoc --math` builds clean); an `sqa-numerical` review, clean with 3 suggestions (applied: § 5 E145 and a note on the rerun's mixed outputs; listed for the author: no test exercises `rk4_solve`'s stage times); F_f round 2, agy clean and Devin C0/W1/S1, applied (`load_forces_ff` read the geometry from the default CSV, the Kármán-option test had no reference value, the rerun helpers had no tests); an `sqa-functional` review of the round-2 changes, C0/W1/S2, applied (§ 5 E148; two test gaps). Devin's round-2 run left pytest scratch folders under a literal `%TEMP%\` folder in the repository root, and `sqa_cli_pass.py` crashed removing their read-only git objects, so its restore and after-guard did not finish; Claude Code checked that no tracked file had changed, removed the folders (pytest output only) and re-ran the guard. | Benjamin asked for the module, the friction force and the rerun, and for agy and Devin to check them; the derivation, the F_f design and every grid and tolerance are his (§ 4); AI checked the derivation and implemented. | Full suite 252 passed, 1 strict xfail (§ 5 E147). On the author's grid p_obs = 4.069, and the error at h/4 (7.2e-11 m) is within the h/2-to-h/4 change (1.2e-9 m). The `sqa-numerical` review killed 13 of 15 hand-built mutants of the march and its tests (one equivalent) and found F_f within 3.2 ulp of a 50-digit reference; the two mutants of the rerun's helpers that survived the `sqa-functional` review are killed by the added tests. The quartic's C_f is 0.517 % above the shooting Blasius (Table 4-1 prints 0.53 % against its Blasius row). F_f against SWD's own `friction_n` at the screen's attitude: 0.985–0.989 of it at 2–10 m/s, a difference from SWD, not an error in either. | Plan `~/.claude/plans/switch-to-the-vonkarman-hidden-sky.md`; run folders `%LOCALAPPDATA%\sqa-loop\runs\von-karman-2026-10-27\`, `friction-force-r1-2026-10-27\` and `friction-force-r2-2026-10-27\`; prompts 2026-10-27 (§ 6) |
 | 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`5af91cfa`): ran the Gate B rerun, `python friction-function/rerun_live_screen_ff.py`, which wrote `SWD/data/default_shortboard/computed-data/identifiability_screen_live_ff/`, and wrote that folder's README by hand (humanizer pass on §§ 1–5 with a before/after fact diff; the AI Acknowledgment untouched). The attitude (pos_y 0, pos_x 0.45) and V0 = 8.3 m/s are held; PLANTED and FRICTION_SHIFT now scale F_f, not SWD's `friction_n`. | Benjamin asked for Gate B to be re-run with F_f in place of SWD's friction (§ 4). | The original `identifiability_screen_live/` was hashed (SHA-256) before and after: all 12 files unchanged. The same 158 rows were kept and 11 dropped. All eight Monte Carlo combinations settled within 5 %, using 747 s of the 3600 s cap. The spread of k is 0.2–5.6 % wider with F_f in every combination (most at 10.055 s, lower σ, set (b): 0.1125 to 0.1188); the within-band fractions move by at most 2 percentage points; max\|Δa_x\| for k ± 10 % goes from 0.0900 to 0.0889 m/s². No verdict (§ 4). | `identifiability_screen_live_ff/README.md`; plan `~/.claude/plans/switch-to-the-vonkarman-hidden-sky.md` |
 | 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`5af91cfa`): recorded two decisions of the author's (§ 4), whose options and bracket framing came from a claude.ai chat (the author adds the claude.ai prompts himself, § 4 2026-10-26). Checked before recording: the bracket table against both runs' `monte_carlo_summary.csv`; the claim that Charles et al. measured no speed, against the paper's full text; and, at the author's request, his E20 against `RESOLUTION_SIGMA`, which found the third line's √2 (§ 5 E149). Recorded the decisions here and in the project wiki (*Board Equation of Motion and SWD Forces*, *Project Validation Evidence and Limits*), and refined the memory note on authorship. A plan that tied the ICM-20948 to V0 was rejected (§ 5 E150). No runs, no code change, no Gate A or B verdict. | The author asked for both decisions and his derivation to be recorded and for E20 to be checked. | Every bracket value matches the CSVs (set (b) within ±band 0.185 → 0.185 and 0.7475 → 0.7275; sd of fitted V0 1.152 → 1.167 and 0.491 → 0.518 m/s; on a bound 0.225 → 0.2275 and 0.030 → 0.0325). The paper, p.2: the video defines the phases with board-data thresholds and is synced to the board data by short, sudden events; every "speed" in the paper is a rotation speed, the act of generating speed, or a literature indicator. σ = 0.0981/√12 = 0.02832 m/s² computed. | Plan `~/.claude/plans/switch-to-the-vonkarman-hidden-sky.md`; prompts 2026-10-27 (§ 6) |
+| 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), session `a3cd550c`, on the new branch `ForwardModel` (from `VonKarman`): moved `PINNs/` out of the repo to `~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\PINNs\`. It is the two-cell PINN stub notebook and was untracked. Also deleted the local branch `pinn` | The author deferred the inverse work (§ 4) | The SHA-256 of `PINN.ipynb` matched before and after the move (`8b36d597…`). `git branch -d` refuses an unmerged branch; `pinn` (`d2924f5`) was fully merged into `VonKarman`. `Screening-for-Inverse-PINN` was kept | Prompt 2026-10-27 (§ 6, and verbatim below); answers 2026-10-27 (§ 2, `a3cd550c`) |
+| 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`a3cd550c`): Step 1, the forward model. (1) Before any code, a read-only feasibility check of the author's slope schedule. His −10° → 20° over 10.055 s left the 2–10 m/s force data within 0.5–2.6 s for every V0 from 4 to 10 m/s. His revised 20° → 0° over 3 s from 6 m/s stays in range. (2) `forward-model/forward_model.py`: E15 and E16 with slope-matched planing and rail (a tensor PCHIP), F_f times k, SWD's decomposition checks, the stop rule, and his `rk4_solve` called one step at a time. (3) Four tables for his choices: h; E19 convergence; the steady speed with the external check against SWD's `drag_total_n`; the slope residuals. (4) `tests/test_forward_model.py`, 27 tests on his grids and tolerances. (5) A "Superseded" paragraph in the docstring of `SWD/model/trajectory.py` | The author asked for Step 1 to be built from his spec, his Part A choices and his derivations | Full suite: 279 passed and 1 xfail; before this session, 252 and 1. `pdoc --math` builds the module with no warnings. The author's run reproduces the planning check (V(3 s) = 6.090559 m/s). E19's p_obs is 3.990 on 3/96–3/384. V* = 7.306 m/s against SWD's linear zero crossing at 7.2926 m/s, a gap of 0.0135 m/s. Review rounds are in the rows below | Plan `~/.claude/plans/now-its-time-to-lexical-avalanche.md`; prompts 2026-10-27 (§ 6); answers 2026-10-27 (§ 2, `a3cd550c`) |
+| 2026-10-27 | Review round 1 of the forward model, review-only, through `sqa_cli_pass.py`. Nothing was reverted, and the guard passed 27/27 before and after. agy (Antigravity CLI, Gemini 4 Argon, Medium): 0 Critical, 3 Warnings, 3 Suggestions. Devin CLI (SWE-1.7 Max): 0 Critical, 2 Warnings, 1 Suggestion, all three inside agy's W1. Claude Code (same session, `a3cd550c`) applied all of them: (1) `load_forces` validates `slope_tol`. (2) `D` raises ValueError for a non-finite V, θ or k, or a negative k, so a NaN can no longer end a run as an `OutOfData` stop. (3) `theta` checks T > 0 and t in [0, T], up to a 1e-9·T slack. (4) `_scalar` rejects booleans and strings. (5) The comment on h is corrected (§ 5 E156). (6) A duplicate-row test, and 15 new negative tests in all. (7) A note on the fifth RHS call per step | The author's A13: two review-only rounds by agy and Devin, with Claude Code applying the fixes | Both reviewers reproduced every other number in the new `AI-USE.md` entries and in `trajectory.py` from the code and the CSV. Full suite: 294 passed and 1 xfail. The author's run is unchanged (V(3 s) = 6.09056 m/s); pdoc is clean | Run folder `%LOCALAPPDATA%\sqa-loop\runs\forward-model-r1-2026-10-27\` |
+| 2026-10-27 | Review round 2 of the forward model, review-only, same wrapper. Nothing was reverted, and the guard passed 42/42 before and after. agy: 0 Critical, 0 Warnings, 2 Suggestions (CLEAN). Devin: 0, 0, 0 (CLEAN). Claude Code applied agy's two: (1) E156 put the largest h change at the wrong time (§ 5 E157). (2) `theta` now rejects a bool t and an empty t; two negative tests | The author's A13, second round | Both reviewers again reproduced the numbers in the `a3cd550c` entries. Claude Code reproduced E157's t = 0.770 s itself. Final full suite: 296 passed and 1 xfail. pdoc is clean, and the author's run is unchanged (V(3 s) = 6.09056 m/s, complete) | Run folder `%LOCALAPPDATA%\sqa-loop\runs\forward-model-r2-2026-10-27\` |
+| 2026-10-27 | Claude Code, same session (`a3cd550c`): the project-wiki ingest for Step 1. *Board Equation of Motion and SWD Forces*, *Project Validation Evidence and Limits* and *Virtual Surfer Project* were updated with the forward model, the schedule check, the constant-slope steady speeds, the external check, the deferred inverse work and a per-row decomposition of `drag_total_n`. The decomposition was computed first across all 6,652 converged non-zero-slope reads. That check showed `drag_total_n` = F + P + R − W sin θ is tight only at pos_x 0.45 (within 4.3 N up to 15°). Across the table the residual's median is 7–10 % of W sin θ. So the wiki's open question, why the slope's weight term appears at 1.11–1.21 × W sin θ, was refined, not closed | The author asked for the ingest after its topics were proposed | The wiki lint passes, with no problems, orphans or unresolved links. The design choices are recorded as the author's. The wiki is gitignored, so `log.md` is its record | Answer 2026-10-27, "do the wiki ingest" (§ 6) |
+| 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), session `b82e80a3`, branch `ForwardModel`: the jerk cost J of the forward model's run, from Charles et al. (2026) Eq 4–7 (cited, p.6). (1) `forward-model/board_jerk.py`: `displacement`, Eq 7 taken literally (D_a, Simpson twice on a); `jerk_cost`, with j from `np.gradient`, C = T⁵/D² and J by composite Simpson; input checks that raise ValueError; a `__main__` that runs `simulate()` at its defaults. (2) Four exploration tables for the author's tolerances: his linear case, his sinusoid, his run subsampled, and the units. (3) `tests/test_board_jerk.py`, 19 tests on his cases, grids and tolerances. `forward_model.py`, `trajectory.py`, the screens and `friction-function/` are untouched | The author asked for the jerk cost from Step 1's a = dV/dt (§ 2 verbatim below). His derivations and every choice are in § 4 | The run gives D = 2.65688 m, C = 34.4242 s⁵/m² and J = 64.5824, complete, as in the planning preview. The linear case is exact to 7.1e-15 (J) and 4.4e-16 m (D). p_obs is 2.0000 on the sinusoid at h, h/2, h/4 and 2.0054 on his run at FD steps 4h, 2h, h. Rescaling changes J by at most 4.9e-15, relative. Full suite: 315 passed, 1 xfail. `pdoc --math` builds clean. The planning preview's p_obs of 1.999 used a different D (§ 5 E160) | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`); answers 2026-10-27 (§ 2, `b82e80a3`) |
+| 2026-10-27 | Review round of the jerk cost, review-only, through `sqa_cli_pass.py`. Nothing was reverted, and the guard passed 19/19 before and after each pass. agy (Antigravity CLI, Gemini 4 Argon, Medium): 0 Critical, 0 Warnings, 2 Suggestions (CLEAN). Devin CLI (SWE-1.7): 0, 0, 0 (CLEAN). Claude Code (same session, `b82e80a3`) applied agy's two: (1) `_samples` rejects a t or a that is not numeric, so a bool a is no longer read as 0 and 1 m/s², the same guard as `forward_model.theta`. (2) Negative tests for a 2-D and a 0-D input and for a bool a: 22 tests in all | The author's one review-only round by agy and Devin, with Claude Code applying the fixes (§ 4) | Both reviewers reproduced every number in the `b82e80a3` entries, including E160's 1.999 (1.998770) and 2.0054. After the fixes the author's run is unchanged (J = 64.5824, complete). Full suite: 318 passed, 1 xfail. `pdoc --math` builds clean | Run folder `%LOCALAPPDATA%\sqa-loop\runs\board-jerk-2026-10-27\` |
+| 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`b82e80a3`): the project-wiki ingest for the jerk cost. *Board-Jerk*, *Project Validation Evidence and Limits* and *Virtual Surfer Project* were updated with the jerk cost of Step 1's run, its checks and limits, and the deferred comparison with the paper. *Board-Jerk* gained a Summary, and a note, labelled inference, that Eq 7's double integral from rest leaves out V0·T | The author asked for the ingest after its topics were proposed | The wiki lint passes, with no problems, orphans or unresolved links, and qmd was re-indexed. The design choices are recorded as the author's. The wiki is gitignored, so `log.md` is its record | Answer 2026-10-28, "Commit it, and do the wiki ingest, then push" (§ 6) |
  
 ### Answers given to Claude Code's questions, 2026-09-29
 
@@ -709,6 +717,540 @@ A: Force-add, like Gate A (Recommended)
 Q: Three memory notes from earlier sessions are untracked, though the committed `MEMORY.md` links them. Include them in the commit?
 A: Include them (Recommended)
 
+### Prompt for Step 1, the forward model, 2026-10-27 (session `a3cd550c`)
+
+The prompt is quoted verbatim here, because it carries the author's Part A choices and Part B derivations, and those
+are recorded in § 4 against it. Its Part A options, implications and Part C requirements were written by Claude in a
+claude.ai chat at the author's request. The "My choice" lines and Part B are the author's.
+
+<details>
+<summary>The prompt, verbatim (the author's message, then the pasted spec)</summary>
+
+````text
+Now its time to make the final part of this project for now (we will continue with making the ivnerse model later), I have made the decision to do the synthetic data, and inverse PINN and least squares model mismatch afterwards, when I have time to accurately make decisions and not skip over any important choices in the aim of speeding up siubmission before a due date. Now we need to conduct the final piece which is the forward model. Thus remove the PINN directory and journal and the branch for PINN. We have made the friction model F_f(V) previously, and I have asked claude to make me a full description, of all the decisions that need to be made, and all the derivations necessary to conduct this:
+
+# Step 1 — forward model (E15–E19): spec for Claude Code
+
+**How to use this file.**
+1. Fill in every "My choice:" line in Part A.
+2. Put your derivations in Part B.
+3. Tell Claude Code: "Read this file and build Step 1 as specified. My choices are on the 'My choice' lines and my
+   derivations are in Part B. If any choice is blank or unclear, ask me; don't pick."
+
+**Gate A and Gate B verdicts:** ___
+
+**Gate rule for Step 1:** ___
+- **(a)** Step 1 waits until a pass is recorded in `AI-USE.md` § 4 (the old flowchart).
+- **(b)** Step 1 goes ahead now. The submission stops at Step 1, and the forward model does not depend on the
+  verdicts. The verdicts are recorded before the report is written.
+
+---
+
+## Part A — decisions
+
+### A1. Slope schedule (E16)
+
+Options:
+- **(a)** A constant slope θ₀ for the whole run. Both gates used 10°.
+- **(b)** Linear in time, θ₀ → θ₁ over T. The state stays [V].
+- **(c)** Linear in distance, θ_top → θ_bot over S. The state becomes [s, V].
+
+Implications:
+- **(a)** This is the simplest option, and the Gate A/B evidence applies to it directly, but only at 10°.
+  - At 10° from 8.3 m/s, every gate run stayed inside 2–10 m/s for the full 10.055 s.
+  - The run settles toward one steady speed. That is where the k and V0 signatures overlap.
+- **(b)** Speeds pass through a wider range, which may help separate k from V0. That is an inference; neither gate
+  tested it.
+  - The gate evidence no longer applies directly.
+  - You must check that V stays inside 2–10 m/s with your numbers.
+- **(c)** This is the closest to a face whose steepness depends on position.
+  - Every RK4 slope k has two components (E17), and s needs its own initial value.
+  - The same caveats as (b) apply.
+- **For any non-constant schedule:** θ's range only limits the force data if A2 = (b). The live solver covers
+  −10° to +20°.
+
+My choice: b   Numbers: -10->20degrees over 10.055s
+
+### A2. Forces at a non-zero slope
+
+Options:
+- **(a)** The 0° components (friction, planing, rail), with gravity as a separate m g sin θ term. This is what deck
+  E15 and both screens use.
+- **(b)** Slope-matched components from the live solver's rows at each slope (−10° to +20° in 5° steps),
+  interpolated in V and θ.
+
+From the data at your attitude (pos_y 0, pos_x 0.45):
+- Friction and rail do not change with slope.
+- Planing at 10° is about 3 N lower than at 0° at 4 m/s, and about 1.5 N lower at 8 m/s.
+- For scale, ±10 % of friction is about 1.7 N at 4 m/s and about 6 N at 8 m/s.
+
+Implications:
+- **(a)** This matches the gates.
+  - On a 10° slope, planing is off by those 1.5–3 N.
+  - That is a modelling error. It biases nothing in the synthetic study as long as the data and the fit use the
+    same forces.
+- **(b)** This is more faithful, but it needs 2-D interpolation and a new consistency check.
+  - At non-zero slope, `drag_total_n` already includes the weight component, so the screen's 1 % check would reject
+    those rows.
+  - `drag_total_n` must never be paired with a separate m g sin θ, or gravity is counted twice.
+- **(b) in Step 2:** it is also a ready-made way to degrade the data against the inverse crime: generate with
+  slope-matched forces, fit with 0°.
+
+**A2.1 Force-loading code**
+- **(a)** Import `load_forces` and `Forces` from `SWD/model/identifiability_screen_live.py`.
+- **(b)** Write a new loader in the forward-model module. It uses the same 1 % decomposition check on 0° rows.
+
+Implications:
+- **(a)** This has no duplicated code. But that file's docstring says it is a feasibility screen only and must not
+  be reused as the forward model.
+- **(b)** This means about 50 duplicated lines. In exchange, the forward model stands alone and the screen stays
+  untouched.
+
+My choice: A2 b, A2.1 b
+
+### A3. The friction term
+
+**A3.1 How F_f enters**
+- **(a)** F_f evaluated directly at each V, from your E14 formula (`friction_force.F_f`).
+- **(b)** A PCHIP of F_f through the 1 m/s grid speeds, as in the Gate B rerun.
+
+Implications:
+- **(a)** This is exactly your E14, and it is smooth in V.
+  - F_f raises ValueError for V outside 2–10 m/s, so an RK4 trial stage that overshoots the range stops the run
+    with an error (see A6).
+- **(b)** This matches the Gate B evidence exactly.
+  - Between grid speeds it differs from F_f by up to 0.34 %.
+  - Outside the range it returns NaN instead of raising.
+
+**A3.2 Laminar law**
+- **(a)** Blasius only, F_f's default.
+- **(b)** Expose the switch now, with Blasius as default and Kármán as an option. Step 4 needs data made with one
+  law and fitted with the other.
+
+Implications:
+- **(b)** costs one parameter and one test now.
+- **(a)** means changing the forward model's signature in Step 4.
+
+My choice: A3.1 a, A3.2 a
+
+### A4. Attitude and starting-speed defaults
+
+Options:
+- **(a)** Keep pos_y 0, pos_x 0.45 and V0 = 8.3 m/s. These are the gates' values; your plan still lists them as
+  rule-based defaults awaiting review (open problem 4).
+- **(b)** Review them and set new values now.
+
+Implications:
+- **(a)** keeps the Gate A/B bracket valid for this model. Recording this as your decision closes open problem 4.
+- **(b)** The bracket and both gates only hold at the old values. Keeping the evidence would mean re-running the
+  screen, which is a Monte Carlo.
+
+My choice: b, the gate has nothing to do with this
+
+### A5. Mass and g
+
+Default: m = 802.21 N / g, with g = 9.81 m/s². This is deck E15 and the screens; E20 also used 9.81.
+- `trajectory.py` used 80 + 1.741 kg, which is within 0.05 % of the same weight.
+- So this choice is about consistency, not size: 802.21 N is the weight the live solver trimmed lift to.
+
+My choice: default
+
+### A6. When V leaves 2–10 m/s
+
+The forces have no data outside 2–10 m/s at this attitude, and nothing is extrapolated.
+
+Options:
+- **(a)** Stop the run at the step where V leaves the range, and return the run so far with a flag.
+- **(b)** Raise ValueError.
+- **(c)** Hold the forces at their edge values, still stopping at the edge. This is the screens' trial-stage rule.
+
+Implications:
+- Your `rk4_solve` marches a fixed array with no early stop. Outside the range, the PCHIPs give NaN (or F_f
+  raises). So (a) and (c) need a range check inside the march, as a modified loop or a wrapper; (b) is a check
+  after the march.
+- **(a)** keeps partial runs usable. Step 3 fits will hit this when trial k or V0 values push V out of range.
+- **(b)** is the simplest and safest for Step 1, but Step 3 will need (a) or a guard like the screen's residual
+  penalty.
+- Fixed-step RK4 cannot stop exactly on the edge. The last step lands past it unless you add a partial step.
+
+My choice: a
+
+### A7. Integrator (E17)
+
+Options:
+- **(a)** Reuse your `rk4_solve` from `friction-function/blasius-shooting/shooting_blasius.py`, imported the way
+  `von_karman.py` already does.
+- **(b)** A new RK4 written from your E17 in the forward-model module.
+- **(c)** scipy `solve_ivp` (RK45, adaptive), as the screens used.
+
+Implications:
+- **(a)** This is your code, already tested on y″ + 4y = 0 with p_obs ≈ 4. Your E17 becomes the check that it
+  matches.
+  - Importing it runs that module's top-level setup (the White table load).
+  - It needs a wrapper for A6 (a) or (c).
+  - It assumes one fixed step size.
+- **(b)** This is fresh code that is yours by derivation, but it duplicates a tested function and needs its own
+  order test.
+- **(c)** This is not RK4 as taught, and the brief wants a technique taught in the unit (p.7).
+  - It is best kept for Step 2: making the synthetic data with `solve_ivp` and fitting with RK4 gives the "different
+    integrator" your inverse-crime rule asks for.
+
+My choice: a (we can do c later)
+
+### A8. Step size and run lengths
+
+- **h:** your choice, after Claude Code shows an exploration table.
+- **Run lengths:** 3 s, 10.055 s (mmc1's span), or both. Both gates used both.
+
+Implications:
+- h does not have to match mmc1's ~15 Hz sampling. A9 decides how values reach the sample times.
+- At the lower σ, which is your noise level, 10.055 s gave much better k recovery in set (b) than 3 s.
+
+My choice: h 0.001 (after the table), run lengths 10.055s
+
+### A9. What the model returns
+
+Default: t, V and a at every step, plus s if A1 = (c).
+- a comes from your E15 right-hand side at each node, not from a finite difference of V.
+- That makes a exactly the model's acceleration at each node; a finite difference would add its own error.
+
+Values at mmc1's uneven sample times (needed in Step 2):
+- **(a)** Defer to Step 2.
+- **(b)** Cubic Hermite interpolation between nodes, using V and a.
+- **(c)** Step exactly onto each sample time, with a variable h.
+
+Implications:
+- **(b)** Cubic Hermite's error shrinks like h⁴ (standard result), so it does not spoil RK4's order. It reuses the
+  a you already have.
+- **(c)** There is no interpolation error, but h varies with the sample gaps.
+  - That complicates the order check (A10).
+  - `rk4_solve` cannot do it as written, because it takes one step size.
+- **(a)** keeps Step 1 smaller, but the function signature may change in Step 2.
+
+My choice: a
+
+### A10. Tests
+
+The brief requires automated tests against analytical cases with known exact solutions.
+
+**A10.1 E19 closed form**
+- Choose n = 2 (the deck's check) and/or a non-integer n, plus the values of c and V0.
+- This tests the integrator and the plumbing only. It has no slope term and no PCHIP forces.
+- Your general form needs n ≠ 1; n = 1 would be a separate exponential case.
+
+**A10.2 Second exact case, including the slope term (optional)**
+- m dV/dt = m g sin θ − cV² on a constant slope also has a closed form. You would derive it; it is not in the
+  deck.
+- It tests the gravity term and the sign convention, which E19 does not. The cost is one more derivation.
+
+**A10.3 Order check (E18)**
+- **(a)** On the E19 case, where the exact solution is known.
+- **(b)** On the full model, using the three-run form.
+- **(c)** Both.
+
+Implications:
+- On the smooth E19 case, expect p_obs near 4.
+- On the full model, expect p_obs below 4 (inference; the exploration table will show it).
+  - Planing and rail are PCHIPs, whose second derivative jumps at every 1 m/s knot, and RK4's order relies on
+    smoothness.
+  - Report the result as measured, per your rule.
+
+**A10.4 Steady speed (E15 step 6)**
+- At a constant slope the run should approach the speed where dV/dt = 0.
+- This is a physical check on the full model, and it needs no exact time history.
+
+**A10.5 Invalid inputs** (default: yes)
+- Non-finite or non-positive V0, negative k, h ≤ 0, and θ outside its range.
+- Each gets a negative test with `match=`.
+
+**A10.6 Cross-check against the gates' model**
+- Run the Step 1 model at the gates' settings and compare its a(t) with the screen's `solve_ivp` output. The
+  settings are: attitude pos_y 0, pos_x 0.45; V0 = 8.3 m/s; constant 10°; k = 1.10; F_f as in Gate B.
+- If the two agree, the gate evidence applies to the verified forward model.
+- The same run gives the RK4-versus-`solve_ivp` accuracy and runtime for criterion 5.
+- It only compares like with like if A1 = (a) at 10°, A2 = (a) and A3.1 = (b). With other choices, this test
+  switches to those settings for itself only.
+
+Tolerances for every test: yours, after the exploration table.
+
+My choice: A10.1 n=2, c depends on V_0 and n, so I want you to make it proportional to D(V)/V_0**n, V_0 = 2, A10.2 do not include the second exact case, A10.3 a, A10.4 at a constant slope, due to the way data was extracted from SWD A10.5 a, all those values as written, A10.6 do not cross check with gate.
+
+### A11. Where the module lives
+
+Options:
+- **(a)** `src/forward_model.py`.
+- **(b)** A new top-level folder, e.g. `forward-model/forward_model.py`, like `friction-function/`.
+- **(c)** `SWD/model/`, next to `trajectory.py` and the screens.
+
+Implications:
+- The HTML docs are built from `src/` only (README: `python -m pdoc ... src`).
+  - Anything outside `src/` is missing from the HTML docs (rubric criterion 3) until that command is extended.
+  - This already applies to `friction-function/`.
+- **(a)** `src/` is a package, but importing F_f from `friction-function/` still needs a `sys.path` insert:
+  hyphenated folder names cannot be imported as packages.
+- **(c)** Your CLAUDE.md scopes `SWD/` to data acquisition, and `trajectory.py` there still has the E133 bug.
+
+My choice: b. I will move all in a new branch later.
+
+### A12. `trajectory.py`
+
+Options:
+- **(a)** Leave it untouched; E133 stays an open problem.
+- **(b)** Mark it as superseded by the new module, in its docstring.
+- **(c)** Fix E133 now.
+
+Implications:
+- The original Board-Jerk and Radicality values come from `trajectory.py`. Under (a) or (b) they stay inflated
+  (plan open problem 2).
+- **(c)** is outside Step 1 and adds time.
+
+My choice: b
+
+### A13. Review and branch
+
+- **Review:** agy and Devin review only, and Claude Code applies the fixes. Choose one round or two (Step 0 used
+  two), with or without the `sqa-numerical` subagent.
+- **Branch:** a new branch (e.g. `ForwardModel`) cut from `VonKarman`, or continue on `VonKarman`.
+
+Implications:
+- Each extra round adds time.
+- One round plus `sqa-numerical` still covers the numerics.
+
+My choice: review agy and devin and cc applies fixes, branch ForwardModel
+
+---
+
+## Part B — my derivations
+
+What each one feeds:
+
+| E | Feeds |
+|---|---|
+| E15 | The right-hand side f(t, y), the state ([V] or [s, V]), and the steady-speed equation for A10.4 |
+| E16 | The θ schedule function, with my numbers from A1 |
+| E17 | The check that `rk4_solve` matches (A7a), or the new RK4 (A7b) |
+| E18 | The p_obs formula in the order test |
+| E19 | The exact solution the A10.1 test compares against (plus A10.2's, if chosen) |
+
+How I'm giving them: ___ (typed below / photo or scan at ___ / filled-in deck)
+- **Typed below:** exact, and recorded verbatim as mine. This is how E20 and the Kármán quartic were done.
+- **Photo or scan:** quick, and the page itself shows authorship for the interview.
+  - Claude Code has to transcribe it, and I check the transcription.
+  - Any misread goes in the errors ledger (R3).
+- **Filled-in deck:** already structured E by E, but the deck lives outside the repo.
+
+Where they end up (the same as Kármán and F_f on 27 Oct):
+- **`AI-USE.md` § 4:** one row per E, "the derivation is the author's own".
+- **The module docstring:** the equations the code implements, with "Derivation: Benjamin Moors (`AI-USE.md` § 4)",
+  as `friction_force.py` does for F_f. `pdoc --math` renders them.
+- **The report:** the computational-solution section, later.
+- **Anything Claude Code fills in or completes:** recorded as written by Claude Code and confirmed by me, never as
+  mine.
+- **Sources owed for these:** `TODO.md` S.6–S.9. These are for the report stage, not the code.
+
+E15: dy/dt=f(t,y)=gsin(theta(t))-D(v)/m, where F_f(V) = 1/2 * rho * V**2 * A * [avg_C_f,lam * x_tr/ L + avg_C_f,turb * (1- x_tr/L)]
+Thus a piecewise, if V<=Re_crit*x/L F_f = 1/2 * rho * V**2 * A(V) * avg_C_f,lam
+if V>=Re_crit*x/L F_f = 1/2 * rho * V**2 * A(V) * [avg_C_f,lam*Re_crit*x_tr/L + avg_C_f,turb*Re_L*(1-x_tr/L)]
+
+E16: theta(t) = theta_min + (theta_max- theta_min)*t/T, where T is 10.055 (from mmc1, and a better time for wave ramp that 3s)
+
+E17: Follow RK4, this should not require my derivation
+
+E18: from Oberkampf we have already used
+
+E19: V(t) = [V_0**(1-n)-c*(1-n)/n*t]**(1/(1-n))
+
+(A10.2, if chosen:)
+
+---
+
+## Part C — fixed requirements for Claude Code
+
+1. **Gate.** Follow my gate rule at the top of this file.
+2. **Ask, don't pick.** If a choice in Part A is blank or unclear, ask me (R12).
+3. **Do not edit:**
+   - `SWD/model/identifiability_screen*.py`
+   - `friction-function/rerun_live_screen_ff.py`
+   - `friction-function/friction_force.py`
+   - `friction-function/blasius-shooting/shooting_blasius.py`
+   - `trajectory.py`, unless A12 says otherwise
+4. **Forces.**
+   - Do not use `trajectory.py` outputs.
+   - Do not use `drag_total_n` with a separate gravity term.
+   - Do not extrapolate anything.
+5. **Inputs and outputs (rubric criterion 1).**
+   - Every input and output gets its units, its valid range and its mathematical domain in the docstring.
+   - Invalid input raises ValueError with a clear message.
+6. **Documentation (W01.3).**
+   - NumPy-style docstrings, each with a Usage block.
+   - Limits as `# Limit:` comments.
+   - Comments that state intent.
+   - Negative tests with `match=`.
+   - `pdoc --math` builds clean.
+7. **Grids and tolerances.**
+   - Before writing any test with a grid or tolerance, run a few combinations and show me the table (h, the error at
+     each h, p_obs), then wait for my choice.
+   - Never tune h to make p_obs reach 4. Report it as measured.
+8. **Tests.** pytest; the full suite must still pass.
+9. **Review.** As set in A13: review only, Claude Code applies the fixes.
+10. **Commit.** Nothing is committed until I have checked the code.
+11. **`AI-USE.md`.**
+    - A task row (R2) with this prompt verbatim.
+    - My Part A choices and Part B derivations in § 4, with authorship split per item.
+    - A § 5 ledger entry for any correction (R3).
+12. **No `Co-Authored-By` trailers** (R11).
+
+ Ask any questions where necessary
+````
+
+</details>
+
+### Answers given to Claude Code's questions, 2026-10-27 (session `a3cd550c`)
+
+Session `a3cd550c`, planning and building Step 1, the forward model. Same handling as the 2026-09-29 subsection: the
+question is paraphrased and the answer is word for word. In the one quotation that names a path, the home directory
+is redacted to `~`.
+
+Q: The −10° → 20° ramp over 10.055 s leaves the 2–10 m/s force data within 0.5–2.6 s for every V0 from 4 to 10 m/s (pos_x 0.45; the same at 0.40). Which schedule and V0? Claude Code offered 0° → 20° or 5° → 15° at V0 = 8.3 m/s, keeping the ramp, or a V0 table first.
+A: Change the ramp to 20->0 deg, over 3s , V0 at 6m/s, check this before running it, note it as a decision when i have made up my mind
+
+Q: Only pos_x 0.40, 0.45 and 0.467 (pos_y 0, drift 0) have the full speed × slope grid that slope-matched forces need. Which attitude?
+A: pos_x 0.45
+
+Q: Separating dV/dt = −cVⁿ gives c(1−n)·t, not E19's c(1−n)/n·t. Which ODE does E19 solve?
+A: /m not /n, typo. 
+
+Q: E15 has no k, but A10.5 tests a negative k and both gates used k·friction. Is D = k·F_f + P + R, with the piecewise F_f read as all-laminar for V ≤ Re_crit·ν/L and "avg_C_f,lam*Re_crit" as C_lam evaluated at Re_crit?
+A: Yes, D = k·F_f + P + R
+
+Q: The 20° → 0° ramp over 3 s from 6 m/s stays inside the data (6.00 → 7.31 → 6.09 m/s, and also for V0 = 5–7). Held at 0° out to 10.055 s, it leaves the data at 5.07 s. E16's note calls 10.055 s the better ramp time. What is built?
+A: Decided: 3 s ramp = 3 s run
+
+Q: With E19 as m dV/dt = −cVⁿ, c = D(V0)/V0ⁿ at V0 = 2 m/s, n = 2 and k = 1. At which slope is D taken? Claude Code quoted c = 96.95 at 0° and 79.65 at 20° (§ 5 E155).
+A: θ = 20° (ramp start)
+
+Q: Between the 5° slope rows, should P and R be PCHIP in both V and θ, or PCHIP in V and linear in θ?
+A: PCHIP in V and θ
+
+Q: The 1 % check holds on the 0° rows. On the non-zero slopes, drag_total − (F+P+R − W sin θ) reaches −10.2 N at 20° and −22.1 N at (2 m/s, −10°). Should those rows be used as read, or should a gravity-inclusive check be added?
+A: Gravity-inclusive check
+
+Q: How many review rounds, and with or without the `sqa-numerical` subagent?
+A: 2 rounds, agy + Devin
+
+Q: Which branch is "the branch for PINN": `pinn`, `Screening-for-Inverse-PINN`, or both?
+A: pinn only
+
+Q: No file is named as a PINN journal. The only PINN file is the untracked `PINNs/PINN.ipynb`. Is that the journal?
+A: Yes, delete the folder
+
+Q: The gate line is blank, and no Gate A or B verdict is recorded. Which gate rule applies, (a) or (b)?
+A: (b) Go ahead now
+
+Plan rejection, verbatim: "Add one external check for the E15 right-hand side: find where SWD's own drag_total_n at 10° (pos_x 0.45) crosses zero, and compare that speed with V* = 7.30. Show me the gap before I set a tolerance; expect a small one from F_f vs friction_n and the slope residual.2. In the § 4 E18 row, state that the Oberkampf reference is unconfirmed (no title, page or equation number; TODO.md S.8).3. Don't delete PINNs/. Move it to ~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\PINNs\ instead. Delete the pinn branch as planned.4. In the E19 test, hard-code c as a number; don't compute it from the force data."
+
+Q: Which step h for the model? In Table 1, every h is converged to about 1e-11 m/s, and h = 0.001 s takes 6.1 s per run.
+A: 0.001 s
+
+Q: Which E19 grid and tolerances?
+A: 3/96–3/384, |p−4| ≤ 0.1
+
+Q: Which steady-speed test at a constant 10°? The time constant is 7.6 s.
+A: V0 6, 30 s, h 0.01, ≤ 0.05
+
+Q: For the external check, V* = 7.306029 m/s; SWD's drag_total_n crosses zero at 7.349590 m/s (PCHIP) or 7.292572 m/s (linear). Which crossing and tolerance?
+A: Linear, ≤ 0.02 m/s
+
+Q: What should SLOPE_TOL be for the non-zero slopes? Every row is within 10.23 N except (2 m/s, −10°), at 22.14 N.
+A: 25 N, keep −10°
+
+### Prompt for the jerk cost, 2026-10-27 (session `b82e80a3`)
+
+The prompt is quoted verbatim here, because it carries the author's derivations and choices, and those are recorded
+in § 4 against it. The three pasted blocks sit where they were pasted; the prompt does not say where their wording
+came from.
+
+<details>
+<summary>The prompt, verbatim (the author's message, with the three pasted blocks in place)</summary>
+
+````text
+There is one more thing we need to do, we do not have enough data for Radicality, but we do for Board-Jerk. From the forward model we now have the change in V over time, thus a. Using finite difference, you can find the single derivative of this to get jerk. Using CHarles et al., I want you to find the jerk cost, not the whole Board-jerk, as there are no turns. The board is going down a dip, thus 3s straight glide, from 20deg->0deg. V0=6m/s. Using the forward model as I stated. Use Step.1's a=dV/dt. Finite difference of acceleratiopn with np.gradient. We are using 3s for this as T again, with step h = 0.001. Use Simpson as we have an even no. of intervals. Use Eq 7 from Charles literally, the derivations are as listed:  Db = V)*T + a)*T**2/2 + beta*T**3/6. Da = abs(a0*T**2/2+beta*T**3/6), Jlinear = beta**2*T**6/(2*D**2) AND J_sinusoidal = A**2*omega**2*T**6/(4*D**2).  where Db = V)*T + A*T/omega, and D_a = abs(A*T/omega). Testing: use these exact cases, Use the Oberkampf reference again for convergence of J at h, h/2 and h/4, checks units for further validation, J is dimensionless. "
+
+Invalid inputs:
+the cases: T ≤ 0, D = 0, non-finite values, t and a of different lengths, fewer than 3 samples, and complete = False;
+each gets a negative test with match=;
+trajectory.py quietly set C = 1 when D = 0; decide whether that case raises instead.
+
+" There should not be comparison with the paper, this is a future endevour. Make a new forward-model/board_jerk.py, calling forward_model. Use C and D from previous, not from trajectory.py. Although it is labelled as board jerk for now, we will need to rename it in future. Do one round of agy and devin, cc applies fixes. Commit after it is finished. Derivations go to: 
+
+AI-USE.md § 4, one row each, as yours.
+The module docstring, as “Derivation: Benjamin Moors (AI-USE.md § 4)”.
+Anything Claude Code fills in is recorded as its own and confirmed by you.
+Eq 4–7 are the paper’s (p.6), so they’re cited, not claimed.
+
+. Base reqs are: 
+
+If a choice is blank or unclear, ask; don’t pick (R12).
+Don’t edit:
+the existing functions in forward_model.py (if B9 = a, only add),
+trajectory.py,
+the screens,
+friction-function/.
+No new force data and no new screens. The only motion input is simulate() at its defaults.
+Every input and output gets units, ranges and domains. Invalid input raises ValueError with a clear message.
+W01.3 documentation:
+NumPy docstrings with a Usage block,
+# Limit: comments,
+intent comments,
+negative tests with match=,
+pdoc --math builds clean.
+Show the exploration table (h, J, the change per halving, p_obs) before writing any tolerance, and wait. Never tune h to hit an expected order.
+pytest, with the full suite still passing.
+Review per B11.
+Nothing is committed until you’ve checked it.
+AI-USE.md:
+an R2 task row with the prompt verbatim,
+your choices and derivations in § 4,
+an R3 ledger entry for any correction.
+No Co-Authored-By trailers (R11).
+````
+
+</details>
+
+### Answers given to Claude Code's questions, 2026-10-27 (session `b82e80a3`)
+
+Session `b82e80a3`, planning and building the jerk cost. Same handling as the 2026-09-29 subsection: the question is
+paraphrased and the answer is word for word.
+
+Q: Which D goes into C = T⁵/D²? On the author's run, D_b = 20.657 m gives J = 1.068 and D_a = 2.657 m gives J = 64.58.
+A: D_a only
+
+Q: How is Eq 7's double integral computed: Simpson twice on a (`cumulative_simpson` inside, `simpson` outside), a trapezoid inside and Simpson outside, or Simpson on Step 1's V?
+A: Simpson twice on a
+
+Q: The invalid-input list includes D = 0, while `trajectory.py` sets C = 1. Raise ValueError, or C = 1?
+A: Raise ValueError
+
+Q: With `simulate()` kept at its defaults, what does the p_obs check on h, h/2, h/4 run on: the sinusoid only, the sinusoid plus his run subsampled to FD steps 4h, 2h, h, or the sinusoid plus re-runs at h/2 and h/4?
+A: Sinusoid + subsampled run
+
+Q: Values for the two exact cases, with the sinusoid as a = A sin(ωt), ω = nπ/T (Claude Code's completion)?
+A: a0=1, β=-0.5, A=1, n=1
+
+Q: How should "J is dimensionless" be checked: a rescaling test, the dimension count in the docstring, or both?
+A: Rescaling test + docstring
+
+Q: Which input checks beyond the six listed: an odd number of intervals, t not strictly increasing, t not uniformly spaced, or none?
+A: Odd number of intervals, t not strictly increasing
+
+Q: "B9" and "B11" are not in the repo or the transcripts. Is B11 one review-only round by agy and Devin with Claude Code applying the fixes, and is `forward_model.py` left unedited, so B9 never applies?
+A: Yes, that's right
+
+Plan approval: the approval dialog was dismissed, then "Go".
+
+Q: Which tolerances, from the four tables (linear; sinusoid; his run subsampled; units)?
+A: 1e-12; E19-style, |p−2| ≤ 0.1; |p−2| ≤ 0.1; 1e-12
+
 ---
 
 ## 📂 3. Approximate level of AI contribution `[REVIEW]`
@@ -735,6 +1277,8 @@ author must adjust to what they know to be true.
 | `friction-function/von-karman/von_karman.py`, `vonkarman.ipynb`, `tests/test_von_karman.py` — the Kármán momentum integral | ~100% of the code | Author derived α = 379/2835, β = 5/3, δ, θ, C_f and avg C_f (his own; AI checked them) and chose the Majdalani–Xuan quartic, the closed form as the reference, the direct RK4 march of δ from x0 with the closed-form start, its grid and p_obs tolerance, and the tests (Table 4-1 row, Eq. 4-10, β by `wall_slope`, the boundary conditions); AI implemented. The φ/z transform was written out by AI from his constraints and confirmed by him, then dropped; it is not in the code (§ 5 E144) |
 | `friction-function/friction_force.py`, `tests/test_friction_force.py` — friction drag F_f(V) | ~100% of the code | Author designed F_f (his own: Re_crit = 5×10⁵, x_tr capped at L, the laminar share x_tr/L of the area, the Blasius avg_C_f at the laminar Reynolds number, SWD's closure 0.031/Re_L^(1/7), A(V) and L(V) by PCHIP with L in m, SWD's ρ and μ, the laminar law as an argument) and the tests (the `physics_baseline` match, the fully laminar limit with White's σ, continuity, the Kármán option); AI implemented, found ρ = 1025 and the constant A and L in the data, and set the continuity bound 10εF, which is the author's to confirm |
 | `friction-function/rerun_live_screen_ff.py`, `tests/test_rerun_live_screen_ff.py` — the Gate B rerun | ~100% of the code | Author chose the screen, holding the attitude and V0, and what the output states; AI chose to replace three module-level names of the unchanged screen rather than edit it |
+| `forward-model/forward_model.py`, `tests/test_forward_model.py` — the forward model, Step 1 | ~100% of the code | **Author derived** E15, E16 and E19 (his own; E19's /m, § 5 E153). **Author chose** the schedule (20° → 0° over 3 s, V0 = 6 m/s); the attitude; slope-matched forces with a gravity-inclusive check and its 25 N tolerance; tensor PCHIP; F_f times k; the stop rule; his `rk4_solve`; h; every test grid and tolerance; c at 20°, hard-coded; and the external check against SWD's `drag_total_n`. **AI ran** the feasibility check and the tables. **AI chose** the V-then-θ order of the PCHIP, the one-step `march` wrapper, the separate `OutOfData` signal, and the 2–10 m/s range on V0 |
+| `forward-model/board_jerk.py`, `tests/test_board_jerk.py` — the jerk cost J | ~100% of the code | **Author derived** D_b, D_a, J_linear and J_sinusoidal (his own; the sinusoid's ωT = nπ is Claude Code's completion, § 5 E159). **Author chose** J alone with no comparison with the paper; D_a; `np.gradient` and Simpson; T and h; `simulate()` at its defaults as the only motion input; D = 0 raising; the exact-case values; the convergence targets; the units check; the extra input checks; every tolerance. **AI offered** the options for the Eq 7 method, the convergence target, the test values, the units check and the extra checks, ran the tables, and chose the code's structure (`displacement`, `jerk_cost`, the `_samples` helper and its order of checks) |
 | The written report and presentation | to be stated when written | Author |
 
 ---
@@ -815,6 +1359,30 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-10-27 | agy and Devin review only and Claude Code applies the fixes. After F_f: agy and Devin, a cleanup to the MMA3001 code structuring with major decisions left to the author, a review, and the same again. Nothing is committed before the author's review | Answer 2026-10-27 (§ 2), "Review-only, Claude fixes"; prompt 2026-10-27 (§ 6), "Now run agy and devin, then cleanup the code, (adhering strictly to the mma3001 code structuring, and leaving any major decisions to me), then review and do it again" |
 | 2026-10-27 | **V0 in the inverse problem is measured with an uncertainty**: neither known exactly (set (a)) nor fitted freely (set (b)). The uncertainty comes from the bracket the existing runs give, not from an instrument. Its lower edge is an exact V0, set (a); its upper edge is the spread of fitted V0 in set (b), which is what the data alone give. Charles et al. measured no board speed: their video defined the phases and was synced to the board data (paper p.2). An IMU cannot give V0 *(inference: an IMU gives acceleration and rotation rate, so V0 is an integration constant)*. Later, the V0 uncertainty will come from a speed source, not yet chosen: the MS5837 dynamic-pressure route or GPS. The result is stated as a conditional. The bracket at the lower σ, Gate A (the live-solver screen, SWD's `friction_n`) → Gate B (its rerun with F_f): set (a) within ±band 100 % → 100 % at 3 s and at 10.055 s; set (b) within ±band 18.5 % → 18.5 % (3 s) and 74.8 % → 72.8 % (10.055 s); set (b) sd of fitted V0 1.15 → 1.17 m/s and 0.49 → 0.52 m/s; set (b) fits ending on a bound 22.5 % → 22.75 % and 3 % → 3.25 %. No new runs, no V0 term in `fit()`, no Gate A or B verdict. **The choice is the author's. The options (V0 exact, fitted, or measured with an uncertainty) and the bracket framing were proposed by Claude in a claude.ai chat on 2026-10-27** | Prompt 2026-10-27 (§ 6), "THe decisions were made myself, but the prompt was not written well so this is from Claude"; plan rejection 2026-10-27, "the options (V0 exact / fitted / measured with an uncertainty; the noise-level options) and the bracket framing were proposed by Claude in a claude.ai chat on 27 Oct. The choices are mine. Record it that way, not as wording only" (the same rejection moved the ICM-20948 out of this row, § 5 E150) |
 | 2026-10-27 | **The noise level is the lower σ for now**: the floor set by the 0.01 g resolution, from **the author's own derivation E20** (his numbering, not § 5 E20): resolution step δ = 0.01 g = 0.0981 m/s²; variance of the rounding error e, Var(e) = δ²/12; standard deviation σ = δ/√12 = 0.0981/√12 = 0.0283 m/s². The third line was written σ = 0.0981/√2 and corrected by the author to √12, a typo (§ 5 E149). It agrees with `RESOLUTION_SIGMA` in `SWD/model/identifiability_screen.py` (code by Claude Code, § 2 2026-10-24; unchanged), the value Gates A and B ran with. E20's assumptions: rounding to nearest (a zero-mean error), the error uniform within one step, and errors independent between samples. Other noise sources will be added later, among them the ICM-20948's own noise. Open check, not done: Gate A's friction peak, max\|Δa_x\| = 0.090 m/s² (0.0889 m/s² in Gate B), against δ = 0.0981 m/s², one resolution step. **The choice is the author's. The noise-level options were proposed by Claude in a claude.ai chat on 2026-10-27** | Prompt 2026-10-27 (§ 6), "The noise level is the lower σ: the floor set by the 0.01 g resolution, derived in E20. Other noise sources will be added later"; answer 2026-10-27 (§ 2), "Correct to sqrt(12) - typo"; plan rejection 2026-10-27, "Add E20's assumptions to the noise row … Add the open check: compare the 0.090 m/s² friction peak with δ = 0.0981 m/s²" and the attribution quoted in the row above |
+| 2026-10-27 | **The submission stops at Step 1, the forward model.** The synthetic data, the inverse PINN and the least-squares model-mismatch study are deferred until there is time to make each decision without skipping important choices to meet a due date. The PINN stub `PINNs/PINN.ipynb` is moved out of the repo to `~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\PINNs\`. It was first chosen to be deleted; the author changed that to a move. The local branch `pinn` is deleted, and `Screening-for-Inverse-PINN` is kept | Prompt 2026-10-27 (§ 2 verbatim, `a3cd550c`), "I have made the decision to do the synthetic data, and inverse PINN and least squares model mismatch afterwards, when I have time to accurately make decisions…"; answers "pinn only" and "Yes, delete the folder"; plan rejection 2026-10-27, "Don't delete PINNs/. Move it to … instead. Delete the pinn branch as planned." |
+| 2026-10-27 | **Gate rule (b):** Step 1 goes ahead now. The forward model does not depend on the Gate A or B verdicts. Neither verdict exists yet; both are recorded before the report is written (`TODO.md`) | Answer 2026-10-27 (§ 2, `a3cd550c`), "(b) Go ahead now"; prompt A4, "the gate has nothing to do with this" |
+| 2026-10-27 | **E15, the author's own:** `dy/dt=f(t,y)=gsin(theta(t))-D(v)/m`, with F_f as his E14 design (the 2026-10-27 F_f row) and the piecewise form as typed in the § 2 prompt. **Claude Code's reading, confirmed by the author:** D = k·F_f + P(V, θ) + R(V, θ), where k is the gates' friction factor (E15 itself has no k). The all-laminar case is V ≤ Re_crit·ν/L. "avg_C_f,lam*Re_crit" means C_lam evaluated at Re_crit, not multiplied by it (§ 5 E154). Read this way, it is what `friction_force.F_f` computes. In `forward_model.py` | Prompt 2026-10-27 (§ 2 verbatim), Part B E15; answer "Yes, D = k·F_f + P + R" |
+| 2026-10-27 | **E16, the author's own:** `theta(t) = theta_min + (theta_max- theta_min)*t/T`, "where T is 10.055 (from mmc1, and a better time for wave ramp that 3s)". The code writes it as θ_start + (θ_end − θ_start)·t/T, because his ramp descends; the renaming is Claude Code's. T was later changed to 3 s (the schedule row below) | Prompt 2026-10-27 (§ 2 verbatim), Part B E16 |
+| 2026-10-27 | **E17:** "Follow RK4, this should not require my derivation". This is the classical RK4 of MMA3001 notebook 7.4, through the author's `rk4_solve` (A7 a; `solve_ivp` is for later). `march` calls it one step at a time so that a run can stop where V leaves the data (A6 a); that wrapper is Claude Code's. Not a derivation; its source is owed (`TODO.md` S.7) | Prompt 2026-10-27 (§ 2 verbatim), Part B E17 and A7, "a (we can do c later)" |
+| 2026-10-27 | **E18:** the observed order p_obs = log2(\|V_h − V_h/2\| / \|V_h/2 − V_h/4\|), the author's choice, as in `test_von_karman.py`: "from Oberkampf we have already used". **The Oberkampf reference is unconfirmed: it has no title, page or equation number (`TODO.md` S.8).** The same flag is in the docstring of the order test | Prompt 2026-10-27 (§ 2 verbatim), Part B E18; plan rejection 2026-10-27, item 2 |
+| 2026-10-27 | **E19, the author's own:** `V(t) = [V_0**(1-n)-c*(1-n)/n*t]**(1/(1-n))`. The /n is a typo for /m (§ 5 E153), so E19 solves m dV/dt = −cVⁿ: V = [V0^(1−n) − c(1−n)t/m]^(1/(1−n)), n ≠ 1. The test case is n = 2 and V0 = 2 m/s, with c = D(V0)/V0ⁿ ("proportional to D(V)/V_0**n") taken at θ = 20°, the ramp start, and k = 1. That gives c = 79.66155266587084 N·s²/m², hard-coded in the test and never computed from the force data (§ 5 E155 for the 79.65 quoted in a question) | Prompt 2026-10-27 (§ 2 verbatim), Part B E19 and A10.1; answers "/m not /n, typo." and "θ = 20° (ramp start)"; plan rejection 2026-10-27, item 4 |
+| 2026-10-27 | **The schedule, run and starting speed (A1 b, revised; A8):** θ linear in time, 20° → 0° over 3 s; a 3 s run; V0 = 6 m/s. His first choice was −10° → 20° over 10.055 s. Claude Code's feasibility check showed it leaving the 2–10 m/s force data within 0.5–2.6 s for every V0 from 4 to 10 m/s, at pos_x 0.45 and 0.40. The new ramp stays in range: 6.00 → 7.31 → 6.09 m/s, and also for V0 = 5–7. Held at 0° out to 10.055 s, it leaves the data at 5.07 s. **The schedule, T and V0 are the author's; the options and the check were Claude Code's** | Answers 2026-10-27 (§ 2, `a3cd550c`), "Change the ramp to 20->0 deg, over 3s , V0 at 6m/s, check this before running it, note it as a decision when i have made up my mind" and "Decided: 3 s ramp = 3 s run" |
+| 2026-10-27 | **The attitude (A4 b):** pos_y 0, pos_x 0.45. It is one of the three drift-0 attitudes with a complete 9 × 7 speed × slope grid (pos_x 0.40, 0.45, 0.467), as listed by Claude Code. This closes the review of the gates' attitude and starting speed: the attitude is kept, and V0 is now 6 m/s | Answer 2026-10-27 (§ 2, `a3cd550c`), "pos_x 0.45"; prompt A4, "b, the gate has nothing to do with this" |
+| 2026-10-27 | **The forces (A2 b, A2.1 b):** slope-matched planing and rail from the live solver at each slope, F_f for friction, and gravity as a separate term. `drag_total_n` is never used as a force. The loader is new, in the module. The interpolation is a tensor PCHIP in V and θ, never extrapolated; the V-then-θ order is Claude Code's. The 1 % check applies to the 0° rows. On the non-zero rows a gravity-inclusive check applies: \|drag_total − (F+P+R − W sin θ)\| ≤ 25 N, keeping −10°. Every row passes, including the (2 m/s, −10°) outlier at 22.1 N | Prompt A2; answers 2026-10-27 (§ 2, `a3cd550c`), "PCHIP in V and θ", "Gravity-inclusive check" and "25 N, keep −10°" |
+| 2026-10-27 | **The rest of the spec's Part A, as he chose:** F_f evaluated directly, with Blasius only (A3.1 a, A3.2 a); m = 802.21 N / 9.81 m/s² (A5); a run that leaves the data stops and returns what it has, with a flag (A6 a); his `rk4_solve` (A7 a); values at sample times deferred to Step 2 (A9 a); tests on E19 with n = 2, the order check on E19 only, the steady speed at a constant slope, and invalid inputs, with no second exact case and no gate cross-check (A10); `forward-model/` as a new folder, to be moved later (A11 b); `trajectory.py` marked superseded (A12 b); two review rounds by agy and Devin, review only, with Claude Code applying the fixes, on branch `ForwardModel` (A13). **The options were written by Claude in a claude.ai chat; the choices are the author's** | Prompt 2026-10-27 (§ 2 verbatim), the "My choice" lines; answer "2 rounds, agy + Devin" |
+| 2026-10-27 | **The external check:** the model's steady speed at a constant 10°, V* = 7.306 m/s (the root of E15), against the speed where SWD's own `drag_total_n` crosses zero, which the model never uses. The crossing is the linear zero between 7 and 8 m/s, 7.2926 m/s, hard-coded, with a tolerance of 0.02 m/s. The measured gap is 0.0135 m/s. With PCHIP the crossing is 7.3496 m/s, a gap of −0.0436 m/s. The gap comes from F_f being 0.6–0.7 N below `friction_n` and from SWD's slope residual of about −0.8 to −1 N, as the author predicted | Plan rejection 2026-10-27, item 1, "Add one external check for the E15 right-hand side…"; answer "Linear, ≤ 0.02 m/s" |
+| 2026-10-27 | **The step and the tolerances, chosen from Claude Code's tables; Claude Code neither picked nor tuned them:** h = 0.001 s. In Table 1, V(3 s) changes by 1.8e-12 m/s from h = 0.002 s, at 6 s per run. The full-model p_obs, 1.2–3.5, is irregular near round-off and is reported as measured, not asserted. The E19 grid is 3/96, 3/192, 3/384 s, with \|p_obs − 4\| ≤ 0.1 (3.990 measured) and the error at h/4 within the h/2 → h/4 change. The steady speed at a constant 10° uses V0 = 6 m/s, 30 s and h = 0.01 s, with \|V − V*\| ≤ 0.05 m/s (0.034 measured; time constant 7.6 s) | Answers 2026-10-27 (§ 2, `a3cd550c`), "0.001 s", "3/96–3/384, \|p−4\| ≤ 0.1", "V0 6, 30 s, h 0.01, ≤ 0.05" |
+| 2026-10-27 | **The jerk cost, its scope:** J alone, from Charles et al. (2026) Eq 4–7 (p.6; the paper's, cited and not claimed), not the whole Board-Jerk, because the 3 s glide down the 20° → 0° ramp has no turns. Radicality is not computed, for lack of data. There is no comparison with the paper's values; that is future work. The module is `forward-model/board_jerk.py`, named for now and to be renamed. It calls `forward_model`, and its only motion input is `simulate()` at its defaults (T = 3 s, h = 0.001 s, V0 = 6 m/s). C and D are computed here, not taken from `trajectory.py` | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`), "I want you to find the jerk cost, not the whole Board-jerk, as there are no turns" and "There should not be comparison with the paper, this is a future endevour" |
+| 2026-10-27 | **The method:** j = da/dt by `np.gradient` on Step 1's a = dV/dt (at its default edge order, Claude Code's literal reading); J by composite Simpson, since 3 s at h = 0.001 s is 3000 intervals, an even number; Eq 7 taken literally | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`), "Finite difference of acceleratiopn with np.gradient", "Use Simpson as we have an even no. of intervals", "Use Eq 7 from Charles literally" |
+| 2026-10-27 | **D_b for linear acceleration, the author's own:** `Db = V)*T + a)*T**2/2 + beta*T**3/6`, read as D_b = V0·T + a0·T²/2 + β·T³/6 (the ")" for "0" is a typing slip, § 5 E158). For a = a0 + βt it is the displacement over T. Writing the case out as a = a0 + βt is Claude Code's, confirmed by the author. Recorded but not used: J uses D_a (row below) | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **D_a for linear acceleration, the author's own:** `Da = abs(a0*T**2/2+beta*T**3/6)`, Eq 7 taken literally: the double integral of a, with no starting speed. With a0 = 1 m/s², β = −0.5 m/s³ and T = 3 s it is 2.25 m, hard-coded in `tests/test_board_jerk.py`. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **J_linear, the author's own:** `Jlinear = beta**2*T**6/(2*D**2)`. j = β is constant, so J = (T⁵/D²)(β²/2)T. With the D_a row's values it is 18, hard-coded. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **J_sinusoidal, the author's own:** `J_sinusoidal = A**2*omega**2*T**6/(4*D**2)`. **Claude Code's completion, confirmed by the author:** the sinusoid is a = A sin(ωt) with ωT = nπ. The result needs ∫₀ᵀ cos²(ωt) dt = T/2, which holds only when sin(2ωT) = 0 (§ 5 E159). With D_a it reduces to (nπ)⁴/4, whatever A and T; that observation is Claude Code's. For A = 1 m/s² and n = 1 (ω = π/3 rad/s) it is π⁴/4 = 24.352272758500604, hard-coded. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`); answer "a0=1, β=-0.5, A=1, n=1" to a question that stated ω = nπ/T |
+| 2026-10-27 | **D_b for the sinusoid, the author's own:** `Db = V)*T + A*T/omega`, read as V0·T + A·T/ω (§ 5 E158). It needs sin(ωT) = 0 (§ 5 E159). Recorded but not used | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **D_a for the sinusoid, the author's own:** `D_a = abs(A*T/omega)`, which needs sin(ωT) = 0 (§ 5 E159). For A = 1 m/s² and ω = π/3 rad/s it is 9/π m. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **D_a, not D_b:** J uses Eq 7 taken literally, without V0·T. On his run D_a = 2.6569 m gives J = 64.582; D_b = 20.657 m would give 1.068, 60 times smaller. A `# Limit:` comment in the module records it. The options and figures were Claude Code's | Answers 2026-10-27 (§ 2, `b82e80a3`), "D_a only" |
+| 2026-10-27 | **The rest of his choices, from options Claude Code offered:** Eq 7 by Simpson twice on a (`cumulative_simpson` inside, `simpson` outside). D = 0 raises ValueError, where `trajectory.py` set C = 1. The convergence check (E18; the Oberkampf reference is still unconfirmed, `TODO.md` S.8) runs on the sinusoid at h, h/2, h/4 and on his run subsampled to FD steps 4h, 2h, h, so `simulate()` is never re-run. The exact cases are a0 = 1 m/s², β = −0.5 m/s³, A = 1 m/s² and n = 1. Units are checked by a rescaling test (a in mm/s²; t in ms with a in m/ms²) plus the dimension count in the docstring. His six invalid inputs, plus an odd interval count and a t that is not strictly increasing, each raise ValueError and have a negative test. One review-only round by agy and Devin, with Claude Code applying the fixes; `forward_model.py` is not edited | Answers 2026-10-27 (§ 2, `b82e80a3`), "Simpson twice on a", "Raise ValueError", "Sinusoid + subsampled run", "a0=1, β=-0.5, A=1, n=1", "Rescaling test + docstring", "Odd number of intervals, t not strictly increasing", "Yes, that's right" |
+| 2026-10-27 | **The tolerances, chosen from Claude Code's four tables; Claude Code neither picked nor tuned them:** on the linear case, J and D within 1e-12 (7.1e-15 and 4.4e-16 m measured). On the sinusoid, the error at h/4 within the h/2 → h/4 change (5.6e-7 against 1.7e-6), and \|p_obs − 2\| ≤ 0.1 (2.0000 measured). On his run, \|p_obs − 2\| ≤ 0.1 (2.0054 measured). The rescaled J within 1e-12, relative (at most 4.9e-15 measured) | Answer 2026-10-27 (§ 2, `b82e80a3`), "1e-12; E19-style, \|p−2\| ≤ 0.1; \|p−2\| ≤ 0.1; 1e-12" |
 
 **Interview readiness** (`CLAUDE.md` R7 — nothing in the repo I cannot explain unaided). To be
 ticked by the author, not by AI:
@@ -846,6 +1414,10 @@ ticked by the author, not by AI:
 | `tests/test_friction_force.py` | ☐ | ☐ | ☐ |
 | `friction-function/rerun_live_screen_ff.py` | ☐ | ☐ | ☐ |
 | `tests/test_rerun_live_screen_ff.py` | ☐ | ☐ | ☐ |
+| `forward-model/forward_model.py` (`load_forces`, `theta`, `march`, `simulate`) | ☐ | ☐ | ☐ |
+| `tests/test_forward_model.py` | ☐ | ☐ | ☐ |
+| `forward-model/board_jerk.py` (`displacement`, `jerk_cost`) | ☐ | ☐ | ☐ |
+| `tests/test_board_jerk.py` | ☐ | ☐ | ☐ |
 
 ---
 
@@ -1009,6 +1581,14 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E150 | 2026-10-27 | The prompt of 2026-10-27 (§ 6; wording from a claude.ai chat), carried into Claude Code's plan for the V0 row: "In future i can use this wirth my uncertainty of the ICM-20948 to find which uncertainty to use" | The ICM-20948 is an IMU and cannot give V0, as the same plan's inference row said. Its noise is one of the later noise sources; the V0 uncertainty will come from a speed source, not yet chosen (the MS5837 dynamic-pressure route or GPS) | Benjamin, rejecting the plan | § 4, the 2026-10-27 V0 and noise-level rows |
 | E151 | 2026-10-27 | Claude Code, session `5af91cfa`, in E147: the rounding defect gives "up to 23 % more force at L = 1.53 m" | The baseline's force is up to 29.4 % above F_f (at 1.0 m/s); 22.7 % is how far F_f is below the baseline. The same inverted ratio as E145. E147's "12.7 % at 2.3 m/s" is in the right direction | agy, review-only pass before the commit (2026-10-27); reproduced by Claude Code | this entry (E147 left as written, R1) |
 | E152 | 2026-10-27 | Claude Code, session `5af91cfa`, in the 2026-10-27 § 2 and § 4 rows, `friction_force.py` and the wiki: the wetted area and length are constant in speed at "all 1,276 converged attitudes" | The converged table has 1,354 attitudes; 1,276 of them have two or more converged speeds, and A and L are constant in speed at all of those (the other 78 have one speed). The claim holds for the 1,276 it was measured on | agy, review-only pass before the commit (2026-10-27); reproduced by Claude Code | `friction_force.py` (comment); wiki *Board Equation of Motion and SWD Forces*; the § 2 and § 4 rows left as written (R1) |
+| E153 | 2026-10-27 | Benjamin's derivation E19 (prompt 2026-10-27, § 2 verbatim): V(t) = [V0^(1−n) − c(1−n)/n·t]^(1/(1−n)) | Separating m dV/dt = −cVⁿ gives c(1−n)t/m, so the /n is a typo for /m. For n = 2, the typed form solves dV/dt = −(c/2)V² | Claude Code, session `a3cd550c`, checking the separation while planning; corrected by the author ("/m not /n, typo.") | § 4, the 2026-10-27 E19 row; `tests/test_forward_model.py` |
+| E154 | 2026-10-27 | Benjamin's E15 (prompt 2026-10-27, § 2 verbatim): the piecewise F_f, "if V<=Re_crit*x/L", "avg_C_f,lam*Re_crit" and "avg_C_f,turb*Re_L", with D(v) and no k | All laminar when x_tr = Re_crit·ν/V ≥ L, that is V ≤ Re_crit·ν/L. The coefficients are evaluated at those Reynolds numbers, C_lam(Re_crit) and C_turb(Re_L), not multiplied by them. The resistance is D = k·F_f + P(V, θ) + R(V, θ). Read this way, F_f is `friction_force.F_f` (§ 4, the 2026-10-27 F_f row) | Claude Code, session `a3cd550c`, while planning; confirmed by the author ("Yes, D = k·F_f + P + R") | § 4, the 2026-10-27 E15 row |
+| E155 | 2026-10-27 | Claude Code, session `a3cd550c`, in a question to the author: c = D(2 m/s, θ)/2² is 79.65 N·s²/m² at 20° (and 96.95 at 0°) | c at 20° is 318.6462106634834/4 = 79.66155266587084 N·s²/m². The question's 79.65 came from D rounded first to 318.6 N | Claude Code, computing c to full precision before hard-coding it | `tests/test_forward_model.py` (`C_E19`) |
+| E156 | 2026-10-27 | Claude Code, session `a3cd550c`, in the comment on `H` in `forward_model.py` and in the § 4 row on the step and tolerances: "V(3 s) changes by 1.8e-12 m/s from h = 0.002 s" | 1.8e-12 m/s (1.825e-12) is the largest change over the shared nodes, near t = 0.26 s. At t = 3 s the change is 3.3e-13 m/s (3.26e-13). The full-model p_obs range of 1.2–3.5 comes from the same maximum; at t = 3 s it is 1.0–5.9. Table 1 itself labelled both columns correctly, so the author's choice of h is unaffected | agy, review-only round 1 (2026-10-27); confirmed by Claude Code against Table 1 | `forward_model.py` (comment); the § 4 row left as written (R1) |
+| E157 | 2026-10-27 | Claude Code, session `a3cd550c`, in E156: the largest change from h = 0.002 s to 0.001 s is "near t = 0.26 s" | It is at t = 0.770 s, node 385 of 1500 on the h = 0.002 s grid, where V = 7.0006 m/s has just crossed the 7 m/s PCHIP knot. 0.257 is the fraction of the run, not a time | agy, review-only round 2 (2026-10-27); reproduced by Claude Code | this entry (E156 left as written, R1) |
+| E158 | 2026-10-27 | Benjamin's D_b derivations (prompt 2026-10-27, § 2 verbatim, `b82e80a3`): `Db = V)*T + a)*T**2/2 + beta*T**3/6` and `Db = V)*T + A*T/omega` | ")" is a slip for "0", the same key shifted: V0 and a0. His D_a line types the same term as `a0*T**2/2` | Claude Code, session `b82e80a3`, while planning; stated in the plan the author approved ("Go") | § 4, the 2026-10-27 D_b rows |
+| E159 | 2026-10-27 | Benjamin's sinusoid results (the same prompt): D_b = V0·T + AT/ω, D_a = \|AT/ω\| and J_sinusoidal = A²ω²T⁶/(4D²), stated with no form for a and no condition on ω | For a = A sin(ωt), ∫₀ᵀ∫₀ᵗ a ds dt = AT/ω − A sin(ωT)/ω², and ∫₀ᵀ cos²(ωt) dt = T/2 + sin(2ωT)/(4ω). All three hold only when sin(ωT) = 0, that is ωT = nπ. For a = A cos(ωt), D would not be AT/ω at all | Claude Code, session `b82e80a3`, checking the derivation while planning; confirmed by the author's answer to the test-values question, which stated ω = nπ/T | § 4, the sinusoid rows; the `board_jerk.py` docstring; `tests/test_board_jerk.py` |
+| E160 | 2026-10-27 | Claude Code, session `b82e80a3`, in the convergence question and the plan: "Preview: p_obs = 1.999" on his run subsampled to FD steps 4h, 2h, h | 1.999 came from D = \|∫(V − V0) dt\| on Step 1's V. With Eq 7 as chosen (Simpson twice on a) the same check gives 2.0054 (Table 3), because D now also changes with the step. The question did not say which D the preview used. The author set \|p − 2\| ≤ 0.1 from Table 3 | Claude Code, running Table 3 | this entry; § 4, the 2026-10-27 tolerances row |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn
@@ -1027,7 +1607,7 @@ transcripts Claude Code keeps outside the repo. Regenerate with `python tools/ex
 the home directory is redacted to `~`. Nothing between the markers is edited by hand.
 
 <!-- prompts:begin -->
-454 prompts across 55 sessions (Claude Code 433, Devin 2, agy 19), 2026-08-26 to 2026-10-27. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
+458 prompts across 58 sessions (Claude Code 435, Devin 2, agy 21), 2026-08-26 to 2026-10-27. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
 
 | Session | CLI | Version | Model | Scope | First | Last | Prompts |
 |---|---|---|---|---|---|---|---:|
@@ -1086,6 +1666,9 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 | `b6dfaacb` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 10:21 AEDT | 2026-10-27 10:21 AEDT | 1 |
 | `18fe4e54` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 11:03 AEDT | 2026-10-27 11:03 AEDT | 1 |
 | `a7bf5c3a` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 12:43 AEDT | 2026-10-27 12:43 AEDT | 1 |
+| `a3cd550c` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 18:38 AEDT | 2026-10-27 20:51 AEDT | 2 |
+| `ca208153` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 19:49 AEDT | 2026-10-27 19:49 AEDT | 1 |
+| `8ef10473` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 20:13 AEDT | 2026-10-27 20:13 AEDT | 1 |
 
 ### 2026-08-26 22:38 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
@@ -3678,6 +4261,412 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 > Guard (must stay exit 0): .venv\Scripts\python.exe -m pytest tests -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\5af91cfa-5add-4abf-9c96-def27de2be6a\scratchpad\pt-guard
 > Temp files: use only the absolute path ~\AppData\Local\Temp\hfin-audit (never a literal %TEMP%, never inside the repo); pytest --basetemp ~\AppData\Local\Temp\hfin-audit\pt.
 > Quick pass: keep it short.
+
+### 2026-10-27 18:38 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `a3cd550c` · `VonKarman`
+
+> Now its time to make the final part of this project for now (we will continue with making the ivnerse model later), I have made the decision to do the synthetic data, and inverse PINN and least squares model mismatch afterwards, when I have time to accurately make decisions and not skip over any important choices in the aim of speeding up siubmission before a due date. Now we need to conduct the final piece which is the forward model. Thus remove the PINN directory and journal and the branch for PINN. We have made the friction model F_f(V) previously, and I have asked claude to make me a full description, of all the decisions that need to be made, and all the derivations necessary to conduct this:
+>
+> <pasted_content id="af37">
+> # Step 1 — forward model (E15–E19): spec for Claude Code
+>
+> **How to use this file.**
+> 1. Fill in every "My choice:" line in Part A.
+> 2. Put your derivations in Part B.
+> 3. Tell Claude Code: "Read this file and build Step 1 as specified. My choices are on the 'My choice' lines and my
+>    derivations are in Part B. If any choice is blank or unclear, ask me; don't pick."
+>
+> **Gate A and Gate B verdicts:** ___
+>
+> **Gate rule for Step 1:** ___
+> - **(a)** Step 1 waits until a pass is recorded in `AI-USE.md` § 4 (the old flowchart).
+> - **(b)** Step 1 goes ahead now. The submission stops at Step 1, and the forward model does not depend on the
+>   verdicts. The verdicts are recorded before the report is written.
+>
+> ---
+>
+> ## Part A — decisions
+>
+> ### A1. Slope schedule (E16)
+>
+> Options:
+> - **(a)** A constant slope θ₀ for the whole run. Both gates used 10°.
+> - **(b)** Linear in time, θ₀ → θ₁ over T. The state stays [V].
+> - **(c)** Linear in distance, θ_top → θ_bot over S. The state becomes [s, V].
+>
+> Implications:
+> - **(a)** This is the simplest option, and the Gate A/B evidence applies to it directly, but only at 10°.
+>   - At 10° from 8.3 m/s, every gate run stayed inside 2–10 m/s for the full 10.055 s.
+>   - The run settles toward one steady speed. That is where the k and V0 signatures overlap.
+> - **(b)** Speeds pass through a wider range, which may help separate k from V0. That is an inference; neither gate
+>   tested it.
+>   - The gate evidence no longer applies directly.
+>   - You must check that V stays inside 2–10 m/s with your numbers.
+> - **(c)** This is the closest to a face whose steepness depends on position.
+>   - Every RK4 slope k has two components (E17), and s needs its own initial value.
+>   - The same caveats as (b) apply.
+> - **For any non-constant schedule:** θ's range only limits the force data if A2 = (b). The live solver covers
+>   −10° to +20°.
+>
+> My choice: b   Numbers: -10->20degrees over 10.055s
+>
+> ### A2. Forces at a non-zero slope
+>
+> Options:
+> - **(a)** The 0° components (friction, planing, rail), with gravity as a separate m g sin θ term. This is what deck
+>   E15 and both screens use.
+> - **(b)** Slope-matched components from the live solver's rows at each slope (−10° to +20° in 5° steps),
+>   interpolated in V and θ.
+>
+> From the data at your attitude (pos_y 0, pos_x 0.45):
+> - Friction and rail do not change with slope.
+> - Planing at 10° is about 3 N lower than at 0° at 4 m/s, and about 1.5 N lower at 8 m/s.
+> - For scale, ±10 % of friction is about 1.7 N at 4 m/s and about 6 N at 8 m/s.
+>
+> Implications:
+> - **(a)** This matches the gates.
+>   - On a 10° slope, planing is off by those 1.5–3 N.
+>   - That is a modelling error. It biases nothing in the synthetic study as long as the data and the fit use the
+>     same forces.
+> - **(b)** This is more faithful, but it needs 2-D interpolation and a new consistency check.
+>   - At non-zero slope, `drag_total_n` already includes the weight component, so the screen's 1 % check would reject
+>     those rows.
+>   - `drag_total_n` must never be paired with a separate m g sin θ, or gravity is counted twice.
+> - **(b) in Step 2:** it is also a ready-made way to degrade the data against the inverse crime: generate with
+>   slope-matched forces, fit with 0°.
+>
+> **A2.1 Force-loading code**
+> - **(a)** Import `load_forces` and `Forces` from `SWD/model/identifiability_screen_live.py`.
+> - **(b)** Write a new loader in the forward-model module. It uses the same 1 % decomposition check on 0° rows.
+>
+> Implications:
+> - **(a)** This has no duplicated code. But that file's docstring says it is a feasibility screen only and must not
+>   be reused as the forward model.
+> - **(b)** This means about 50 duplicated lines. In exchange, the forward model stands alone and the screen stays
+>   untouched.
+>
+> My choice: A2 b, A2.1 b
+>
+> ### A3. The friction term
+>
+> **A3.1 How F_f enters**
+> - **(a)** F_f evaluated directly at each V, from your E14 formula (`friction_force.F_f`).
+> - **(b)** A PCHIP of F_f through the 1 m/s grid speeds, as in the Gate B rerun.
+>
+> Implications:
+> - **(a)** This is exactly your E14, and it is smooth in V.
+>   - F_f raises ValueError for V outside 2–10 m/s, so an RK4 trial stage that overshoots the range stops the run
+>     with an error (see A6).
+> - **(b)** This matches the Gate B evidence exactly.
+>   - Between grid speeds it differs from F_f by up to 0.34 %.
+>   - Outside the range it returns NaN instead of raising.
+>
+> **A3.2 Laminar law**
+> - **(a)** Blasius only, F_f's default.
+> - **(b)** Expose the switch now, with Blasius as default and Kármán as an option. Step 4 needs data made with one
+>   law and fitted with the other.
+>
+> Implications:
+> - **(b)** costs one parameter and one test now.
+> - **(a)** means changing the forward model's signature in Step 4.
+>
+> My choice: A3.1 a, A3.2 a
+>
+> ### A4. Attitude and starting-speed defaults
+>
+> Options:
+> - **(a)** Keep pos_y 0, pos_x 0.45 and V0 = 8.3 m/s. These are the gates' values; your plan still lists them as
+>   rule-based defaults awaiting review (open problem 4).
+> - **(b)** Review them and set new values now.
+>
+> Implications:
+> - **(a)** keeps the Gate A/B bracket valid for this model. Recording this as your decision closes open problem 4.
+> - **(b)** The bracket and both gates only hold at the old values. Keeping the evidence would mean re-running the
+>   screen, which is a Monte Carlo.
+>
+> My choice: b, the gate has nothing to do with this
+>
+> ### A5. Mass and g
+>
+> Default: m = 802.21 N / g, with g = 9.81 m/s². This is deck E15 and the screens; E20 also used 9.81.
+> - `trajectory.py` used 80 + 1.741 kg, which is within 0.05 % of the same weight.
+> - So this choice is about consistency, not size: 802.21 N is the weight the live solver trimmed lift to.
+>
+> My choice: default
+>
+> ### A6. When V leaves 2–10 m/s
+>
+> The forces have no data outside 2–10 m/s at this attitude, and nothing is extrapolated.
+>
+> Options:
+> - **(a)** Stop the run at the step where V leaves the range, and return the run so far with a flag.
+> - **(b)** Raise ValueError.
+> - **(c)** Hold the forces at their edge values, still stopping at the edge. This is the screens' trial-stage rule.
+>
+> Implications:
+> - Your `rk4_solve` marches a fixed array with no early stop. Outside the range, the PCHIPs give NaN (or F_f
+>   raises). So (a) and (c) need a range check inside the march, as a modified loop or a wrapper; (b) is a check
+>   after the march.
+> - **(a)** keeps partial runs usable. Step 3 fits will hit this when trial k or V0 values push V out of range.
+> - **(b)** is the simplest and safest for Step 1, but Step 3 will need (a) or a guard like the screen's residual
+>   penalty.
+> - Fixed-step RK4 cannot stop exactly on the edge. The last step lands past it unless you add a partial step.
+>
+> My choice: a
+>
+> ### A7. Integrator (E17)
+>
+> Options:
+> - **(a)** Reuse your `rk4_solve` from `friction-function/blasius-shooting/shooting_blasius.py`, imported the way
+>   `von_karman.py` already does.
+> - **(b)** A new RK4 written from your E17 in the forward-model module.
+> - **(c)** scipy `solve_ivp` (RK45, adaptive), as the screens used.
+>
+> Implications:
+> - **(a)** This is your code, already tested on y″ + 4y = 0 with p_obs ≈ 4. Your E17 becomes the check that it
+>   matches.
+>   - Importing it runs that module's top-level setup (the White table load).
+>   - It needs a wrapper for A6 (a) or (c).
+>   - It assumes one fixed step size.
+> - **(b)** This is fresh code that is yours by derivation, but it duplicates a tested function and needs its own
+>   order test.
+> - **(c)** This is not RK4 as taught, and the brief wants a technique taught in the unit (p.7).
+>   - It is best kept for Step 2: making the synthetic data with `solve_ivp` and fitting with RK4 gives the "different
+>     integrator" your inverse-crime rule asks for.
+>
+> My choice: a (we can do c later)
+>
+> ### A8. Step size and run lengths
+>
+> - **h:** your choice, after Claude Code shows an exploration table.
+> - **Run lengths:** 3 s, 10.055 s (mmc1's span), or both. Both gates used both.
+>
+> Implications:
+> - h does not have to match mmc1's ~15 Hz sampling. A9 decides how values reach the sample times.
+> - At the lower σ, which is your noise level, 10.055 s gave much better k recovery in set (b) than 3 s.
+>
+> My choice: h 0.001 (after the table), run lengths 10.055s
+>
+> ### A9. What the model returns
+>
+> Default: t, V and a at every step, plus s if A1 = (c).
+> - a comes from your E15 right-hand side at each node, not from a finite difference of V.
+> - That makes a exactly the model's acceleration at each node; a finite difference would add its own error.
+>
+> Values at mmc1's uneven sample times (needed in Step 2):
+> - **(a)** Defer to Step 2.
+> - **(b)** Cubic Hermite interpolation between nodes, using V and a.
+> - **(c)** Step exactly onto each sample time, with a variable h.
+>
+> Implications:
+> - **(b)** Cubic Hermite's error shrinks like h⁴ (standard result), so it does not spoil RK4's order. It reuses the
+>   a you already have.
+> - **(c)** There is no interpolation error, but h varies with the sample gaps.
+>   - That complicates the order check (A10).
+>   - `rk4_solve` cannot do it as written, because it takes one step size.
+> - **(a)** keeps Step 1 smaller, but the function signature may change in Step 2.
+>
+> My choice: a
+>
+> ### A10. Tests
+>
+> The brief requires automated tests against analytical cases with known exact solutions.
+>
+> **A10.1 E19 closed form**
+> - Choose n = 2 (the deck's check) and/or a non-integer n, plus the values of c and V0.
+> - This tests the integrator and the plumbing only. It has no slope term and no PCHIP forces.
+> - Your general form needs n ≠ 1; n = 1 would be a separate exponential case.
+>
+> **A10.2 Second exact case, including the slope term (optional)**
+> - m dV/dt = m g sin θ − cV² on a constant slope also has a closed form. You would derive it; it is not in the
+>   deck.
+> - It tests the gravity term and the sign convention, which E19 does not. The cost is one more derivation.
+>
+> **A10.3 Order check (E18)**
+> - **(a)** On the E19 case, where the exact solution is known.
+> - **(b)** On the full model, using the three-run form.
+> - **(c)** Both.
+>
+> Implications:
+> - On the smooth E19 case, expect p_obs near 4.
+> - On the full model, expect p_obs below 4 (inference; the exploration table will show it).
+>   - Planing and rail are PCHIPs, whose second derivative jumps at every 1 m/s knot, and RK4's order relies on
+>     smoothness.
+>   - Report the result as measured, per your rule.
+>
+> **A10.4 Steady speed (E15 step 6)**
+> - At a constant slope the run should approach the speed where dV/dt = 0.
+> - This is a physical check on the full model, and it needs no exact time history.
+>
+> **A10.5 Invalid inputs** (default: yes)
+> - Non-finite or non-positive V0, negative k, h ≤ 0, and θ outside its range.
+> - Each gets a negative test with `match=`.
+>
+> **A10.6 Cross-check against the gates' model**
+> - Run the Step 1 model at the gates' settings and compare its a(t) with the screen's `solve_ivp` output. The
+>   settings are: attitude pos_y 0, pos_x 0.45; V0 = 8.3 m/s; constant 10°; k = 1.10; F_f as in Gate B.
+> - If the two agree, the gate evidence applies to the verified forward model.
+> - The same run gives the RK4-versus-`solve_ivp` accuracy and runtime for criterion 5.
+> - It only compares like with like if A1 = (a) at 10°, A2 = (a) and A3.1 = (b). With other choices, this test
+>   switches to those settings for itself only.
+>
+> Tolerances for every test: yours, after the exploration table.
+>
+> My choice: A10.1 n=2, c depends on V_0 and n, so I want you to make it proportional to D(V)/V_0**n, V_0 = 2, A10.2 do not include the second exact case, A10.3 a, A10.4 at a constant slope, due to the way data was extracted from SWD A10.5 a, all those values as written, A10.6 do not cross check with gate.
+>
+> ### A11. Where the module lives
+>
+> Options:
+> - **(a)** `src/forward_model.py`.
+> - **(b)** A new top-level folder, e.g. `forward-model/forward_model.py`, like `friction-function/`.
+> - **(c)** `SWD/model/`, next to `trajectory.py` and the screens.
+>
+> Implications:
+> - The HTML docs are built from `src/` only (README: `python -m pdoc ... src`).
+>   - Anything outside `src/` is missing from the HTML docs (rubric criterion 3) until that command is extended.
+>   - This already applies to `friction-function/`.
+> - **(a)** `src/` is a package, but importing F_f from `friction-function/` still needs a `sys.path` insert:
+>   hyphenated folder names cannot be imported as packages.
+> - **(c)** Your CLAUDE.md scopes `SWD/` to data acquisition, and `trajectory.py` there still has the E133 bug.
+>
+> My choice: b. I will move all in a new branch later.
+>
+> ### A12. `trajectory.py`
+>
+> Options:
+> - **(a)** Leave it untouched; E133 stays an open problem.
+> - **(b)** Mark it as superseded by the new module, in its docstring.
+> - **(c)** Fix E133 now.
+>
+> Implications:
+> - The original Board-Jerk and Radicality values come from `trajectory.py`. Under (a) or (b) they stay inflated
+>   (plan open problem 2).
+> - **(c)** is outside Step 1 and adds time.
+>
+> My choice: b
+>
+> ### A13. Review and branch
+>
+> - **Review:** agy and Devin review only, and Claude Code applies the fixes. Choose one round or two (Step 0 used
+>   two), with or without the `sqa-numerical` subagent.
+> - **Branch:** a new branch (e.g. `ForwardModel`) cut from `VonKarman`, or continue on `VonKarman`.
+>
+> Implications:
+> - Each extra round adds time.
+> - One round plus `sqa-numerical` still covers the numerics.
+>
+> My choice: review agy and devin and cc applies fixes, branch ForwardModel
+>
+> ---
+>
+> ## Part B — my derivations
+>
+> What each one feeds:
+>
+> | E | Feeds |
+> |---|---|
+> | E15 | The right-hand side f(t, y), the state ([V] or [s, V]), and the steady-speed equation for A10.4 |
+> | E16 | The θ schedule function, with my numbers from A1 |
+> | E17 | The check that `rk4_solve` matches (A7a), or the new RK4 (A7b) |
+> | E18 | The p_obs formula in the order test |
+> | E19 | The exact solution the A10.1 test compares against (plus A10.2's, if chosen) |
+>
+> How I'm giving them: ___ (typed below / photo or scan at ___ / filled-in deck)
+> - **Typed below:** exact, and recorded verbatim as mine. This is how E20 and the Kármán quartic were done.
+> - **Photo or scan:** quick, and the page itself shows authorship for the interview.
+>   - Claude Code has to transcribe it, and I check the transcription.
+>   - Any misread goes in the errors ledger (R3).
+> - **Filled-in deck:** already structured E by E, but the deck lives outside the repo.
+>
+> Where they end up (the same as Kármán and F_f on 27 Oct):
+> - **`AI-USE.md` § 4:** one row per E, "the derivation is the author's own".
+> - **The module docstring:** the equations the code implements, with "Derivation: Benjamin Moors (`AI-USE.md` § 4)",
+>   as `friction_force.py` does for F_f. `pdoc --math` renders them.
+> - **The report:** the computational-solution section, later.
+> - **Anything Claude Code fills in or completes:** recorded as written by Claude Code and confirmed by me, never as
+>   mine.
+> - **Sources owed for these:** `TODO.md` S.6–S.9. These are for the report stage, not the code.
+>
+> E15: dy/dt=f(t,y)=gsin(theta(t))-D(v)/m, where F_f(V) = 1/2 * rho * V**2 * A * [avg_C_f,lam * x_tr/ L + avg_C_f,turb * (1- x_tr/L)]
+> Thus a piecewise, if V<=Re_crit*x/L F_f = 1/2 * rho * V**2 * A(V) * avg_C_f,lam
+> if V>=Re_crit*x/L F_f = 1/2 * rho * V**2 * A(V) * [avg_C_f,lam*Re_crit*x_tr/L + avg_C_f,turb*Re_L*(1-x_tr/L)]
+>
+> E16: theta(t) = theta_min + (theta_max- theta_min)*t/T, where T is 10.055 (from mmc1, and a better time for wave ramp that 3s)
+>
+> E17: Follow RK4, this should not require my derivation
+>
+> E18: from Oberkampf we have already used
+>
+> E19: V(t) = [V_0**(1-n)-c*(1-n)/n*t]**(1/(1-n))
+>
+> (A10.2, if chosen:)
+>
+> ---
+>
+> ## Part C — fixed requirements for Claude Code
+>
+> 1. **Gate.** Follow my gate rule at the top of this file.
+> 2. **Ask, don't pick.** If a choice in Part A is blank or unclear, ask me (R12).
+> 3. **Do not edit:**
+>    - `SWD/model/identifiability_screen*.py`
+>    - `friction-function/rerun_live_screen_ff.py`
+>    - `friction-function/friction_force.py`
+>    - `friction-function/blasius-shooting/shooting_blasius.py`
+>    - `trajectory.py`, unless A12 says otherwise
+> 4. **Forces.**
+>    - Do not use `trajectory.py` outputs.
+>    - Do not use `drag_total_n` with a separate gravity term.
+>    - Do not extrapolate anything.
+> 5. **Inputs and outputs (rubric criterion 1).**
+>    - Every input and output gets its units, its valid range and its mathematical domain in the docstring.
+>    - Invalid input raises ValueError with a clear message.
+> 6. **Documentation (W01.3).**
+>    - NumPy-style docstrings, each with a Usage block.
+>    - Limits as `# Limit:` comments.
+>    - Comments that state intent.
+>    - Negative tests with `match=`.
+>    - `pdoc --math` builds clean.
+> 7. **Grids and tolerances.**
+>    - Before writing any test with a grid or tolerance, run a few combinations and show me the table (h, the error at
+>      each h, p_obs), then wait for my choice.
+>    - Never tune h to make p_obs reach 4. Report it as measured.
+> 8. **Tests.** pytest; the full suite must still pass.
+> 9. **Review.** As set in A13: review only, Claude Code applies the fixes.
+> 10. **Commit.** Nothing is committed until I have checked the code.
+> 11. **`AI-USE.md`.**
+>     - A task row (R2) with this prompt verbatim.
+>     - My Part A choices and Part B derivations in § 4, with authorship split per item.
+>     - A § 5 ledger entry for any correction (R3).
+> 12. **No `Co-Authored-By` trailers** (R11).
+> </pasted_content id="af37">
+>
+>  Ask any questions where necessary
+
+### 2026-10-27 19:49 AEDT · agy · Gemini 4 Argon (Medium) · `ca208153`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on forward-model/forward_model.py and tests/test_forward_model.py (new; they import friction-function/friction_force.py and friction-function/blasius-shooting/shooting_blasius.py, which must not change).
+> Model (the author's E15/E16): dV/dt = g sin(theta(t)) - D(V, theta, k)/m, D = k F_f(V) + P(V, theta) + R(V, theta), theta(t) = theta_start + (theta_end - theta_start) t/T, m = 802.21/9.81. P + R are SWD live-solver rows at pos_y 0, pos_x 0.45, drift 0, tensor PCHIP (V then theta), never extrapolated. The author's run: 20 -> 0 deg over 3 s from V0 = 6 m/s, h = 0.001.
+> march() steps the author's rk4_solve one step at a time and stops (complete=False) at the last node whose derivative and RK4 stages stayed inside 2-10 m/s and -10..20 deg (OutOfData). drag_total_n is a check and a reference only, never a force; positive slope is downhill (drag_total = F + P + R - W sin theta).
+> Also check the new 2026-10-27 session a3cd550c entries in AI-USE.md (the two § 2 task rows, the § 3 forward-model row, the § 4 rows from "The submission stops at Step 1", E153-E155) and the "Superseded" paragraph in SWD/model/trajectory.py: does every number and claim match the code and SWD/data/live_solver/default_shortboard/converged/solver_points.csv?
+> The design, E15/E16/E19, the constants, grids and tolerances are the author's: question them, do not change them. AI-USE.md is append-only and never style-edited.
+> REVIEW ONLY: report findings, edit no file at all. Claude Code applies the fixes.
+> Guard (must stay exit 0): .venv\Scripts\python.exe forward-model\forward_model.py && .venv\Scripts\python.exe -m pytest tests\test_forward_model.py -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\a3cd550c-2e9c-41be-8d73-22a19b485853\scratchpad\pt-guard
+> Repro scripts only in ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\a3cd550c-2e9c-41be-8d73-22a19b485853\scratchpad\hfin-audit\. Quick pass: keep it short.
+
+### 2026-10-27 20:13 AEDT · agy · Gemini 4 Argon (Medium) · `8ef10473`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on forward-model/forward_model.py and tests/test_forward_model.py (second round; they import friction-function/friction_force.py and friction-function/blasius-shooting/shooting_blasius.py, which must not change).
+> Model (the author's E15/E16): dV/dt = g sin(theta(t)) - D(V, theta, k)/m, D = k F_f(V) + P(V, theta) + R(V, theta), theta(t) = theta_start + (theta_end - theta_start) t/T, m = 802.21/9.81. P + R are SWD live-solver rows at pos_y 0, pos_x 0.45, drift 0, tensor PCHIP (V then theta), never extrapolated. The author's run: 20 -> 0 deg over 3 s from V0 = 6 m/s, h = 0.001.
+> march() steps the author's rk4_solve one step at a time and stops (complete=False) at the last node whose derivative and RK4 stages stayed inside 2-10 m/s and -10..20 deg (OutOfData). drag_total_n is a check and a reference only, never a force; positive slope is downhill (drag_total = F + P + R - W sin theta).
+> Also check the new 2026-10-27 session a3cd550c entries in AI-USE.md (the three § 2 task rows, the § 3 forward-model row, the § 4 rows from "The submission stops at Step 1", E153-E156) and the "Superseded" paragraph in SWD/model/trajectory.py: does every number and claim match the code and SWD/data/live_solver/default_shortboard/converged/solver_points.csv?
+> The design, E15/E16/E19, the constants, grids and tolerances are the author's: question them, do not change them. AI-USE.md is append-only and never style-edited.
+> Round 1 fixed: slope_tol validated; D raises ValueError on non-finite V/theta/k or k < 0 (a NaN is not an OutOfData stop); theta checks T > 0 and t in [0, T] with 1e-9 T slack; _scalar rejects bool/str; the h comment (E156); duplicate-row and 15 negative tests. Do not re-report those.
+> REVIEW ONLY: report findings, edit no file at all. Claude Code applies the fixes.
+> Guard (must stay exit 0): .venv\Scripts\python.exe forward-model\forward_model.py && .venv\Scripts\python.exe -m pytest tests\test_forward_model.py -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\a3cd550c-2e9c-41be-8d73-22a19b485853\scratchpad\pt-guard
+> Repro scripts only in ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\a3cd550c-2e9c-41be-8d73-22a19b485853\scratchpad\hfin-audit\. Quick pass: keep it short.
+
+### 2026-10-27 20:51 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `a3cd550c` · `ForwardModel`
+
+> do the wiki ingest. I have also checked the code, and it looks good. Commit it
 
 <!-- prompts:end -->
 

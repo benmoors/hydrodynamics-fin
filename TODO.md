@@ -149,6 +149,14 @@ write-free escalation, if needed, is to invoke the top-level `File` item and re-
 | D.4 | `project-io-spec.md:130`, `DATA-DICTIONARY.md:33-36` — sentinel filter stale | ⬜ |
 | D.5 | **[`CLAUDE.md`](CLAUDE.md) § 5 friction-velocity bullet is misleading** — measured 2026-09-01: using stored `board_speed_setting_ms` gives ratio 0.243 (76% error); scan speed gives 0.941. SWD overwrites the field before solving | ⬜ |
 
+## Report — owed before it is written
+
+- ⬜ **Gate A and Gate B verdicts.** None is recorded. Step 1 (the forward model) went ahead without them under gate
+  rule (b), 2026-10-27 (`AI-USE.md` § 4).
+- ⬜ **Rename `forward-model/board_jerk.py`.** It computes the jerk cost J (Eq 4–7) of the 3 s glide, done
+  2026-10-27, not the paper's whole Board-Jerk (`AI-USE.md` § 4).
+- ⬜ **Compare J with Charles et al.'s values.** Deliberately not done yet: future work (`AI-USE.md` § 4).
+
 ## Report — equation sources owed (E1–E27 pre-work deck)
 
 Each E slide in `MMA3001_Project_E1-E27.pptx` now carries the equation's standard name and its source.

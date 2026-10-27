@@ -164,7 +164,8 @@ def clean_scope(scope: str, home: Path | None = None) -> str:
     from an earlier appendix is cleaned too.
     """
     home = home or Path.home()
-    if scope.strip() == f"via {home.name}":
+    # Case-insensitive, as _home_pattern is: Windows folder names are
+    if scope.strip().lower() == f"via {home.name}".lower():
         return "via ~"
     return _ONEDRIVE_TENANT.sub("OneDrive", scope)
 
@@ -347,7 +348,8 @@ def load_claude_ancestors(
             continue
         seen.add(key.lower())
         if (projects / key).is_dir():
-            sessions += load_sessions(projects / key, home, scope=f"via {parent.name or parent}")
+            sessions += load_sessions(projects / key, home,
+                                      scope=clean_scope(f"via {parent.name or parent}", home))
     return sessions
 
 

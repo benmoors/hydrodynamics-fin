@@ -30,7 +30,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 from src.data import FEATURES, TARGETS
 from src.models import CONDITION_ONLY, ESTIMATORS
-from src.splits import leave_one_group_out
+from src.splits import group_labels, leave_one_group_out
 
 __all__ = ["evaluate_all", "fold_scores", "nested_lobo", "pooled_score", "summarise"]
 
@@ -285,7 +285,7 @@ def nested_lobo(
     KeyError
         If ``target`` is not a column.
     ValueError
-        If ``grid`` is empty.
+        If ``grid`` is empty, or the table has fewer than 3 groups.
 
     Notes
     -----
@@ -300,6 +300,9 @@ def nested_lobo(
     _require(table, target)
     if not grid:
         raise ValueError("grid must hold at least one parameter set")
+    # One group held out, and at least two left for the inner leave-one-group-out
+    if group_labels(table, level).nunique() < 3:
+        raise ValueError("nested_lobo needs at least 3 groups: one held out and two for the inner split")
     rows = []
     for held_out, train, test in leave_one_group_out(table, level=level):
         best_score, best_params = -np.inf, grid[0]

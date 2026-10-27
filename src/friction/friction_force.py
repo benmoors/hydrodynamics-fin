@@ -138,7 +138,13 @@ def F_f(V, A, L, rho=RHO, mu=MU, laminar_avg_C_f=skin_and_shear.avg_C_f):
         raise ValueError("V is outside the range of A(V) and L(V), which are not extrapolated")
     if np.any(area < 0) or np.any(length <= 0):
         raise ValueError("A(V) must be >= 0 and L(V) > 0")
-    if np.ndim(rho) != 0 or np.ndim(mu) != 0 or not (np.isfinite(rho) and rho > 0 and np.isfinite(mu) and mu > 0):
+    try:
+        # A bool would pass as 1 kg/m^3 or 1 Pa s; a string raises TypeError inside isfinite, caught here
+        ok = all(not isinstance(v, (bool, np.bool_)) and np.ndim(v) == 0 and bool(np.isfinite(v)) and v > 0
+                 for v in (rho, mu))
+    except TypeError:
+        ok = False
+    if not ok:
         raise ValueError("rho and mu must be finite and positive scalars")
     nu = mu/rho
 

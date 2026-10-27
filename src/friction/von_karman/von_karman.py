@@ -49,7 +49,11 @@ def profile(xi):
     ValueError
         If xi is empty, not finite or negative.
     """
-    xi = np.asarray(xi, dtype=float)
+    xi = np.asarray(xi)
+    # A bool would pass as xi = 0 or 1
+    if xi.dtype.kind not in "iuf":
+        raise ValueError("xi must be a number or an array of numbers (a bool is not)")
+    xi = xi.astype(float)
     if xi.size == 0 or not np.all(np.isfinite(xi) & (xi >= 0)):
         raise ValueError("xi must be finite and >= 0")
     # Beyond the edge the quartic is held at its edge value g(1) = (5 - 3 + 1)/3 = 1, exact in floating point;

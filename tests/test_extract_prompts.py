@@ -373,6 +373,7 @@ def test_times_render_in_melbourne_and_old_utc_headings_convert() -> None:
 # SQA round 2 (sqa-security): a session opened in the home folder rendered "via <username>" (R9)
 @pytest.mark.parametrize("scope, cleaned", [
     ("via alice", "via ~"),
+    ("via ALICE", "via ~"),  # Windows folder names are case-insensitive
     ("via OneDrive - Contoso Ltd", "via OneDrive"),
     ("via UNIVERSITY", "via UNIVERSITY"),
     ("repo", "repo"),

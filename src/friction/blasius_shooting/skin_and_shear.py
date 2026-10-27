@@ -186,7 +186,11 @@ def wall_slope(df, h):
     ValueError
         If df is not 1-D with at least 3 values, its first 3 are not finite, or h is not finite and positive.
     """
-    df = np.asarray(df, dtype=float)
+    df = np.asarray(df)
+    # A bool profile would pass as 0s and 1s
+    if df.dtype.kind not in "iuf":
+        raise ValueError("df must be a number array (a bool is not)")
+    df = df.astype(float)
     if df.ndim != 1 or df.size < 3 or not np.all(np.isfinite(df[:3])):
         raise ValueError("df must be 1-D, with at least 3 values and the first 3 finite")
     # One grid step: an array h would broadcast into one slope per step

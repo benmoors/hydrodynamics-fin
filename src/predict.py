@@ -189,6 +189,9 @@ class SurrogatePredictor:
         if missing:
             raise KeyError(f"table is missing columns: {missing}")
         subset = table[self.features + self.targets]
+        # A bool (a whole bool column, or one inside an object column) would be read as 0 or 1
+        if not all(dtype.kind in "iuf" for dtype in subset.dtypes):
+            raise ValueError("training table feature and target columns must be numeric (a bool is not)")
         if subset.empty:
             raise ValueError("training table has no rows")
         if subset.isna().to_numpy().any():
@@ -246,6 +249,8 @@ class SurrogatePredictor:
             raise KeyError(f"query is missing feature columns: {missing}")
 
         query = X[self.features]
+        if not all(dtype.kind in "iuf" for dtype in query.dtypes):
+            raise ValueError("query columns must be numeric (a bool is not)")
         if query.empty:
             raise ValueError("query has no rows")
         if query.isna().to_numpy().any():

@@ -264,7 +264,10 @@ def at_samples(df: pd.DataFrame, t: np.ndarray) -> np.ndarray:
         Shape ``(len(t), 3)``: accel x, y, z in m/s^2.
     """
     ts = df.timestamp.to_numpy()
-    t = np.asarray(t, dtype=float)
+    t = np.asarray(t)
+    if t.dtype.kind not in "iuf":
+        raise ValueError("sample times must be numbers (a bool is not)")
+    t = t.astype(float)
     if t.ndim != 1 or t.size == 0 or not np.all(np.isfinite(t)):
         raise ValueError("sample times must be a non-empty 1-D array of finite values")
     # np.interp clamps outside its grid, which would silently hold the last value; min/max, not the ends,

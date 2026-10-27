@@ -137,6 +137,10 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-10-27 | Review round of the jerk cost, review-only, through `sqa_cli_pass.py`. Nothing was reverted, and the guard passed 19/19 before and after each pass. agy (Antigravity CLI, Gemini 4 Argon, Medium): 0 Critical, 0 Warnings, 2 Suggestions (CLEAN). Devin CLI (SWE-1.7): 0, 0, 0 (CLEAN). Claude Code (same session, `b82e80a3`) applied agy's two: (1) `_samples` rejects a t or a that is not numeric, so a bool a is no longer read as 0 and 1 m/s², the same guard as `forward_model.theta`. (2) Negative tests for a 2-D and a 0-D input and for a bool a: 22 tests in all | The author's one review-only round by agy and Devin, with Claude Code applying the fixes (§ 4) | Both reviewers reproduced every number in the `b82e80a3` entries, including E160's 1.999 (1.998770) and 2.0054. After the fixes the author's run is unchanged (J = 64.5824, complete). Full suite: 318 passed, 1 xfail. `pdoc --math` builds clean | Run folder `%LOCALAPPDATA%\sqa-loop\runs\board-jerk-2026-10-27\` |
 | 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`b82e80a3`): the project-wiki ingest for the jerk cost. *Board-Jerk*, *Project Validation Evidence and Limits* and *Virtual Surfer Project* were updated with the jerk cost of Step 1's run, its checks and limits, and the deferred comparison with the paper. *Board-Jerk* gained a Summary, and a note, labelled inference, that Eq 7's double integral from rest leaves out V0·T | The author asked for the ingest after its topics were proposed | The wiki lint passes, with no problems, orphans or unresolved links, and qmd was re-indexed. The design choices are recorded as the author's. The wiki is gitignored, so `log.md` is its record | Answer 2026-10-28, "Commit it, and do the wiki ingest, then push" (§ 6) |
 | 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`b82e80a3`), branch `resort-repo` cut from main after main was pulled to `e40973d` (PR #7): the repo re-sort. (1) Untracked and gitignored, kept on disk: all 27 `*.ps1`, `memory/`, the Charles et al. PDF and its text extract, `TODO.md`, `surfing-performance-io.md`, `mma3001-project-spec.md` and `fin_sensor_pcb_overview.md`; `.gitattributes` deleted (its one rule was for `memory/MEMORY.md`). (2) `git mv` of the project code into `src/` packages (the path map is in § 4), with every sys.path insert replaced by an absolute `src.` import, the data paths moved up one level, five empty `__init__.py`, and run commands as `python -m src.<pkg>.<module>`. The notebooks stay beside their modules; the import lines in the first cells of `fd_vs_shooting_cc.ipynb` and `vonkarman.ipynb` now put the repo root on sys.path and import from the package; `shooting_for_blasius.ipynb` and `rk4_blasius_checks_cc.ipynb` are unchanged. Living references updated: two `SWD/tools/*.py` messages, the `.gitignore` comment, three `computed-data/**/README.md` run commands, `SWD/docs/column-names.md` and `PROGRESS.md`. (3) `docs/` regenerated with `pdoc --math` for every package; 40 absolute checkout paths that pdoc wrote into default arguments cut back to repo-relative. (4) The README: title, intro and §§ 1–7 rewritten for the project as it stands, from the wiki and § 4; § 8 and the 🤖 AI Acknowledgment given fact updates only (versions, counts, tools), no style pass. `CLAUDE.md` § 7, `AGENTS.md` and `SWD/README.md` updated for the layout | The author asked for the re-sort, the README update and the merge route (§ 2 verbatim below) | Before and after the move: 318 passed and 1 xfail; J = 64.5824 and V(3 s) = 6.09056 m/s from `python -m`. All four notebooks' code cells run from their own folders (jupyter is absent, so as scripts): the Kármán p_obs is 4.0694 and the FD and RK4 checks reproduce. `git log --follow` reaches the pre-move history (17 renames detected). A grep of `docs/` for `C:/`, `C:\`, `dev/HYDRODYNAMICS` and `Users/` finds nothing. Humanizer pass on README §§ 1–7, then a token diff against the old README: every dropped number, path or command is an intended update except the PowerShell 5.1 and Win32/UI Automation facts, which were restored in § 6 | Prompts and answers 2026-10-28 (§ 2, `b82e80a3`) |
+| 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`b82e80a3`): merged `resort-repo` into main. The author chose a GitHub PR, but `gh` holds only the `bennmoors` account, which has pull-only rights on `benmoors/hydrodynamics-fin` ("must be a collaborator"). So the merge was made locally with `--no-ff`, the merge commit a PR merge makes (`f971e01`); main was pushed with the git credentials that push; `resort-repo` was deleted on GitHub and locally. No PR record exists. The merge deleted 44 gitignored files from disk (§ 5 E162), and they were restored | The author's merge route (§ 4), blocked by the `gh` account | All 44 restored byte-identical from `e40973d`, each blob hash checked; still untracked and ignored; nothing staged | Answers 2026-10-28 (§ 2, `b82e80a3`), "GitHub PR, merge, delete" |
+| 2026-10-28 | SQA round 1 of 3 on all project Python (`src/**`, `tests/`), branch `sqa-pass`, review-only through `sqa_cli_pass.py`; nothing reverted, and the guard passed 318 + 1 xfail before and after each pass. agy (Antigravity CLI, Gemini): 2 Critical, 8 Warnings, 3 Suggestions. Devin CLI (SWE-1.7): 1, 3, 0. Claude Code (same session, `b82e80a3`) fixed: (1) the notebooks find the repo root from any directory, `rk4_blasius_checks_cc.ipynb` imports from the package, and `tests/test_notebooks.py` runs every notebook's imports from the root and from its folder (mutation-checked); (2) `geometry.aspect_ratio` no longer flips a reversed span with `abs()`, and NaN and inf are refused; (3) input checks across the first screen, the surrogate, the baseline, the Blasius modules, F_f and the attitude selectors, with 46 negative tests. Rebutted: Devin's "outputs written under SWD/data" (the documented `computed-data/` layout; the `src/data.py` docstring corrected, § 5 E165). Five findings left for the author | The author's SQA order (§ 4, 2026-10-28) | 373 passed, 1 xfail after; J = 64.5824 and V(3 s) = 6.09056 m/s unchanged | Run folder `%LOCALAPPDATA%\sqa-loop\runs\hfin-python-2026-10-28\` (`r1-*.md`) |
+| 2026-10-28 | SQA round 2 of 3: one `sqa-lead` with `sqa-functional`, `sqa-numerical`, `sqa-security` and `sqa-efficiency` (`sqa-embedded` skipped: no firmware), review-only: 0 Critical, 6 Warnings, 14 Suggestions. Claude Code fixed: round 1's checks sat behind `lru_cache`, which served `True` from a cached call made with `1` (`shoot` and `load_forces` now check, then call a cached private function); the `shoot` grid guard counted wrongly, so `shoot(2h, h)` returned an f''(0) 42.6 times too large; a `match=` on every Blasius negative test; `holdout_split` keeps a train group; the slope PCHIP never extrapolates; the envelope test's expected values are hard-coded. **R9, fixed forward (§ 5 E164):** the prompt appendix's Scope cell carried the Windows account name; `SWD/docs/provenance-gate.md` listed the shaper names (now a count, replaced without being read); the account and host names left four documents. Seven findings left for the author | The author's SQA order (§ 4, 2026-10-28) | 383 passed, 1 xfail; J and V(3 s) unchanged. sqa-numerical measured each scheme's observed order: RK4 shooting 3.97, FD Blasius 2.04, the Kármán march 4.01, E19 4.00, J 2.00. perf_probe found round 1 cost nothing measurable | Run folder `%LOCALAPPDATA%\sqa-loop\runs\hfin-python-2026-10-28\` (`r2-outcomes.md`) |
+| 2026-10-28 | SQA round 3 of 3, review-only through the same wrapper: agy 0 Critical, 3 Warnings, 2 Suggestions; Devin 0, 1, 0. Claude Code fixed: booleans read as 0 or 1 across `physics_baseline`, F_f, the Kármán profile, `wall_slope`, `geometry`, the surrogate's fit and predict, `at_samples` and `build_training_table`; the baseline checks X in predict as in fit, and refuses non-positive dimensions (two negatives used to multiply to a positive planform) and a NaN or negative roughness; `clean_scope` is case-insensitive; `nested_lobo` needs 3 groups. The round-3 fixes are the one thing no fresh reviewer checked | The author's SQA order (§ 4, 2026-10-28) | 403 passed, 1 xfail; J = 64.5824 and V(3 s) = 6.09056 m/s unchanged. perf_probe on the author's run plus J, under cProfile: 120.99 s before the rounds and 125.82 s after; F_f's cumulative time 15.31 → 20.50 s from its new checks; peak memory 90.68 → 90.67 MB | Run folder `%LOCALAPPDATA%\sqa-loop\runs\hfin-python-2026-10-28\` (`r3-outcomes.md`, `baseline.json`, `final.json`) |
  
 ### Answers given to Claude Code's questions, 2026-09-29
 
@@ -1651,6 +1655,10 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E159 | 2026-10-27 | Benjamin's sinusoid results (the same prompt): D_b = V0·T + AT/ω, D_a = \|AT/ω\| and J_sinusoidal = A²ω²T⁶/(4D²), stated with no form for a and no condition on ω | For a = A sin(ωt), ∫₀ᵀ∫₀ᵗ a ds dt = AT/ω − A sin(ωT)/ω², and ∫₀ᵀ cos²(ωt) dt = T/2 + sin(2ωT)/(4ω). All three hold only when sin(ωT) = 0, that is ωT = nπ. For a = A cos(ωt), D would not be AT/ω at all | Claude Code, session `b82e80a3`, checking the derivation while planning; confirmed by the author's answer to the test-values question, which stated ω = nπ/T | § 4, the sinusoid rows; the `board_jerk.py` docstring; `tests/test_board_jerk.py` |
 | E160 | 2026-10-27 | Claude Code, session `b82e80a3`, in the convergence question and the plan: "Preview: p_obs = 1.999" on his run subsampled to FD steps 4h, 2h, h | 1.999 came from D = \|∫(V − V0) dt\| on Step 1's V. With Eq 7 as chosen (Simpson twice on a) the same check gives 2.0054 (Table 3), because D now also changes with the step. The question did not say which D the preview used. The author set \|p − 2\| ≤ 0.1 from Table 3 | Claude Code, running Table 3 | this entry; § 4, the 2026-10-27 tolerances row |
 | E161 | 2026-10-28 | Claude Code, session `b82e80a3`, in a question to the author about the merge route: merging `resort-repo` into main "also brings ForwardModel's 12 commits" | It was 10 commits (`origin/main..ForwardModel`, as counted earlier in the same session), and by the time of the question main already held them: the author had merged PR #7 (`e40973d`) | Claude Code, while writing this entry | this entry |
+| E162 | 2026-10-28 | Claude Code, session `b82e80a3`, in the approved plan for the re-sort: the untracked files "stay on disk" | A branch that untracks files with `git rm --cached`, merged into a branch that still tracks them, deletes them from the working tree. After `git merge --no-ff resort-repo` on main, 44 files (every `*.ps1`, `memory/*`, `TODO.md`, the paper PDF and three notes) were gone from disk | Claude Code's own post-merge check | Restored byte-identical from `e40973d` (`git restore --source=e40973d --worktree`, every blob hash checked); memory note `old-branches-delete-local-only-files` |
+| E163 | 2026-10-28 | Claude Code, session `a3cd550c`, in the 2026-10-27 § 4 row on the step and tolerances: the full-model p_obs, 1.2–3.5, "is irregular near round-off" | It is irregular because RK4 crosses the off-grid V = 7 m/s PCHIP knot at t ≈ 0.769 s, where the force is only C1; before the knot p_obs is 4.00 (E157 had found the largest change there). Neither the results nor h change | `sqa-numerical`, SQA round 2 (2026-10-28) | this entry (the § 4 row left as written, R1) |
+| E164 | 2026-10-28 | `tools/extract_prompts.py` (Claude Code, earlier sessions): the § 6 appendix keeps R9 through `redact()`; and the tracked documents keep R9 | The Scope cell of § 6's session table bypassed `redact()`: a session opened in the home folder rendered "via" and the Windows account name, committed since `2cfe2ab`. `SWD/docs/provenance-gate.md` listed the seven `shaper_name` values (since `eb68360`), and `AGENTS.md`, `SWD/TODO.md`, `BUILD-NOTES.md` and `SQA-FINDINGS.md` named the account and the host. All public | `sqa-security`, SQA round 2 (2026-10-28) | Fixed forward: `clean_scope()` at render time (§ 6 regenerated), the names replaced by a count, the account and host by placeholders. The git history still holds them, and § 2 (2026-10-24) and § 5 E128 quote the account in records this file keeps (R1): both the author's to decide |
+| E165 | 2026-10-28 | Docstrings by Claude Code in earlier sessions: `PhysicsFrictionBaseline` "fits ... by least squares in log space", with "a ratio of medians"; `src/data.py` "nothing this project computes is ever written back into SWD/data/"; `geometry.aspect_ratio` raises "if either span is zero or negative" | The fit is the median of the per-row ratios; the screens and the Gate B rerun write `computed-data/` folders under `SWD/data/` (never the extracted CSVs); `aspect_ratio` took `abs()` of both spans first, so a reversed span passed | agy and Devin, SQA round 1 (2026-10-28) | the three docstrings; `aspect_ratio` (abs removed) |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn
@@ -1669,7 +1677,7 @@ transcripts Claude Code keeps outside the repo. Regenerate with `python tools/ex
 the home directory is redacted to `~`. Nothing between the markers is edited by hand.
 
 <!-- prompts:begin -->
-458 prompts across 58 sessions (Claude Code 435, Devin 2, agy 21), 2026-08-26 to 2026-10-27. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
+470 prompts across 63 sessions (Claude Code 444, Devin 2, agy 24), 2026-08-26 to 2026-10-28. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
 
 | Session | CLI | Version | Model | Scope | First | Last | Prompts |
 |---|---|---|---|---|---|---|---:|
@@ -1711,7 +1719,7 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 | `163c6944` | Claude Code | 2.1.302 | claude-opus-5-5 | repo | 2026-10-21 18:47 AEDT | 2026-10-22 11:21 AEDT | 7 |
 | `83d4f55b` | Claude Code | 2.1.302 | claude-opus-5-5 | repo | 2026-10-22 11:39 AEDT | 2026-10-22 12:53 AEDT | 6 |
 | `31e106dc` | Claude Code | 2.1.306 | claude-opus-5-5 | repo | 2026-10-22 13:41 AEDT | 2026-10-22 13:43 AEDT | 3 |
-| `2f68b25f` | Claude Code | 2.1.307 | claude-opus-5-5 | via moors | 2026-10-22 14:18 AEDT | 2026-10-22 14:18 AEDT | 1 |
+| `2f68b25f` | Claude Code | 2.1.307 | claude-opus-5-5 | via ~ | 2026-10-22 14:18 AEDT | 2026-10-22 14:18 AEDT | 1 |
 | `afbb016f` | Claude Code | 2.1.308 | claude-opus-5-5 | via dev | 2026-10-22 18:24 AEDT | 2026-10-22 18:29 AEDT | 2 |
 | `1278f436` | Claude Code | 2.1.308 | claude-opus-5-5 | repo | 2026-10-22 20:54 AEDT | 2026-10-22 21:17 AEDT | 6 |
 | `6461fe50` | Claude Code | 2.1.308 | claude-opus-5-5 | repo | 2026-10-23 10:37 AEDT | 2026-10-24 18:55 AEDT | 11 |
@@ -1731,6 +1739,11 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 | `a3cd550c` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 18:38 AEDT | 2026-10-27 20:51 AEDT | 2 |
 | `ca208153` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 19:49 AEDT | 2026-10-27 19:49 AEDT | 1 |
 | `8ef10473` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 20:13 AEDT | 2026-10-27 20:13 AEDT | 1 |
+| `008e894d` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 21:04 AEDT | 2026-10-27 21:04 AEDT | 1 |
+| `b82e80a3` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 22:58 AEDT | 2026-10-28 00:24 AEDT | 8 |
+| `21be5f2c` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 23:43 AEDT | 2026-10-27 23:43 AEDT | 1 |
+| `302ecf3c` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-28 00:56 AEDT | 2026-10-28 00:56 AEDT | 1 |
+| `7f2334de` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-28 02:23 AEDT | 2026-10-28 02:23 AEDT | 1 |
 
 ### 2026-08-26 22:38 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
@@ -4729,6 +4742,115 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 ### 2026-10-27 20:51 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `a3cd550c` · `ForwardModel`
 
 > do the wiki ingest. I have also checked the code, and it looks good. Commit it
+
+### 2026-10-27 21:04 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `008e894d` · `ForwardModel`
+
+> Have a look through the documentation we have created so far, are there any ambiguities, or decisions that were made by me that were left out?
+
+### 2026-10-27 22:58 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> There is one more thing we need to do, we do not have enough data for Radicality, but we do for Board-Jerk. From the forward model we now have the change in V over time, thus a. Using finite difference, you can find the single derivative of this to get jerk. Using CHarles et al., I want you to find the jerk cost, not the whole Board-jerk, as there are no turns. The board is going down a dip, thus 3s straight glide, from 20deg->0deg. V0=6m/s. Using the forward model as I stated. Use Step.1's a=dV/dt. Finite difference of acceleratiopn with np.gradient. We are using 3s for this as T again, with step h = 0.001. Use Simpson as we have an even no. of intervals. Use Eq 7 from Charles literally, the derivations are as listed:  Db = V)*T + a)*T**2/2 + beta*T**3/6. Da = abs(a0*T**2/2+beta*T**3/6), Jlinear = beta**2*T**6/(2*D**2) AND J_sinusoidal = A**2*omega**2*T**6/(4*D**2).  where Db = V)*T + A*T/omega, and D_a = abs(A*T/omega). Testing: use these exact cases, Use the Oberkampf reference again for convergence of J at h, h/2 and h/4, checks units for further validation, J is dimensionless. "
+>
+> <pasted_content id="9932">
+> Invalid inputs:
+> the cases: T ≤ 0, D = 0, non-finite values, t and a of different lengths, fewer than 3 samples, and complete = False;
+> each gets a negative test with match=;
+> trajectory.py quietly set C = 1 when D = 0; decide whether that case raises instead.
+> </pasted_content id="9932">
+>
+> " There should not be comparison with the paper, this is a future endevour. Make a new forward-model/board_jerk.py, calling forward_model. Use C and D from previous, not from trajectory.py. Although it is labelled as board jerk for now, we will need to rename it in future. Do one round of agy and devin, cc applies fixes. Commit after it is finished. Derivations go to: 
+>
+> <pasted_content id="9932">
+> AI-USE.md § 4, one row each, as yours.
+> The module docstring, as “Derivation: Benjamin Moors (AI-USE.md § 4)”.
+> Anything Claude Code fills in is recorded as its own and confirmed by you.
+> Eq 4–7 are the paper’s (p.6), so they’re cited, not claimed.
+> </pasted_content id="9932">
+>
+> . Base reqs are: 
+>
+> <pasted_content id="9932">
+> If a choice is blank or unclear, ask; don’t pick (R12).
+> Don’t edit:
+> the existing functions in forward_model.py (if B9 = a, only add),
+> trajectory.py,
+> the screens,
+> friction-function/.
+> No new force data and no new screens. The only motion input is simulate() at its defaults.
+> Every input and output gets units, ranges and domains. Invalid input raises ValueError with a clear message.
+> W01.3 documentation:
+> NumPy docstrings with a Usage block,
+> # Limit: comments,
+> intent comments,
+> negative tests with match=,
+> pdoc --math builds clean.
+> Show the exploration table (h, J, the change per halving, p_obs) before writing any tolerance, and wait. Never tune h to hit an expected order.
+> pytest, with the full suite still passing.
+> Review per B11.
+> Nothing is committed until you’ve checked it.
+> AI-USE.md:
+> an R2 task row with the prompt verbatim,
+> your choices and derivations in § 4,
+> an R3 ledger entry for any correction.
+> No Co-Authored-By trailers (R11).
+> </pasted_content id="9932">
+
+### 2026-10-27 23:28 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> Go
+
+### 2026-10-27 23:34 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> 1e-12; E19-style, |p−2| ≤ 0.1; |p−2| ≤ 0.1; 1e-12
+
+### 2026-10-27 23:43 AEDT · agy · Gemini 4 Argon (Medium) · `21be5f2c`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on forward-model/board_jerk.py and tests/test_board_jerk.py (new; they import forward-model/forward_model.py, which must not change).
+> What it computes: the jerk cost J of the author's forward-model run (simulate() at its defaults: 20 -> 0 deg over T = 3 s, V0 = 6 m/s, h = 0.001 s), Charles et al. 2026 Eq 4-7: j = np.gradient(a, t); J = simpson(C j^2/2); C = T^5/D^2; D = |double integral of a| with no starting speed (Eq 7 literally, the author's D_a), by cumulative_simpson inside and simpson outside. D = 0 raises ValueError.
+> Exact cases (the author's): a = 1 - 0.5t gives D = 2.25 m, J = 18; a = sin(pi t/3) gives J = pi^4/4. p_obs = log2(|J_h - J_h/2|/|J_h/2 - J_h/4|) is 2 for np.gradient; his run is checked on FD steps 4h, 2h, h by subsampling.
+> Also check the new session b82e80a3 entries in AI-USE.md (the § 2 task row and prompt/answers subsections, the § 3 board_jerk row, the § 4 rows from "The jerk cost, its scope", E158-E160) and the two new TODO.md bullets: does every number, formula and claim match the code and a rerun?
+> The design, derivations, grids and tolerances are the author's: question them, do not change them. AI-USE.md is append-only and never style-edited.
+> REVIEW ONLY: report findings, edit no file at all. Claude Code applies the fixes.
+> Guard (must stay exit 0): .venv\Scripts\python.exe forward-model\board_jerk.py && .venv\Scripts\python.exe -m pytest tests\test_board_jerk.py -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\pt-guard
+> Repro scripts only in ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\hfin-audit\. Quick pass: keep it short.
+
+### 2026-10-27 23:59 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> Commit it, and do the wiki ingest, then push.
+
+### 2026-10-28 00:08 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> Great, now I want you to make a new branch, called resort-repo. I want you to move all source code into src, and ipynb into notebooks,  Remove all ps1 from the repo (gitignore), these are not important for the project. Memory and wiki can also be gitignored too, as well as 1-s2.0-... pdf and md, and TODO.md, surfing-per-io.md, requirements.txt, mma3001-project-spec.md, and fin_sensor_pcb_overview.md too. Data can stay in the repo. After this is all done, commit, push, then pull the branch and delete. THEN, carry out SQA-loop on all the python code we have produced, modified though. Carry out agy and devin, then claue code to fix, then the sqa-loop agents, then fix, then agy and devin, then fix.
+
+### 2026-10-28 00:09 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> Fold into this plan, updating the readme with the updated project, you have enough context from here and the wiki for what to change it to.
+
+### 2026-10-28 00:09 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `ForwardModel`
+
+> Ask any questions where needed
+
+### 2026-10-28 00:24 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `resort-repo`
+
+> Do not stop to ask me anything, get it all done tonight
+
+### 2026-10-28 00:56 AEDT · agy · Gemini 4 Argon (Medium) · `302ecf3c`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on ALL project Python: src/** (friction/, forward_model/, swd_model/, and the surrogate modules) and tests/ (43 files). Round 1 of 3.
+> Goal: correctness. Hunt real defects: wrong maths or units, unvalidated inputs that should raise ValueError, broken edge cases, tests that cannot fail, stale paths after today's move of the code into src/ packages (run modules as python -m src.<pkg>.<module>).
+> The derivations, constants, grids and tolerances are the author's (AI-USE.md section 4): question them, do not change them. AI-USE.md is append-only.
+> REVIEW ONLY: report findings with file:line and a repro; edit no file at all. Claude Code applies the fixes.
+> Guard (must stay exit 0): .venv\Scripts\python.exe -m pytest -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\pt-guard
+> Repro scripts only in ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\hfin-audit\. Keep the report short: VERDICT line, then findings ranked by severity.
+
+### 2026-10-28 02:23 AEDT · agy · Gemini 4 Argon (Medium) · `7f2334de`
+
+> Use the `audit` skill (.agents/skills/audit/SKILL.md) on ALL project Python: src/** and tests/ (plus tools/extract_prompts.py's new clean_scope). Round 3 of 3, the last.
+> Rounds 1-2 fixed what ~\AppData\Local\sqa-loop\runs\hfin-python-2026-10-28\r1-outcomes.md and ~\AppData\Local\sqa-loop\runs\hfin-python-2026-10-28\r2-outcomes.md list; do NOT re-report anything marked FIXED, REBUTTED, NEEDS DECISION or NOT APPLIED there. Focus: are those fixes themselves correct and complete (git diff main..sqa-pass), and anything both earlier rounds missed.
+> The derivations, constants, grids and tolerances are the author's (AI-USE.md section 4): question them, do not change them. Run modules as python -m src.<pkg>.<module>.
+> REVIEW ONLY: report findings with file:line and a repro; edit no file at all. Claude Code applies the fixes.
+> Guard (must stay exit 0; now 383 passed, 1 xfailed): .venv\Scripts\python.exe -m pytest -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\pt-guard
+> Repro scripts only in ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\hfin-audit\. Keep the report short: VERDICT line, then findings ranked by severity.
 
 <!-- prompts:end -->
 

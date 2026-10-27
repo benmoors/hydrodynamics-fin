@@ -133,6 +133,8 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-10-27 | Review round 1 of the forward model, review-only, through `sqa_cli_pass.py`. Nothing was reverted, and the guard passed 27/27 before and after. agy (Antigravity CLI, Gemini 4 Argon, Medium): 0 Critical, 3 Warnings, 3 Suggestions. Devin CLI (SWE-1.7 Max): 0 Critical, 2 Warnings, 1 Suggestion, all three inside agy's W1. Claude Code (same session, `a3cd550c`) applied all of them: (1) `load_forces` validates `slope_tol`. (2) `D` raises ValueError for a non-finite V, θ or k, or a negative k, so a NaN can no longer end a run as an `OutOfData` stop. (3) `theta` checks T > 0 and t in [0, T], up to a 1e-9·T slack. (4) `_scalar` rejects booleans and strings. (5) The comment on h is corrected (§ 5 E156). (6) A duplicate-row test, and 15 new negative tests in all. (7) A note on the fifth RHS call per step | The author's A13: two review-only rounds by agy and Devin, with Claude Code applying the fixes | Both reviewers reproduced every other number in the new `AI-USE.md` entries and in `trajectory.py` from the code and the CSV. Full suite: 294 passed and 1 xfail. The author's run is unchanged (V(3 s) = 6.09056 m/s); pdoc is clean | Run folder `%LOCALAPPDATA%\sqa-loop\runs\forward-model-r1-2026-10-27\` |
 | 2026-10-27 | Review round 2 of the forward model, review-only, same wrapper. Nothing was reverted, and the guard passed 42/42 before and after. agy: 0 Critical, 0 Warnings, 2 Suggestions (CLEAN). Devin: 0, 0, 0 (CLEAN). Claude Code applied agy's two: (1) E156 put the largest h change at the wrong time (§ 5 E157). (2) `theta` now rejects a bool t and an empty t; two negative tests | The author's A13, second round | Both reviewers again reproduced the numbers in the `a3cd550c` entries. Claude Code reproduced E157's t = 0.770 s itself. Final full suite: 296 passed and 1 xfail. pdoc is clean, and the author's run is unchanged (V(3 s) = 6.09056 m/s, complete) | Run folder `%LOCALAPPDATA%\sqa-loop\runs\forward-model-r2-2026-10-27\` |
 | 2026-10-27 | Claude Code, same session (`a3cd550c`): the project-wiki ingest for Step 1. *Board Equation of Motion and SWD Forces*, *Project Validation Evidence and Limits* and *Virtual Surfer Project* were updated with the forward model, the schedule check, the constant-slope steady speeds, the external check, the deferred inverse work and a per-row decomposition of `drag_total_n`. The decomposition was computed first across all 6,652 converged non-zero-slope reads. That check showed `drag_total_n` = F + P + R − W sin θ is tight only at pos_x 0.45 (within 4.3 N up to 15°). Across the table the residual's median is 7–10 % of W sin θ. So the wiki's open question, why the slope's weight term appears at 1.11–1.21 × W sin θ, was refined, not closed | The author asked for the ingest after its topics were proposed | The wiki lint passes, with no problems, orphans or unresolved links. The design choices are recorded as the author's. The wiki is gitignored, so `log.md` is its record | Answer 2026-10-27, "do the wiki ingest" (§ 6) |
+| 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), session `b82e80a3`, branch `ForwardModel`: the jerk cost J of the forward model's run, from Charles et al. (2026) Eq 4–7 (cited, p.6). (1) `forward-model/board_jerk.py`: `displacement`, Eq 7 taken literally (D_a, Simpson twice on a); `jerk_cost`, with j from `np.gradient`, C = T⁵/D² and J by composite Simpson; input checks that raise ValueError; a `__main__` that runs `simulate()` at its defaults. (2) Four exploration tables for the author's tolerances: his linear case, his sinusoid, his run subsampled, and the units. (3) `tests/test_board_jerk.py`, 19 tests on his cases, grids and tolerances. `forward_model.py`, `trajectory.py`, the screens and `friction-function/` are untouched | The author asked for the jerk cost from Step 1's a = dV/dt (§ 2 verbatim below). His derivations and every choice are in § 4 | The run gives D = 2.65688 m, C = 34.4242 s⁵/m² and J = 64.5824, complete, as in the planning preview. The linear case is exact to 7.1e-15 (J) and 4.4e-16 m (D). p_obs is 2.0000 on the sinusoid at h, h/2, h/4 and 2.0054 on his run at FD steps 4h, 2h, h. Rescaling changes J by at most 4.9e-15, relative. Full suite: 315 passed, 1 xfail. `pdoc --math` builds clean. The planning preview's p_obs of 1.999 used a different D (§ 5 E160) | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`); answers 2026-10-27 (§ 2, `b82e80a3`) |
+| 2026-10-27 | Review round of the jerk cost, review-only, through `sqa_cli_pass.py`. Nothing was reverted, and the guard passed 19/19 before and after each pass. agy (Antigravity CLI, Gemini 4 Argon, Medium): 0 Critical, 0 Warnings, 2 Suggestions (CLEAN). Devin CLI (SWE-1.7): 0, 0, 0 (CLEAN). Claude Code (same session, `b82e80a3`) applied agy's two: (1) `_samples` rejects a t or a that is not numeric, so a bool a is no longer read as 0 and 1 m/s², the same guard as `forward_model.theta`. (2) Negative tests for a 2-D and a 0-D input and for a bool a: 22 tests in all | The author's one review-only round by agy and Devin, with Claude Code applying the fixes (§ 4) | Both reviewers reproduced every number in the `b82e80a3` entries, including E160's 1.999 (1.998770) and 2.0054. After the fixes the author's run is unchanged (J = 64.5824, complete). Full suite: 318 passed, 1 xfail. `pdoc --math` builds clean | Run folder `%LOCALAPPDATA%\sqa-loop\runs\board-jerk-2026-10-27\` |
  
 ### Answers given to Claude Code's questions, 2026-09-29
 
@@ -1161,6 +1163,93 @@ A: Linear, ≤ 0.02 m/s
 Q: What should SLOPE_TOL be for the non-zero slopes? Every row is within 10.23 N except (2 m/s, −10°), at 22.14 N.
 A: 25 N, keep −10°
 
+### Prompt for the jerk cost, 2026-10-27 (session `b82e80a3`)
+
+The prompt is quoted verbatim here, because it carries the author's derivations and choices, and those are recorded
+in § 4 against it. The three pasted blocks sit where they were pasted; the prompt does not say where their wording
+came from.
+
+<details>
+<summary>The prompt, verbatim (the author's message, with the three pasted blocks in place)</summary>
+
+````text
+There is one more thing we need to do, we do not have enough data for Radicality, but we do for Board-Jerk. From the forward model we now have the change in V over time, thus a. Using finite difference, you can find the single derivative of this to get jerk. Using CHarles et al., I want you to find the jerk cost, not the whole Board-jerk, as there are no turns. The board is going down a dip, thus 3s straight glide, from 20deg->0deg. V0=6m/s. Using the forward model as I stated. Use Step.1's a=dV/dt. Finite difference of acceleratiopn with np.gradient. We are using 3s for this as T again, with step h = 0.001. Use Simpson as we have an even no. of intervals. Use Eq 7 from Charles literally, the derivations are as listed:  Db = V)*T + a)*T**2/2 + beta*T**3/6. Da = abs(a0*T**2/2+beta*T**3/6), Jlinear = beta**2*T**6/(2*D**2) AND J_sinusoidal = A**2*omega**2*T**6/(4*D**2).  where Db = V)*T + A*T/omega, and D_a = abs(A*T/omega). Testing: use these exact cases, Use the Oberkampf reference again for convergence of J at h, h/2 and h/4, checks units for further validation, J is dimensionless. "
+
+Invalid inputs:
+the cases: T ≤ 0, D = 0, non-finite values, t and a of different lengths, fewer than 3 samples, and complete = False;
+each gets a negative test with match=;
+trajectory.py quietly set C = 1 when D = 0; decide whether that case raises instead.
+
+" There should not be comparison with the paper, this is a future endevour. Make a new forward-model/board_jerk.py, calling forward_model. Use C and D from previous, not from trajectory.py. Although it is labelled as board jerk for now, we will need to rename it in future. Do one round of agy and devin, cc applies fixes. Commit after it is finished. Derivations go to: 
+
+AI-USE.md § 4, one row each, as yours.
+The module docstring, as “Derivation: Benjamin Moors (AI-USE.md § 4)”.
+Anything Claude Code fills in is recorded as its own and confirmed by you.
+Eq 4–7 are the paper’s (p.6), so they’re cited, not claimed.
+
+. Base reqs are: 
+
+If a choice is blank or unclear, ask; don’t pick (R12).
+Don’t edit:
+the existing functions in forward_model.py (if B9 = a, only add),
+trajectory.py,
+the screens,
+friction-function/.
+No new force data and no new screens. The only motion input is simulate() at its defaults.
+Every input and output gets units, ranges and domains. Invalid input raises ValueError with a clear message.
+W01.3 documentation:
+NumPy docstrings with a Usage block,
+# Limit: comments,
+intent comments,
+negative tests with match=,
+pdoc --math builds clean.
+Show the exploration table (h, J, the change per halving, p_obs) before writing any tolerance, and wait. Never tune h to hit an expected order.
+pytest, with the full suite still passing.
+Review per B11.
+Nothing is committed until you’ve checked it.
+AI-USE.md:
+an R2 task row with the prompt verbatim,
+your choices and derivations in § 4,
+an R3 ledger entry for any correction.
+No Co-Authored-By trailers (R11).
+````
+
+</details>
+
+### Answers given to Claude Code's questions, 2026-10-27 (session `b82e80a3`)
+
+Session `b82e80a3`, planning and building the jerk cost. Same handling as the 2026-09-29 subsection: the question is
+paraphrased and the answer is word for word.
+
+Q: Which D goes into C = T⁵/D²? On the author's run, D_b = 20.657 m gives J = 1.068 and D_a = 2.657 m gives J = 64.58.
+A: D_a only
+
+Q: How is Eq 7's double integral computed: Simpson twice on a (`cumulative_simpson` inside, `simpson` outside), a trapezoid inside and Simpson outside, or Simpson on Step 1's V?
+A: Simpson twice on a
+
+Q: The invalid-input list includes D = 0, while `trajectory.py` sets C = 1. Raise ValueError, or C = 1?
+A: Raise ValueError
+
+Q: With `simulate()` kept at its defaults, what does the p_obs check on h, h/2, h/4 run on: the sinusoid only, the sinusoid plus his run subsampled to FD steps 4h, 2h, h, or the sinusoid plus re-runs at h/2 and h/4?
+A: Sinusoid + subsampled run
+
+Q: Values for the two exact cases, with the sinusoid as a = A sin(ωt), ω = nπ/T (Claude Code's completion)?
+A: a0=1, β=-0.5, A=1, n=1
+
+Q: How should "J is dimensionless" be checked: a rescaling test, the dimension count in the docstring, or both?
+A: Rescaling test + docstring
+
+Q: Which input checks beyond the six listed: an odd number of intervals, t not strictly increasing, t not uniformly spaced, or none?
+A: Odd number of intervals, t not strictly increasing
+
+Q: "B9" and "B11" are not in the repo or the transcripts. Is B11 one review-only round by agy and Devin with Claude Code applying the fixes, and is `forward_model.py` left unedited, so B9 never applies?
+A: Yes, that's right
+
+Plan approval: the approval dialog was dismissed, then "Go".
+
+Q: Which tolerances, from the four tables (linear; sinusoid; his run subsampled; units)?
+A: 1e-12; E19-style, |p−2| ≤ 0.1; |p−2| ≤ 0.1; 1e-12
+
 ---
 
 ## 📂 3. Approximate level of AI contribution `[REVIEW]`
@@ -1188,6 +1277,7 @@ author must adjust to what they know to be true.
 | `friction-function/friction_force.py`, `tests/test_friction_force.py` — friction drag F_f(V) | ~100% of the code | Author designed F_f (his own: Re_crit = 5×10⁵, x_tr capped at L, the laminar share x_tr/L of the area, the Blasius avg_C_f at the laminar Reynolds number, SWD's closure 0.031/Re_L^(1/7), A(V) and L(V) by PCHIP with L in m, SWD's ρ and μ, the laminar law as an argument) and the tests (the `physics_baseline` match, the fully laminar limit with White's σ, continuity, the Kármán option); AI implemented, found ρ = 1025 and the constant A and L in the data, and set the continuity bound 10εF, which is the author's to confirm |
 | `friction-function/rerun_live_screen_ff.py`, `tests/test_rerun_live_screen_ff.py` — the Gate B rerun | ~100% of the code | Author chose the screen, holding the attitude and V0, and what the output states; AI chose to replace three module-level names of the unchanged screen rather than edit it |
 | `forward-model/forward_model.py`, `tests/test_forward_model.py` — the forward model, Step 1 | ~100% of the code | **Author derived** E15, E16 and E19 (his own; E19's /m, § 5 E153). **Author chose** the schedule (20° → 0° over 3 s, V0 = 6 m/s); the attitude; slope-matched forces with a gravity-inclusive check and its 25 N tolerance; tensor PCHIP; F_f times k; the stop rule; his `rk4_solve`; h; every test grid and tolerance; c at 20°, hard-coded; and the external check against SWD's `drag_total_n`. **AI ran** the feasibility check and the tables. **AI chose** the V-then-θ order of the PCHIP, the one-step `march` wrapper, the separate `OutOfData` signal, and the 2–10 m/s range on V0 |
+| `forward-model/board_jerk.py`, `tests/test_board_jerk.py` — the jerk cost J | ~100% of the code | **Author derived** D_b, D_a, J_linear and J_sinusoidal (his own; the sinusoid's ωT = nπ is Claude Code's completion, § 5 E159). **Author chose** J alone with no comparison with the paper; D_a; `np.gradient` and Simpson; T and h; `simulate()` at its defaults as the only motion input; D = 0 raising; the exact-case values; the convergence targets; the units check; the extra input checks; every tolerance. **AI offered** the options for the Eq 7 method, the convergence target, the test values, the units check and the extra checks, ran the tables, and chose the code's structure (`displacement`, `jerk_cost`, the `_samples` helper and its order of checks) |
 | The written report and presentation | to be stated when written | Author |
 
 ---
@@ -1281,6 +1371,17 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-10-27 | **The rest of the spec's Part A, as he chose:** F_f evaluated directly, with Blasius only (A3.1 a, A3.2 a); m = 802.21 N / 9.81 m/s² (A5); a run that leaves the data stops and returns what it has, with a flag (A6 a); his `rk4_solve` (A7 a); values at sample times deferred to Step 2 (A9 a); tests on E19 with n = 2, the order check on E19 only, the steady speed at a constant slope, and invalid inputs, with no second exact case and no gate cross-check (A10); `forward-model/` as a new folder, to be moved later (A11 b); `trajectory.py` marked superseded (A12 b); two review rounds by agy and Devin, review only, with Claude Code applying the fixes, on branch `ForwardModel` (A13). **The options were written by Claude in a claude.ai chat; the choices are the author's** | Prompt 2026-10-27 (§ 2 verbatim), the "My choice" lines; answer "2 rounds, agy + Devin" |
 | 2026-10-27 | **The external check:** the model's steady speed at a constant 10°, V* = 7.306 m/s (the root of E15), against the speed where SWD's own `drag_total_n` crosses zero, which the model never uses. The crossing is the linear zero between 7 and 8 m/s, 7.2926 m/s, hard-coded, with a tolerance of 0.02 m/s. The measured gap is 0.0135 m/s. With PCHIP the crossing is 7.3496 m/s, a gap of −0.0436 m/s. The gap comes from F_f being 0.6–0.7 N below `friction_n` and from SWD's slope residual of about −0.8 to −1 N, as the author predicted | Plan rejection 2026-10-27, item 1, "Add one external check for the E15 right-hand side…"; answer "Linear, ≤ 0.02 m/s" |
 | 2026-10-27 | **The step and the tolerances, chosen from Claude Code's tables; Claude Code neither picked nor tuned them:** h = 0.001 s. In Table 1, V(3 s) changes by 1.8e-12 m/s from h = 0.002 s, at 6 s per run. The full-model p_obs, 1.2–3.5, is irregular near round-off and is reported as measured, not asserted. The E19 grid is 3/96, 3/192, 3/384 s, with \|p_obs − 4\| ≤ 0.1 (3.990 measured) and the error at h/4 within the h/2 → h/4 change. The steady speed at a constant 10° uses V0 = 6 m/s, 30 s and h = 0.01 s, with \|V − V*\| ≤ 0.05 m/s (0.034 measured; time constant 7.6 s) | Answers 2026-10-27 (§ 2, `a3cd550c`), "0.001 s", "3/96–3/384, \|p−4\| ≤ 0.1", "V0 6, 30 s, h 0.01, ≤ 0.05" |
+| 2026-10-27 | **The jerk cost, its scope:** J alone, from Charles et al. (2026) Eq 4–7 (p.6; the paper's, cited and not claimed), not the whole Board-Jerk, because the 3 s glide down the 20° → 0° ramp has no turns. Radicality is not computed, for lack of data. There is no comparison with the paper's values; that is future work. The module is `forward-model/board_jerk.py`, named for now and to be renamed. It calls `forward_model`, and its only motion input is `simulate()` at its defaults (T = 3 s, h = 0.001 s, V0 = 6 m/s). C and D are computed here, not taken from `trajectory.py` | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`), "I want you to find the jerk cost, not the whole Board-jerk, as there are no turns" and "There should not be comparison with the paper, this is a future endevour" |
+| 2026-10-27 | **The method:** j = da/dt by `np.gradient` on Step 1's a = dV/dt (at its default edge order, Claude Code's literal reading); J by composite Simpson, since 3 s at h = 0.001 s is 3000 intervals, an even number; Eq 7 taken literally | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`), "Finite difference of acceleratiopn with np.gradient", "Use Simpson as we have an even no. of intervals", "Use Eq 7 from Charles literally" |
+| 2026-10-27 | **D_b for linear acceleration, the author's own:** `Db = V)*T + a)*T**2/2 + beta*T**3/6`, read as D_b = V0·T + a0·T²/2 + β·T³/6 (the ")" for "0" is a typing slip, § 5 E158). For a = a0 + βt it is the displacement over T. Writing the case out as a = a0 + βt is Claude Code's, confirmed by the author. Recorded but not used: J uses D_a (row below) | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **D_a for linear acceleration, the author's own:** `Da = abs(a0*T**2/2+beta*T**3/6)`, Eq 7 taken literally: the double integral of a, with no starting speed. With a0 = 1 m/s², β = −0.5 m/s³ and T = 3 s it is 2.25 m, hard-coded in `tests/test_board_jerk.py`. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **J_linear, the author's own:** `Jlinear = beta**2*T**6/(2*D**2)`. j = β is constant, so J = (T⁵/D²)(β²/2)T. With the D_a row's values it is 18, hard-coded. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **J_sinusoidal, the author's own:** `J_sinusoidal = A**2*omega**2*T**6/(4*D**2)`. **Claude Code's completion, confirmed by the author:** the sinusoid is a = A sin(ωt) with ωT = nπ. The result needs ∫₀ᵀ cos²(ωt) dt = T/2, which holds only when sin(2ωT) = 0 (§ 5 E159). With D_a it reduces to (nπ)⁴/4, whatever A and T; that observation is Claude Code's. For A = 1 m/s² and n = 1 (ω = π/3 rad/s) it is π⁴/4 = 24.352272758500604, hard-coded. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`); answer "a0=1, β=-0.5, A=1, n=1" to a question that stated ω = nπ/T |
+| 2026-10-27 | **D_b for the sinusoid, the author's own:** `Db = V)*T + A*T/omega`, read as V0·T + A·T/ω (§ 5 E158). It needs sin(ωT) = 0 (§ 5 E159). Recorded but not used | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **D_a for the sinusoid, the author's own:** `D_a = abs(A*T/omega)`, which needs sin(ωT) = 0 (§ 5 E159). For A = 1 m/s² and ω = π/3 rad/s it is 9/π m. In the module docstring | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`) |
+| 2026-10-27 | **D_a, not D_b:** J uses Eq 7 taken literally, without V0·T. On his run D_a = 2.6569 m gives J = 64.582; D_b = 20.657 m would give 1.068, 60 times smaller. A `# Limit:` comment in the module records it. The options and figures were Claude Code's | Answers 2026-10-27 (§ 2, `b82e80a3`), "D_a only" |
+| 2026-10-27 | **The rest of his choices, from options Claude Code offered:** Eq 7 by Simpson twice on a (`cumulative_simpson` inside, `simpson` outside). D = 0 raises ValueError, where `trajectory.py` set C = 1. The convergence check (E18; the Oberkampf reference is still unconfirmed, `TODO.md` S.8) runs on the sinusoid at h, h/2, h/4 and on his run subsampled to FD steps 4h, 2h, h, so `simulate()` is never re-run. The exact cases are a0 = 1 m/s², β = −0.5 m/s³, A = 1 m/s² and n = 1. Units are checked by a rescaling test (a in mm/s²; t in ms with a in m/ms²) plus the dimension count in the docstring. His six invalid inputs, plus an odd interval count and a t that is not strictly increasing, each raise ValueError and have a negative test. One review-only round by agy and Devin, with Claude Code applying the fixes; `forward_model.py` is not edited | Answers 2026-10-27 (§ 2, `b82e80a3`), "Simpson twice on a", "Raise ValueError", "Sinusoid + subsampled run", "a0=1, β=-0.5, A=1, n=1", "Rescaling test + docstring", "Odd number of intervals, t not strictly increasing", "Yes, that's right" |
+| 2026-10-27 | **The tolerances, chosen from Claude Code's four tables; Claude Code neither picked nor tuned them:** on the linear case, J and D within 1e-12 (7.1e-15 and 4.4e-16 m measured). On the sinusoid, the error at h/4 within the h/2 → h/4 change (5.6e-7 against 1.7e-6), and \|p_obs − 2\| ≤ 0.1 (2.0000 measured). On his run, \|p_obs − 2\| ≤ 0.1 (2.0054 measured). The rescaled J within 1e-12, relative (at most 4.9e-15 measured) | Answer 2026-10-27 (§ 2, `b82e80a3`), "1e-12; E19-style, \|p−2\| ≤ 0.1; \|p−2\| ≤ 0.1; 1e-12" |
 
 **Interview readiness** (`CLAUDE.md` R7 — nothing in the repo I cannot explain unaided). To be
 ticked by the author, not by AI:
@@ -1314,6 +1415,8 @@ ticked by the author, not by AI:
 | `tests/test_rerun_live_screen_ff.py` | ☐ | ☐ | ☐ |
 | `forward-model/forward_model.py` (`load_forces`, `theta`, `march`, `simulate`) | ☐ | ☐ | ☐ |
 | `tests/test_forward_model.py` | ☐ | ☐ | ☐ |
+| `forward-model/board_jerk.py` (`displacement`, `jerk_cost`) | ☐ | ☐ | ☐ |
+| `tests/test_board_jerk.py` | ☐ | ☐ | ☐ |
 
 ---
 
@@ -1482,6 +1585,9 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E155 | 2026-10-27 | Claude Code, session `a3cd550c`, in a question to the author: c = D(2 m/s, θ)/2² is 79.65 N·s²/m² at 20° (and 96.95 at 0°) | c at 20° is 318.6462106634834/4 = 79.66155266587084 N·s²/m². The question's 79.65 came from D rounded first to 318.6 N | Claude Code, computing c to full precision before hard-coding it | `tests/test_forward_model.py` (`C_E19`) |
 | E156 | 2026-10-27 | Claude Code, session `a3cd550c`, in the comment on `H` in `forward_model.py` and in the § 4 row on the step and tolerances: "V(3 s) changes by 1.8e-12 m/s from h = 0.002 s" | 1.8e-12 m/s (1.825e-12) is the largest change over the shared nodes, near t = 0.26 s. At t = 3 s the change is 3.3e-13 m/s (3.26e-13). The full-model p_obs range of 1.2–3.5 comes from the same maximum; at t = 3 s it is 1.0–5.9. Table 1 itself labelled both columns correctly, so the author's choice of h is unaffected | agy, review-only round 1 (2026-10-27); confirmed by Claude Code against Table 1 | `forward_model.py` (comment); the § 4 row left as written (R1) |
 | E157 | 2026-10-27 | Claude Code, session `a3cd550c`, in E156: the largest change from h = 0.002 s to 0.001 s is "near t = 0.26 s" | It is at t = 0.770 s, node 385 of 1500 on the h = 0.002 s grid, where V = 7.0006 m/s has just crossed the 7 m/s PCHIP knot. 0.257 is the fraction of the run, not a time | agy, review-only round 2 (2026-10-27); reproduced by Claude Code | this entry (E156 left as written, R1) |
+| E158 | 2026-10-27 | Benjamin's D_b derivations (prompt 2026-10-27, § 2 verbatim, `b82e80a3`): `Db = V)*T + a)*T**2/2 + beta*T**3/6` and `Db = V)*T + A*T/omega` | ")" is a slip for "0", the same key shifted: V0 and a0. His D_a line types the same term as `a0*T**2/2` | Claude Code, session `b82e80a3`, while planning; stated in the plan the author approved ("Go") | § 4, the 2026-10-27 D_b rows |
+| E159 | 2026-10-27 | Benjamin's sinusoid results (the same prompt): D_b = V0·T + AT/ω, D_a = \|AT/ω\| and J_sinusoidal = A²ω²T⁶/(4D²), stated with no form for a and no condition on ω | For a = A sin(ωt), ∫₀ᵀ∫₀ᵗ a ds dt = AT/ω − A sin(ωT)/ω², and ∫₀ᵀ cos²(ωt) dt = T/2 + sin(2ωT)/(4ω). All three hold only when sin(ωT) = 0, that is ωT = nπ. For a = A cos(ωt), D would not be AT/ω at all | Claude Code, session `b82e80a3`, checking the derivation while planning; confirmed by the author's answer to the test-values question, which stated ω = nπ/T | § 4, the sinusoid rows; the `board_jerk.py` docstring; `tests/test_board_jerk.py` |
+| E160 | 2026-10-27 | Claude Code, session `b82e80a3`, in the convergence question and the plan: "Preview: p_obs = 1.999" on his run subsampled to FD steps 4h, 2h, h | 1.999 came from D = \|∫(V − V0) dt\| on Step 1's V. With Eq 7 as chosen (Simpson twice on a) the same check gives 2.0054 (Table 3), because D now also changes with the step. The question did not say which D the preview used. The author set \|p − 2\| ≤ 0.1 from Table 3 | Claude Code, running Table 3 | this entry; § 4, the 2026-10-27 tolerances row |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn

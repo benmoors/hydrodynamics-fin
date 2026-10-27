@@ -153,6 +153,9 @@ write-free escalation, if needed, is to invoke the top-level `File` item and re-
 
 - ⬜ **Gate A and Gate B verdicts.** None is recorded. Step 1 (the forward model) went ahead without them under gate
   rule (b), 2026-10-27 (`AI-USE.md` § 4).
+- ⬜ **Rename `forward-model/board_jerk.py`.** It computes the jerk cost J (Eq 4–7) of the 3 s glide, done
+  2026-10-27, not the paper's whole Board-Jerk (`AI-USE.md` § 4).
+- ⬜ **Compare J with Charles et al.'s values.** Deliberately not done yet: future work (`AI-USE.md` § 4).
 
 ## Report — equation sources owed (E1–E27 pre-work deck)
 

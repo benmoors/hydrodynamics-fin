@@ -631,19 +631,29 @@ def mc_stats(f: pd.DataFrame, joint: bool) -> dict:
     -------
     dict
         N, mean and sd of k, sd / (FRICTION_SHIFT x PLANTED), within-band fraction, converged
-        and at-bound fractions, and for set b the V0 mean, sd and corr(k, V0).
+        and at-bound fractions, and for set b the V0 mean, sd and corr(k, V0). Each statistic is
+        followed by its standard error, "SE ..." (identifiability_screen.standard_error).
     """
     ok = f[f.converged]
     band = FRICTION_SHIFT * PLANTED
     sd = ok.k_fit.std(ddof=1)
+    within = (((f.k_fit - PLANTED).abs() <= band) & f.converged).mean() if len(f) else np.nan
+    at_bound = f.at_bound.mean() if "at_bound" in f else np.nan
+    sd_v0 = ok.v0_fit.std(ddof=1) if joint else np.nan
+    corr = ids.correlation(ok.k_fit.to_numpy(), ok.v0_fit.to_numpy()) if joint else np.nan
+    se = ids.standard_error
+    # Each statistic with its standard error beside it (the author's choice, AI-USE.md section 4, 2026-10-28):
+    # "settled" is a stopping rule, not a precision
     return {
-        "N": len(f), "mean k": ok.k_fit.mean(), "sd k": sd, "sd k / (shift x PLANTED)": sd / band,
-        "within ±band": (((f.k_fit - PLANTED).abs() <= band) & f.converged).mean() if len(f) else np.nan,
-        "converged": f.converged.mean(),
-        "at bound": f.at_bound.mean() if "at_bound" in f else np.nan,
-        "mean V0": ok.v0_fit.mean() if joint else np.nan,
-        "sd V0": ok.v0_fit.std(ddof=1) if joint else np.nan,
-        "corr(k, V0)": ids.correlation(ok.k_fit.to_numpy(), ok.v0_fit.to_numpy()) if joint else np.nan,
+        "N": len(f), "mean k": ok.k_fit.mean(), "SE mean k": se("mean", sd, len(ok)),
+        "sd k": sd, "SE sd k": se("sd", sd, len(ok)),
+        "sd k / (shift x PLANTED)": sd / band, "SE sd k / (shift x PLANTED)": se("sd", sd, len(ok)) / band,
+        "within ±band": within, "SE within ±band": se("fraction", within, len(f)),
+        "converged": f.converged.mean(), "SE converged": se("fraction", f.converged.mean(), len(f)),
+        "at bound": at_bound, "SE at bound": se("fraction", at_bound, len(f)),
+        "mean V0": ok.v0_fit.mean() if joint else np.nan, "SE mean V0": se("mean", sd_v0, len(ok)),
+        "sd V0": sd_v0, "SE sd V0": se("sd", sd_v0, len(ok)),
+        "corr(k, V0)": corr, "SE corr(k, V0)": se("corr", corr, len(ok)),
     }
 
 

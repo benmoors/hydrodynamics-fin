@@ -44,7 +44,7 @@ m/s² (upper) and 0.0283 m/s² (lower).
 | `delta_a.csv` | Shifted run minus baseline, along-path acceleration, at mmc1's sample times |
 | `summary.csv` | Rows dropped, the choices, σ, how far each run got, the rtol check, and the step 7 comparison |
 | `monte_carlo_fits.csv` | Every fit: draw, set, fitted k and V0, converged, at a bound, guard hits |
-| `monte_carlo_summary.csv` | The Monte Carlo statistics, beside the first screen's |
+| `monte_carlo_summary.csv` | The Monte Carlo statistics, beside the first screen's. Since 2026-10-28 every statistic is followed by its standard error (`SE ...`, normal-theory approximations), and the 3 s set (b) rows are not used as evidence: their fits depend on the optimiser's start point and on the V0 bound, so set (b) evidence is taken from the 10.055 s rows (`AI-USE.md` § 4 and § 5 E166) |
 | `speed_runs.png`, `delta_a_x.png`, `overlay_x.png`, `fitted_k_hist.png` | The plots |
 
 ---

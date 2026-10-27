@@ -214,3 +214,31 @@ def test_predict_refuses_a_bool_column(table) -> None:
     query.iloc[0, 0] = True
     with pytest.raises(ValueError, match="query columns must be numeric"):
         model.predict(query)
+
+
+# The author's decisions of 2026-10-28 (AI-USE.md section 4)
+from src.friction.blasius_shooting import shooting_blasius as sb  # noqa: E402
+
+
+def test_thicknesses_refuses_above_the_laminar_range() -> None:
+    with pytest.raises(ValueError, match=r"at most 1e\+06"):
+        bt.thicknesses(2e6)
+
+
+def test_secant_names_its_failure() -> None:
+    with pytest.raises(ValueError, match="would divide by zero"):
+        sb.secant_for_shooting(lambda s: 1.0, 0.5, 0.6)  # a flat F
+    with pytest.raises(ValueError, match="did not reach"):
+        sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, max_iter=0)
+    with pytest.raises(ValueError, match="second guess s = 5.0 is not finite"):
+        sb.secant_for_shooting(lambda s: float("nan") if s > 1 else s, 0.0, 5.0)
+
+
+def test_F_f_checks_a_passed_fluid_but_not_the_defaults(monkeypatch) -> None:
+    """rho and mu are checked where they enter: a passed value each call, the module's own once at import."""
+    calls = []
+    monkeypatch.setattr(ff, "_check_fluid", lambda rho, mu: calls.append((rho, mu)))
+    ff.F_f(6.0, ONES, ONES)
+    assert calls == []
+    ff.F_f(6.0, ONES, ONES, rho=1025.0)
+    assert calls == [(1025.0, ff.MU)]

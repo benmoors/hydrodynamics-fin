@@ -87,6 +87,8 @@ ASSUMPTIONS = (
     "detrended quiet-window signal is printed per axis above.",
     "mmc1's board, surfer and wave differ from default_shortboard and the 80 kg surfer.",
     f"The friction speed exponent is trajectory.py's EXP_FRICTION placeholder ({tr.EXP_FRICTION}).",
+    "Below the polar's smallest tabulated roll (0.866 deg), np.interp holds the 0.866 deg forces: for about 10 % of "
+    "each run (the ends of the roll profile) the forces are held, not measured.",
 )
 
 
@@ -456,6 +458,44 @@ def correlation(a: np.ndarray, b: np.ndarray) -> float:
     if np.ptp(a) == 0 or np.ptp(b) == 0:
         return float("nan")
     return float(np.corrcoef(a, b)[0, 1])
+
+
+def standard_error(kind: str, value: float, n: int) -> float:
+    """Standard error of a Monte Carlo statistic over n draws, by the usual normal-theory approximations.
+
+    Printed beside each statistic (the author's choice, AI-USE.md section 4, 2026-10-28), because "settled < 5 %"
+    is a stopping rule, not a statement of precision.
+
+    Parameters
+    ----------
+    kind : {'mean', 'sd', 'fraction', 'corr'}
+        Which statistic: a mean (pass the draws' sd as value), a standard deviation (pass the sd), a fraction (pass
+        p) or a correlation (pass r).
+    value : float
+        As above. NaN gives NaN.
+    n : int
+        Draws behind the statistic: the converged fits for k and V0, every fit for a fraction.
+
+    Returns
+    -------
+    float
+        sd/sqrt(n) for a mean; sd/sqrt(2(n - 1)) for an sd; sqrt(p(1 - p)/n) for a fraction;
+        (1 - r^2)/sqrt(n - 1) for a correlation. NaN when n is too small.
+
+    Raises
+    ------
+    ValueError
+        If kind is not one of the four.
+    """
+    if kind == "mean":
+        return float(value / np.sqrt(n)) if n > 0 else float("nan")
+    if kind == "sd":
+        return float(value / np.sqrt(2 * (n - 1))) if n > 1 else float("nan")
+    if kind == "fraction":
+        return float(np.sqrt(value * (1 - value) / n)) if n > 0 else float("nan")
+    if kind == "corr":
+        return float((1 - value**2) / np.sqrt(n - 1)) if n > 1 else float("nan")
+    raise ValueError(f"kind must be 'mean', 'sd', 'fraction' or 'corr', got {kind!r}")
 
 
 def residuals(
@@ -902,15 +942,21 @@ def main(argv: list[str] | None = None) -> None:
                 f = pd.DataFrame(fits, columns=["k_fit", "v0_fit", "converged"])
                 out.append(f.assign(duration_s=dur, sigma_case=case, set=set_name, draw=np.arange(len(f))))
                 ok = f[f.converged]
+                sd_k = ok.k_fit.std(ddof=1)
+                sd_v0 = ok.v0_fit.std(ddof=1) if joint else np.nan
+                corr = correlation(ok.k_fit.to_numpy(), ok.v0_fit.to_numpy()) if joint else np.nan
+                se = standard_error
                 stats.append({
                     "duration_s": dur, "sigma": case, "set": set_name,
                     "N": stop["n"], "2N": stop["n2"], "sd k (N)": stop["sd_n"], "sd k (2N)": stop["sd_n2"],
-                    "settled <5%": stop["settled"], "mean k": ok.k_fit.mean(), "sd k": ok.k_fit.std(ddof=1),
-                    "sd k / (shift×PLANTED)": ok.k_fit.std(ddof=1) / (FRICTION_SHIFT * PLANTED),
-                    "converged": f.converged.mean(),
-                    "mean V0": ok.v0_fit.mean() if joint else np.nan,
-                    "sd V0": ok.v0_fit.std(ddof=1) if joint else np.nan,
-                    "corr(k, V0)": correlation(ok.k_fit.to_numpy(), ok.v0_fit.to_numpy()) if joint else np.nan,
+                    "settled <5%": stop["settled"],
+                    "mean k": ok.k_fit.mean(), "SE mean k": se("mean", sd_k, len(ok)),
+                    "sd k": sd_k, "SE sd k": se("sd", sd_k, len(ok)),
+                    "sd k / (shift×PLANTED)": sd_k / (FRICTION_SHIFT * PLANTED),
+                    "converged": f.converged.mean(), "SE converged": se("fraction", f.converged.mean(), len(f)),
+                    "mean V0": ok.v0_fit.mean() if joint else np.nan, "SE mean V0": se("mean", sd_v0, len(ok)),
+                    "sd V0": sd_v0, "SE sd V0": se("sd", sd_v0, len(ok)),
+                    "corr(k, V0)": corr, "SE corr(k, V0)": se("corr", corr, len(ok)),
                 })
                 print(f"  done: {dur:g} s, sigma {case}, set ({set_name}), {len(f)} fits")
     fits_df = pd.concat(out, ignore_index=True)[["duration_s", "sigma_case", "set", "draw", "k_fit", "v0_fit", "converged"]]

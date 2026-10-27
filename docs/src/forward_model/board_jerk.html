@@ -53,6 +53,9 @@
             <h2>API Documentation</h2>
                 <ul class="memberlist">
             <li>
+                    <a class="variable" href="#D_MIN">D_MIN</a>
+            </li>
+            <li>
                     <a class="function" href="#displacement">displacement</a>
             </li>
             <li>
@@ -171,120 +174,138 @@ both of his sinusoid results need sin(omega T) = 0. With D_a, J_sinusoidal = (n 
 </span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>
 </span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.forward_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">forward_model</span> <span class="k">as</span> <span class="n">fm</span>
 </span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>
-</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a><span class="c1"># Limit: one axis, the acceleration along the face. No lateral or normal acceleration, no turns, no pitch.</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a><span class="c1"># Limit: D is Eq 7 taken literally (D_a): it leaves out V0 T. On the author's run D_a = 2.657 m and J = 64.58; the</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a><span class="c1">#        displacement V0 T + D_a = 20.657 m would give J = 1.068, 60 times smaller.</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a><span class="c1"># Limit: np.gradient is second order inside and first order at the two end nodes.</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a><span class="c1"># Limit: a comes from forces that are PCHIP in V and theta, which is C1, so j is continuous but its slope jumps at the</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a><span class="c1">#        data's knots (each whole m/s, each 5 deg).</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a><span class="c1"># Limit: T is the 3 s glide, not a wave from take-off to kick-out as in the paper, and J is not compared with the</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a><span class="c1">#        paper's values.</span>
-</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a>
-</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>
-</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
-</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="w">    </span><span class="sd">"""t and a as float arrays, or ValueError unless they are one run sampled for composite Simpson."""</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a>    <span class="c1"># A bool would pass as 0 or 1, the same guard as forward_model.theta</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a>    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s2">"iuf"</span> <span class="ow">or</span> <span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s2">"iuf"</span><span class="p">:</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a must be arrays of numbers (a bool is not)"</span><span class="p">)</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">a</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a>    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a must be 1-D arrays of the same length"</span><span class="p">)</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a need at least 3 samples"</span><span class="p">)</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">t</span><span class="p">))</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a</span><span class="p">))):</span>
-</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a must be finite"</span><span class="p">)</span>
-</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>    <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"T = t[-1] - t[0] must be &gt; 0"</span><span class="p">)</span>
-</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a>    <span class="c1"># T &gt; 0 alone would let a t that doubles back through to np.gradient</span>
-</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
-</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t must be strictly increasing"</span><span class="p">)</span>
-</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="p">:</span>
-</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Simpson needs an even number of intervals, so an odd number of samples"</span><span class="p">)</span>
-</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>    <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">a</span>
-</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>
-</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>
-</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a><span class="k">def</span><span class="w"> </span><span class="nf">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
-</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a><span class="w">    </span><span class="sd">"""D, Eq 7 along one axis: |integral_0^T integral_0^t a ds dt|, by Simpson twice.</span>
+</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a><span class="c1"># m, the author's floor on D (AI-USE.md section 4, 2026-10-28): jerk_cost refuses a D below it</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a><span class="n">D_MIN</span> <span class="o">=</span> <span class="mf">1e-5</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a>
+</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a><span class="c1"># Limit: one axis, the acceleration along the face. No lateral or normal acceleration, no turns, no pitch.</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a><span class="c1"># Limit: D is Eq 7 taken literally (D_a): it leaves out V0 T. On the author's run D_a = 2.657 m and J = 64.58; the</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a><span class="c1">#        displacement V0 T + D_a = 20.657 m would give J = 1.068, 60 times smaller.</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a><span class="c1"># Limit: D_MIN is in metres, so it assumes a in m/s^2 and t in s; in other units it is a different floor.</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a><span class="c1"># Limit: np.gradient is second order inside and first order at the two end nodes.</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="c1"># Limit: a comes from forces that are PCHIP in V and theta, which is C1, so j is continuous but its slope jumps at the</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a><span class="c1">#        data's knots (each whole m/s, each 5 deg).</span>
+</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a><span class="c1"># Limit: T is the 3 s glide, not a wave from take-off to kick-out as in the paper, and J is not compared with the</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="c1">#        paper's values.</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a>
+</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a>
+</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a><span class="k">def</span><span class="w"> </span><span class="nf">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a><span class="w">    </span><span class="sd">"""t and a as float arrays, or ValueError unless they are one run sampled for composite Simpson."""</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a>    <span class="c1"># A bool would pass as 0 or 1, the same guard as forward_model.theta</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a>    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s2">"iuf"</span> <span class="ow">or</span> <span class="n">a</span><span class="o">.</span><span class="n">dtype</span><span class="o">.</span><span class="n">kind</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s2">"iuf"</span><span class="p">:</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a must be arrays of numbers (a bool is not)"</span><span class="p">)</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">),</span> <span class="n">a</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a>    <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">t</span><span class="o">.</span><span class="n">shape</span> <span class="o">!=</span> <span class="n">a</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a must be 1-D arrays of the same length"</span><span class="p">)</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a need at least 3 samples"</span><span class="p">)</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">t</span><span class="p">))</span> <span class="ow">and</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">a</span><span class="p">))):</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t and a must be finite"</span><span class="p">)</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a>    <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"T = t[-1] - t[0] must be &gt; 0"</span><span class="p">)</span>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>    <span class="c1"># T &gt; 0 alone would let a t that doubles back through to np.gradient</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"t must be strictly increasing"</span><span class="p">)</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span><span class="p">:</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Simpson needs an even number of intervals, so an odd number of samples"</span><span class="p">)</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>    <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">a</span>
 </span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>
-</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="sd">    Parameters</span>
-</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a><span class="sd">    ----------</span>
-</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="sd">    t : array_like</span>
-</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a><span class="sd">        Time, s, finite and strictly increasing, with at least 3 samples and an even number of intervals.</span>
-</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a><span class="sd">        T = t[-1] - t[0] &gt; 0. It need not start at 0.</span>
-</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a><span class="sd">    a : array_like</span>
-</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a><span class="sd">        Acceleration along the face at each t, m/s^2, finite, the same length as t.</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>
-</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a><span class="sd">    Returns</span>
-</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a><span class="sd">    -------</span>
-</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a><span class="sd">    float</span>
-</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a><span class="sd">        D, m, &gt;= 0. It is 0 only when the double integral is.</span>
-</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>
-</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a><span class="sd">    Raises</span>
-</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a><span class="sd">    ------</span>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a><span class="sd">    ValueError</span>
-</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a><span class="sd">        If t or a is not numeric (a bool is not) or not 1-D, their lengths differ, there are fewer than 3 samples, a</span>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a><span class="sd">        value is not finite, T &lt;= 0, t is not strictly increasing, or the number of intervals is odd.</span>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a>
-</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a><span class="sd">    Usage</span>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="sd">    -----</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">        &gt;&gt;&gt; displacement([0.0, 1.5, 3.0], [1.0, 0.25, -0.5])   # a = 1 - 0.5 t: 2.25 m</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a><span class="sd">    """</span>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>    <span class="c1"># The inner integral is the speed gained since t[0]; Eq 7 takes no starting speed, so V0 is not added</span>
-</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a>    <span class="n">gained</span> <span class="o">=</span> <span class="n">cumulative_simpson</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a>    <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">gained</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">)))</span>
-</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>
-</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>
-</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a><span class="k">def</span><span class="w"> </span><span class="nf">jerk_cost</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">complete</span><span class="p">):</span>
-</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a><span class="w">    </span><span class="sd">"""J, Eq 4-6: the dimensionless jerk cost of one run.</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a><span class="k">def</span><span class="w"> </span><span class="nf">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="w">    </span><span class="sd">"""D, Eq 7 along one axis: |integral_0^T integral_0^t a ds dt|, by Simpson twice.</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a><span class="sd">    Parameters</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a><span class="sd">    ----------</span>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a><span class="sd">    t : array_like</span>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a><span class="sd">        Time, s, finite and strictly increasing, with at least 3 samples and an even number of intervals.</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a><span class="sd">        T = t[-1] - t[0] &gt; 0. It need not start at 0.</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a><span class="sd">    a : array_like</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a><span class="sd">        Acceleration along the face at each t, m/s^2, finite, the same length as t.</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a><span class="sd">    Returns</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a><span class="sd">    -------</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a><span class="sd">    float</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a><span class="sd">        D, m, &gt;= 0. It is 0 only when the double integral is.</span>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a><span class="sd">    Raises</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="sd">    ------</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a><span class="sd">    ValueError</span>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="sd">        If t or a is not numeric (a bool is not) or not 1-D, their lengths differ, there are fewer than 3 samples, a</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">        value is not finite, T &lt;= 0, t is not strictly increasing, or the number of intervals is odd.</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a><span class="sd">    Usage</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a><span class="sd">    -----</span>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a><span class="sd">        &gt;&gt;&gt; displacement([0.0, 1.5, 3.0], [1.0, 0.25, -0.5])   # a = 1 - 0.5 t: 2.25 m</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a><span class="sd">    """</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a>    <span class="c1"># The inner integral is the speed gained since t[0]; Eq 7 takes no starting speed, so V0 is not added</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>    <span class="n">gained</span> <span class="o">=</span> <span class="n">cumulative_simpson</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a>    <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">gained</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">)))</span>
 </span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>
-</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a><span class="sd">    Parameters</span>
-</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a><span class="sd">    ----------</span>
-</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="sd">    t : array_like</span>
-</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a><span class="sd">        Time, s: as displacement. simulate() gives 0, 0.001, ..., 3 s.</span>
-</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="sd">    a : array_like</span>
-</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="sd">        Acceleration along the face, m/s^2: as displacement. simulate()'s a is E15 at each node.</span>
-</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">    complete : bool</span>
-</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd">        simulate()'s flag. It must be True: J and C need the whole run from 0 to T.</span>
-</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a>
-</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">    Returns</span>
-</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">    -------</span>
-</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a><span class="sd">    float</span>
-</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a><span class="sd">        J, dimensionless, &gt;= 0.</span>
-</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>
-</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">    Raises</span>
-</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">    ------</span>
-</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">    ValueError</span>
-</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a><span class="sd">        If complete is not True, if D = 0 (C = T^5/D^2 is undefined there), or for any reason displacement raises.</span>
-</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>
-</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="sd">    Usage</span>
-</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">    -----</span>
-</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="sd">        &gt;&gt;&gt; t, V, a, complete = fm.simulate()</span>
-</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a><span class="sd">        &gt;&gt;&gt; jerk_cost(t, a, complete)</span>
-</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a><span class="sd">    """</span>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="c1"># A run that left the force data stopped before T, so its J would be over a different T</span>
-</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">complete</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">complete</span><span class="p">:</span>
-</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"complete must be True: J needs the whole run, and this one stopped before T"</span><span class="p">)</span>
-</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>    <span class="n">T</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>    <span class="c1"># trajectory.py set C = 1 here; the author's choice is to refuse</span>
-</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>    <span class="k">if</span> <span class="n">D</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"D = 0, so C = T^5/D^2 is undefined"</span><span class="p">)</span>
-</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a>    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">T</span><span class="o">**</span><span class="mi">5</span><span class="o">/</span><span class="n">D</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">))</span>
-</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>
-</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>
-</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
-</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">complete</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
-</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>    <span class="n">T</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"theta </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">THETA_START</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">THETA_END</span><span class="si">}</span><span class="s2"> deg over </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">T_RUN</span><span class="si">}</span><span class="s2"> s; V0 </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">V0_RUN</span><span class="si">}</span><span class="s2"> m/s; h </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">H</span><span class="si">}</span><span class="s2"> s; "</span>
-</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>          <span class="sa">f</span><span class="s2">"complete: </span><span class="si">{</span><span class="n">complete</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"T = </span><span class="si">{</span><span class="n">T</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> s, D = </span><span class="si">{</span><span class="n">D</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> m, C = </span><span class="si">{</span><span class="n">T</span><span class="o">**</span><span class="mi">5</span><span class="o">/</span><span class="n">D</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> s^5/m^2, J = </span><span class="si">{</span><span class="n">jerk_cost</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">complete</span><span class="p">)</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a><span class="k">def</span><span class="w"> </span><span class="nf">jerk_cost</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">complete</span><span class="p">):</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="w">    </span><span class="sd">"""J, Eq 4-6: the dimensionless jerk cost of one run.</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="sd">    Parameters</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="sd">    ----------</span>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">    t : array_like</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd">        Time, s: as displacement. simulate() gives 0, 0.001, ..., 3 s.</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a><span class="sd">    a : array_like</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">        Acceleration along the face, m/s^2: as displacement. simulate()'s a is E15 at each node.</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">    complete : bool</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a><span class="sd">        simulate()'s flag. It must be True: J and C need the whole run from 0 to T.</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a><span class="sd">    Returns</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a><span class="sd">    -------</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a><span class="sd">    float</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a><span class="sd">        J, dimensionless, &gt;= 0.</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a><span class="sd">    Raises</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a><span class="sd">    ------</span>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a><span class="sd">    ValueError</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a><span class="sd">        If complete is not True, if D &lt; D_MIN = 1e-5 m (C = T^5/D^2 is undefined at 0 and meaningless near it), or</span>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a><span class="sd">        for any reason displacement raises.</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a><span class="sd">    Usage</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a><span class="sd">    -----</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a><span class="sd">        &gt;&gt;&gt; t, V, a, complete = fm.simulate()</span>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a><span class="sd">        &gt;&gt;&gt; jerk_cost(t, a, complete)</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a><span class="sd">    """</span>
+</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>    <span class="c1"># A run that left the force data stopped before T, so its J would be over a different T</span>
+</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">complete</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">complete</span><span class="p">:</span>
+</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"complete must be True: J needs the whole run, and this one stopped before T"</span><span class="p">)</span>
+</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>    <span class="n">T</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>    <span class="c1"># trajectory.py set C = 1 here; the author's choice is to refuse, below his floor rather than only at an exact 0:</span>
+</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>    <span class="c1"># quadrature leaves an analytically zero D at about 1e-16 m, which would make C, and J, astronomically large</span>
+</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>    <span class="k">if</span> <span class="n">D</span> <span class="o">&lt;</span> <span class="n">D_MIN</span><span class="p">:</span>
+</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"D = </span><span class="si">{</span><span class="n">D</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> m is below the </span><span class="si">{</span><span class="n">D_MIN</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m floor, so C = T^5/D^2 is undefined or meaningless"</span><span class="p">)</span>
+</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">T</span><span class="o">**</span><span class="mi">5</span><span class="o">/</span><span class="n">D</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">))</span>
+</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>
+</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a>
+</span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">"__main__"</span><span class="p">:</span>
+</span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">complete</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a>    <span class="n">T</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"theta </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">THETA_START</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">THETA_END</span><span class="si">}</span><span class="s2"> deg over </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">T_RUN</span><span class="si">}</span><span class="s2"> s; V0 </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">V0_RUN</span><span class="si">}</span><span class="s2"> m/s; h </span><span class="si">{</span><span class="n">fm</span><span class="o">.</span><span class="n">H</span><span class="si">}</span><span class="s2"> s; "</span>
+</span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a>          <span class="sa">f</span><span class="s2">"complete: </span><span class="si">{</span><span class="n">complete</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"T = </span><span class="si">{</span><span class="n">T</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> s, D = </span><span class="si">{</span><span class="n">D</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> m, C = </span><span class="si">{</span><span class="n">T</span><span class="o">**</span><span class="mi">5</span><span class="o">/</span><span class="n">D</span><span class="o">**</span><span class="mi">2</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2"> s^5/m^2, J = </span><span class="si">{</span><span class="n">jerk_cost</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="w"> </span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">complete</span><span class="p">)</span><span class="si">:</span><span class="s2">.6g</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></pre></div>
 
 
             </section>
+                <section id="D_MIN">
+                    <div class="attr variable">
+            <span class="name">D_MIN</span>        =
+<span class="default_value">1e-05</span>
+
+        
+    </div>
+    <a class="headerlink" href="#D_MIN"></a>
+    
+    
+
+                </section>
                 <section id="displacement">
                             <input id="displacement-view-source" class="view-source-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
 <div class="attr function">
@@ -296,36 +317,36 @@ both of his sinusoid results need sin(omega T) = 0. With D_a, J_sinusoidal = (n 
 
     </div>
     <a class="headerlink" href="#displacement"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="displacement-81"><a href="#displacement-81"><span class="linenos"> 81</span></a><span class="k">def</span><span class="w"> </span><span class="nf">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
-</span><span id="displacement-82"><a href="#displacement-82"><span class="linenos"> 82</span></a><span class="w">    </span><span class="sd">"""D, Eq 7 along one axis: |integral_0^T integral_0^t a ds dt|, by Simpson twice.</span>
-</span><span id="displacement-83"><a href="#displacement-83"><span class="linenos"> 83</span></a>
-</span><span id="displacement-84"><a href="#displacement-84"><span class="linenos"> 84</span></a><span class="sd">    Parameters</span>
-</span><span id="displacement-85"><a href="#displacement-85"><span class="linenos"> 85</span></a><span class="sd">    ----------</span>
-</span><span id="displacement-86"><a href="#displacement-86"><span class="linenos"> 86</span></a><span class="sd">    t : array_like</span>
-</span><span id="displacement-87"><a href="#displacement-87"><span class="linenos"> 87</span></a><span class="sd">        Time, s, finite and strictly increasing, with at least 3 samples and an even number of intervals.</span>
-</span><span id="displacement-88"><a href="#displacement-88"><span class="linenos"> 88</span></a><span class="sd">        T = t[-1] - t[0] &gt; 0. It need not start at 0.</span>
-</span><span id="displacement-89"><a href="#displacement-89"><span class="linenos"> 89</span></a><span class="sd">    a : array_like</span>
-</span><span id="displacement-90"><a href="#displacement-90"><span class="linenos"> 90</span></a><span class="sd">        Acceleration along the face at each t, m/s^2, finite, the same length as t.</span>
-</span><span id="displacement-91"><a href="#displacement-91"><span class="linenos"> 91</span></a>
-</span><span id="displacement-92"><a href="#displacement-92"><span class="linenos"> 92</span></a><span class="sd">    Returns</span>
-</span><span id="displacement-93"><a href="#displacement-93"><span class="linenos"> 93</span></a><span class="sd">    -------</span>
-</span><span id="displacement-94"><a href="#displacement-94"><span class="linenos"> 94</span></a><span class="sd">    float</span>
-</span><span id="displacement-95"><a href="#displacement-95"><span class="linenos"> 95</span></a><span class="sd">        D, m, &gt;= 0. It is 0 only when the double integral is.</span>
-</span><span id="displacement-96"><a href="#displacement-96"><span class="linenos"> 96</span></a>
-</span><span id="displacement-97"><a href="#displacement-97"><span class="linenos"> 97</span></a><span class="sd">    Raises</span>
-</span><span id="displacement-98"><a href="#displacement-98"><span class="linenos"> 98</span></a><span class="sd">    ------</span>
-</span><span id="displacement-99"><a href="#displacement-99"><span class="linenos"> 99</span></a><span class="sd">    ValueError</span>
-</span><span id="displacement-100"><a href="#displacement-100"><span class="linenos">100</span></a><span class="sd">        If t or a is not numeric (a bool is not) or not 1-D, their lengths differ, there are fewer than 3 samples, a</span>
-</span><span id="displacement-101"><a href="#displacement-101"><span class="linenos">101</span></a><span class="sd">        value is not finite, T &lt;= 0, t is not strictly increasing, or the number of intervals is odd.</span>
-</span><span id="displacement-102"><a href="#displacement-102"><span class="linenos">102</span></a>
-</span><span id="displacement-103"><a href="#displacement-103"><span class="linenos">103</span></a><span class="sd">    Usage</span>
-</span><span id="displacement-104"><a href="#displacement-104"><span class="linenos">104</span></a><span class="sd">    -----</span>
-</span><span id="displacement-105"><a href="#displacement-105"><span class="linenos">105</span></a><span class="sd">        &gt;&gt;&gt; displacement([0.0, 1.5, 3.0], [1.0, 0.25, -0.5])   # a = 1 - 0.5 t: 2.25 m</span>
-</span><span id="displacement-106"><a href="#displacement-106"><span class="linenos">106</span></a><span class="sd">    """</span>
-</span><span id="displacement-107"><a href="#displacement-107"><span class="linenos">107</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="displacement-108"><a href="#displacement-108"><span class="linenos">108</span></a>    <span class="c1"># The inner integral is the speed gained since t[0]; Eq 7 takes no starting speed, so V0 is not added</span>
-</span><span id="displacement-109"><a href="#displacement-109"><span class="linenos">109</span></a>    <span class="n">gained</span> <span class="o">=</span> <span class="n">cumulative_simpson</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
-</span><span id="displacement-110"><a href="#displacement-110"><span class="linenos">110</span></a>    <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">gained</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">)))</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="displacement-85"><a href="#displacement-85"><span class="linenos"> 85</span></a><span class="k">def</span><span class="w"> </span><span class="nf">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">):</span>
+</span><span id="displacement-86"><a href="#displacement-86"><span class="linenos"> 86</span></a><span class="w">    </span><span class="sd">"""D, Eq 7 along one axis: |integral_0^T integral_0^t a ds dt|, by Simpson twice.</span>
+</span><span id="displacement-87"><a href="#displacement-87"><span class="linenos"> 87</span></a>
+</span><span id="displacement-88"><a href="#displacement-88"><span class="linenos"> 88</span></a><span class="sd">    Parameters</span>
+</span><span id="displacement-89"><a href="#displacement-89"><span class="linenos"> 89</span></a><span class="sd">    ----------</span>
+</span><span id="displacement-90"><a href="#displacement-90"><span class="linenos"> 90</span></a><span class="sd">    t : array_like</span>
+</span><span id="displacement-91"><a href="#displacement-91"><span class="linenos"> 91</span></a><span class="sd">        Time, s, finite and strictly increasing, with at least 3 samples and an even number of intervals.</span>
+</span><span id="displacement-92"><a href="#displacement-92"><span class="linenos"> 92</span></a><span class="sd">        T = t[-1] - t[0] &gt; 0. It need not start at 0.</span>
+</span><span id="displacement-93"><a href="#displacement-93"><span class="linenos"> 93</span></a><span class="sd">    a : array_like</span>
+</span><span id="displacement-94"><a href="#displacement-94"><span class="linenos"> 94</span></a><span class="sd">        Acceleration along the face at each t, m/s^2, finite, the same length as t.</span>
+</span><span id="displacement-95"><a href="#displacement-95"><span class="linenos"> 95</span></a>
+</span><span id="displacement-96"><a href="#displacement-96"><span class="linenos"> 96</span></a><span class="sd">    Returns</span>
+</span><span id="displacement-97"><a href="#displacement-97"><span class="linenos"> 97</span></a><span class="sd">    -------</span>
+</span><span id="displacement-98"><a href="#displacement-98"><span class="linenos"> 98</span></a><span class="sd">    float</span>
+</span><span id="displacement-99"><a href="#displacement-99"><span class="linenos"> 99</span></a><span class="sd">        D, m, &gt;= 0. It is 0 only when the double integral is.</span>
+</span><span id="displacement-100"><a href="#displacement-100"><span class="linenos">100</span></a>
+</span><span id="displacement-101"><a href="#displacement-101"><span class="linenos">101</span></a><span class="sd">    Raises</span>
+</span><span id="displacement-102"><a href="#displacement-102"><span class="linenos">102</span></a><span class="sd">    ------</span>
+</span><span id="displacement-103"><a href="#displacement-103"><span class="linenos">103</span></a><span class="sd">    ValueError</span>
+</span><span id="displacement-104"><a href="#displacement-104"><span class="linenos">104</span></a><span class="sd">        If t or a is not numeric (a bool is not) or not 1-D, their lengths differ, there are fewer than 3 samples, a</span>
+</span><span id="displacement-105"><a href="#displacement-105"><span class="linenos">105</span></a><span class="sd">        value is not finite, T &lt;= 0, t is not strictly increasing, or the number of intervals is odd.</span>
+</span><span id="displacement-106"><a href="#displacement-106"><span class="linenos">106</span></a>
+</span><span id="displacement-107"><a href="#displacement-107"><span class="linenos">107</span></a><span class="sd">    Usage</span>
+</span><span id="displacement-108"><a href="#displacement-108"><span class="linenos">108</span></a><span class="sd">    -----</span>
+</span><span id="displacement-109"><a href="#displacement-109"><span class="linenos">109</span></a><span class="sd">        &gt;&gt;&gt; displacement([0.0, 1.5, 3.0], [1.0, 0.25, -0.5])   # a = 1 - 0.5 t: 2.25 m</span>
+</span><span id="displacement-110"><a href="#displacement-110"><span class="linenos">110</span></a><span class="sd">    """</span>
+</span><span id="displacement-111"><a href="#displacement-111"><span class="linenos">111</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="displacement-112"><a href="#displacement-112"><span class="linenos">112</span></a>    <span class="c1"># The inner integral is the speed gained since t[0]; Eq 7 takes no starting speed, so V0 is not added</span>
+</span><span id="displacement-113"><a href="#displacement-113"><span class="linenos">113</span></a>    <span class="n">gained</span> <span class="o">=</span> <span class="n">cumulative_simpson</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">,</span> <span class="n">initial</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+</span><span id="displacement-114"><a href="#displacement-114"><span class="linenos">114</span></a>    <span class="k">return</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">gained</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">)))</span>
 </span></pre></div>
 
 
@@ -375,43 +396,45 @@ value is not finite, T &lt;= 0, t is not strictly increasing, or the number of i
 
     </div>
     <a class="headerlink" href="#jerk_cost"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="jerk_cost-113"><a href="#jerk_cost-113"><span class="linenos">113</span></a><span class="k">def</span><span class="w"> </span><span class="nf">jerk_cost</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">complete</span><span class="p">):</span>
-</span><span id="jerk_cost-114"><a href="#jerk_cost-114"><span class="linenos">114</span></a><span class="w">    </span><span class="sd">"""J, Eq 4-6: the dimensionless jerk cost of one run.</span>
-</span><span id="jerk_cost-115"><a href="#jerk_cost-115"><span class="linenos">115</span></a>
-</span><span id="jerk_cost-116"><a href="#jerk_cost-116"><span class="linenos">116</span></a><span class="sd">    Parameters</span>
-</span><span id="jerk_cost-117"><a href="#jerk_cost-117"><span class="linenos">117</span></a><span class="sd">    ----------</span>
-</span><span id="jerk_cost-118"><a href="#jerk_cost-118"><span class="linenos">118</span></a><span class="sd">    t : array_like</span>
-</span><span id="jerk_cost-119"><a href="#jerk_cost-119"><span class="linenos">119</span></a><span class="sd">        Time, s: as displacement. simulate() gives 0, 0.001, ..., 3 s.</span>
-</span><span id="jerk_cost-120"><a href="#jerk_cost-120"><span class="linenos">120</span></a><span class="sd">    a : array_like</span>
-</span><span id="jerk_cost-121"><a href="#jerk_cost-121"><span class="linenos">121</span></a><span class="sd">        Acceleration along the face, m/s^2: as displacement. simulate()'s a is E15 at each node.</span>
-</span><span id="jerk_cost-122"><a href="#jerk_cost-122"><span class="linenos">122</span></a><span class="sd">    complete : bool</span>
-</span><span id="jerk_cost-123"><a href="#jerk_cost-123"><span class="linenos">123</span></a><span class="sd">        simulate()'s flag. It must be True: J and C need the whole run from 0 to T.</span>
-</span><span id="jerk_cost-124"><a href="#jerk_cost-124"><span class="linenos">124</span></a>
-</span><span id="jerk_cost-125"><a href="#jerk_cost-125"><span class="linenos">125</span></a><span class="sd">    Returns</span>
-</span><span id="jerk_cost-126"><a href="#jerk_cost-126"><span class="linenos">126</span></a><span class="sd">    -------</span>
-</span><span id="jerk_cost-127"><a href="#jerk_cost-127"><span class="linenos">127</span></a><span class="sd">    float</span>
-</span><span id="jerk_cost-128"><a href="#jerk_cost-128"><span class="linenos">128</span></a><span class="sd">        J, dimensionless, &gt;= 0.</span>
-</span><span id="jerk_cost-129"><a href="#jerk_cost-129"><span class="linenos">129</span></a>
-</span><span id="jerk_cost-130"><a href="#jerk_cost-130"><span class="linenos">130</span></a><span class="sd">    Raises</span>
-</span><span id="jerk_cost-131"><a href="#jerk_cost-131"><span class="linenos">131</span></a><span class="sd">    ------</span>
-</span><span id="jerk_cost-132"><a href="#jerk_cost-132"><span class="linenos">132</span></a><span class="sd">    ValueError</span>
-</span><span id="jerk_cost-133"><a href="#jerk_cost-133"><span class="linenos">133</span></a><span class="sd">        If complete is not True, if D = 0 (C = T^5/D^2 is undefined there), or for any reason displacement raises.</span>
-</span><span id="jerk_cost-134"><a href="#jerk_cost-134"><span class="linenos">134</span></a>
-</span><span id="jerk_cost-135"><a href="#jerk_cost-135"><span class="linenos">135</span></a><span class="sd">    Usage</span>
-</span><span id="jerk_cost-136"><a href="#jerk_cost-136"><span class="linenos">136</span></a><span class="sd">    -----</span>
-</span><span id="jerk_cost-137"><a href="#jerk_cost-137"><span class="linenos">137</span></a><span class="sd">        &gt;&gt;&gt; t, V, a, complete = fm.simulate()</span>
-</span><span id="jerk_cost-138"><a href="#jerk_cost-138"><span class="linenos">138</span></a><span class="sd">        &gt;&gt;&gt; jerk_cost(t, a, complete)</span>
-</span><span id="jerk_cost-139"><a href="#jerk_cost-139"><span class="linenos">139</span></a><span class="sd">    """</span>
-</span><span id="jerk_cost-140"><a href="#jerk_cost-140"><span class="linenos">140</span></a>    <span class="c1"># A run that left the force data stopped before T, so its J would be over a different T</span>
-</span><span id="jerk_cost-141"><a href="#jerk_cost-141"><span class="linenos">141</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">complete</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">complete</span><span class="p">:</span>
-</span><span id="jerk_cost-142"><a href="#jerk_cost-142"><span class="linenos">142</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"complete must be True: J needs the whole run, and this one stopped before T"</span><span class="p">)</span>
-</span><span id="jerk_cost-143"><a href="#jerk_cost-143"><span class="linenos">143</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="jerk_cost-144"><a href="#jerk_cost-144"><span class="linenos">144</span></a>    <span class="n">T</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-</span><span id="jerk_cost-145"><a href="#jerk_cost-145"><span class="linenos">145</span></a>    <span class="c1"># trajectory.py set C = 1 here; the author's choice is to refuse</span>
-</span><span id="jerk_cost-146"><a href="#jerk_cost-146"><span class="linenos">146</span></a>    <span class="k">if</span> <span class="n">D</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="jerk_cost-147"><a href="#jerk_cost-147"><span class="linenos">147</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"D = 0, so C = T^5/D^2 is undefined"</span><span class="p">)</span>
-</span><span id="jerk_cost-148"><a href="#jerk_cost-148"><span class="linenos">148</span></a>    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
-</span><span id="jerk_cost-149"><a href="#jerk_cost-149"><span class="linenos">149</span></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">T</span><span class="o">**</span><span class="mi">5</span><span class="o">/</span><span class="n">D</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">))</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="jerk_cost-117"><a href="#jerk_cost-117"><span class="linenos">117</span></a><span class="k">def</span><span class="w"> </span><span class="nf">jerk_cost</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">complete</span><span class="p">):</span>
+</span><span id="jerk_cost-118"><a href="#jerk_cost-118"><span class="linenos">118</span></a><span class="w">    </span><span class="sd">"""J, Eq 4-6: the dimensionless jerk cost of one run.</span>
+</span><span id="jerk_cost-119"><a href="#jerk_cost-119"><span class="linenos">119</span></a>
+</span><span id="jerk_cost-120"><a href="#jerk_cost-120"><span class="linenos">120</span></a><span class="sd">    Parameters</span>
+</span><span id="jerk_cost-121"><a href="#jerk_cost-121"><span class="linenos">121</span></a><span class="sd">    ----------</span>
+</span><span id="jerk_cost-122"><a href="#jerk_cost-122"><span class="linenos">122</span></a><span class="sd">    t : array_like</span>
+</span><span id="jerk_cost-123"><a href="#jerk_cost-123"><span class="linenos">123</span></a><span class="sd">        Time, s: as displacement. simulate() gives 0, 0.001, ..., 3 s.</span>
+</span><span id="jerk_cost-124"><a href="#jerk_cost-124"><span class="linenos">124</span></a><span class="sd">    a : array_like</span>
+</span><span id="jerk_cost-125"><a href="#jerk_cost-125"><span class="linenos">125</span></a><span class="sd">        Acceleration along the face, m/s^2: as displacement. simulate()'s a is E15 at each node.</span>
+</span><span id="jerk_cost-126"><a href="#jerk_cost-126"><span class="linenos">126</span></a><span class="sd">    complete : bool</span>
+</span><span id="jerk_cost-127"><a href="#jerk_cost-127"><span class="linenos">127</span></a><span class="sd">        simulate()'s flag. It must be True: J and C need the whole run from 0 to T.</span>
+</span><span id="jerk_cost-128"><a href="#jerk_cost-128"><span class="linenos">128</span></a>
+</span><span id="jerk_cost-129"><a href="#jerk_cost-129"><span class="linenos">129</span></a><span class="sd">    Returns</span>
+</span><span id="jerk_cost-130"><a href="#jerk_cost-130"><span class="linenos">130</span></a><span class="sd">    -------</span>
+</span><span id="jerk_cost-131"><a href="#jerk_cost-131"><span class="linenos">131</span></a><span class="sd">    float</span>
+</span><span id="jerk_cost-132"><a href="#jerk_cost-132"><span class="linenos">132</span></a><span class="sd">        J, dimensionless, &gt;= 0.</span>
+</span><span id="jerk_cost-133"><a href="#jerk_cost-133"><span class="linenos">133</span></a>
+</span><span id="jerk_cost-134"><a href="#jerk_cost-134"><span class="linenos">134</span></a><span class="sd">    Raises</span>
+</span><span id="jerk_cost-135"><a href="#jerk_cost-135"><span class="linenos">135</span></a><span class="sd">    ------</span>
+</span><span id="jerk_cost-136"><a href="#jerk_cost-136"><span class="linenos">136</span></a><span class="sd">    ValueError</span>
+</span><span id="jerk_cost-137"><a href="#jerk_cost-137"><span class="linenos">137</span></a><span class="sd">        If complete is not True, if D &lt; D_MIN = 1e-5 m (C = T^5/D^2 is undefined at 0 and meaningless near it), or</span>
+</span><span id="jerk_cost-138"><a href="#jerk_cost-138"><span class="linenos">138</span></a><span class="sd">        for any reason displacement raises.</span>
+</span><span id="jerk_cost-139"><a href="#jerk_cost-139"><span class="linenos">139</span></a>
+</span><span id="jerk_cost-140"><a href="#jerk_cost-140"><span class="linenos">140</span></a><span class="sd">    Usage</span>
+</span><span id="jerk_cost-141"><a href="#jerk_cost-141"><span class="linenos">141</span></a><span class="sd">    -----</span>
+</span><span id="jerk_cost-142"><a href="#jerk_cost-142"><span class="linenos">142</span></a><span class="sd">        &gt;&gt;&gt; t, V, a, complete = fm.simulate()</span>
+</span><span id="jerk_cost-143"><a href="#jerk_cost-143"><span class="linenos">143</span></a><span class="sd">        &gt;&gt;&gt; jerk_cost(t, a, complete)</span>
+</span><span id="jerk_cost-144"><a href="#jerk_cost-144"><span class="linenos">144</span></a><span class="sd">    """</span>
+</span><span id="jerk_cost-145"><a href="#jerk_cost-145"><span class="linenos">145</span></a>    <span class="c1"># A run that left the force data stopped before T, so its J would be over a different T</span>
+</span><span id="jerk_cost-146"><a href="#jerk_cost-146"><span class="linenos">146</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">complete</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">complete</span><span class="p">:</span>
+</span><span id="jerk_cost-147"><a href="#jerk_cost-147"><span class="linenos">147</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"complete must be True: J needs the whole run, and this one stopped before T"</span><span class="p">)</span>
+</span><span id="jerk_cost-148"><a href="#jerk_cost-148"><span class="linenos">148</span></a>    <span class="n">t</span><span class="p">,</span> <span class="n">a</span> <span class="o">=</span> <span class="n">_samples</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="jerk_cost-149"><a href="#jerk_cost-149"><span class="linenos">149</span></a>    <span class="n">T</span><span class="p">,</span> <span class="n">D</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">displacement</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+</span><span id="jerk_cost-150"><a href="#jerk_cost-150"><span class="linenos">150</span></a>    <span class="c1"># trajectory.py set C = 1 here; the author's choice is to refuse, below his floor rather than only at an exact 0:</span>
+</span><span id="jerk_cost-151"><a href="#jerk_cost-151"><span class="linenos">151</span></a>    <span class="c1"># quadrature leaves an analytically zero D at about 1e-16 m, which would make C, and J, astronomically large</span>
+</span><span id="jerk_cost-152"><a href="#jerk_cost-152"><span class="linenos">152</span></a>    <span class="k">if</span> <span class="n">D</span> <span class="o">&lt;</span> <span class="n">D_MIN</span><span class="p">:</span>
+</span><span id="jerk_cost-153"><a href="#jerk_cost-153"><span class="linenos">153</span></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"D = </span><span class="si">{</span><span class="n">D</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> m is below the </span><span class="si">{</span><span class="n">D_MIN</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> m floor, so C = T^5/D^2 is undefined or meaningless"</span><span class="p">)</span>
+</span><span id="jerk_cost-154"><a href="#jerk_cost-154"><span class="linenos">154</span></a>    <span class="n">j</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">gradient</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+</span><span id="jerk_cost-155"><a href="#jerk_cost-155"><span class="linenos">155</span></a>    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">simpson</span><span class="p">(</span><span class="n">T</span><span class="o">**</span><span class="mi">5</span><span class="o">/</span><span class="n">D</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="o">**</span><span class="mi">2</span><span class="o">/</span><span class="mi">2</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">t</span><span class="p">))</span>
 </span></pre></div>
 
 
@@ -437,7 +460,8 @@ simulate()'s flag. It must be True: J and C need the whole run from 0 to T.</li>
 <h6 id="raises">Raises</h6>
 
 <ul>
-<li><strong>ValueError</strong>: If complete is not True, if D = 0 (C = T^5/D^2 is undefined there), or for any reason displacement raises.</li>
+<li><strong>ValueError</strong>: If complete is not True, if D &lt; D_MIN = 1e-5 m (C = T^5/D^2 is undefined at 0 and meaningless near it), or
+for any reason displacement raises.</li>
 </ul>
 
 <h6 id="usage">Usage</h6>

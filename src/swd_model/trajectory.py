@@ -231,6 +231,9 @@ def radicality(df: pd.DataFrame) -> float:
     strict = np.where(rr[:-1] * rr[1:] < 0)[0]
     zeros = np.where(rr == 0.0)[0]
     cross = np.unique(np.concatenate([strict, zeros])) if zeros.size else strict
+    # Limit: each crossing is compared with keep[-1], the first of its run, not with the previous crossing, so three or
+    #        more consecutive zero samples (cross = [0, 1, 2]) keep two of them and collapse the turn window. Found in
+    #        SQA 2026-10-28; not fixed, because the module is superseded and kept as it was (AI-USE.md section 4, A12 b)
     if cross.size:
         keep = [cross[0]]
         for c in cross[1:]:

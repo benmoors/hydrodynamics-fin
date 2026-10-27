@@ -44,9 +44,13 @@ from scipy.integrate import cumulative_simpson, simpson
 
 from src.forward_model import forward_model as fm
 
+# m, the author's floor on D (AI-USE.md section 4, 2026-10-28): jerk_cost refuses a D below it
+D_MIN = 1e-5
+
 # Limit: one axis, the acceleration along the face. No lateral or normal acceleration, no turns, no pitch.
 # Limit: D is Eq 7 taken literally (D_a): it leaves out V0 T. On the author's run D_a = 2.657 m and J = 64.58; the
 #        displacement V0 T + D_a = 20.657 m would give J = 1.068, 60 times smaller.
+# Limit: D_MIN is in metres, so it assumes a in m/s^2 and t in s; in other units it is a different floor.
 # Limit: np.gradient is second order inside and first order at the two end nodes.
 # Limit: a comes from forces that are PCHIP in V and theta, which is C1, so j is continuous but its slope jumps at the
 #        data's knots (each whole m/s, each 5 deg).
@@ -129,7 +133,8 @@ def jerk_cost(t, a, complete):
     Raises
     ------
     ValueError
-        If complete is not True, if D = 0 (C = T^5/D^2 is undefined there), or for any reason displacement raises.
+        If complete is not True, if D < D_MIN = 1e-5 m (C = T^5/D^2 is undefined at 0 and meaningless near it), or
+        for any reason displacement raises.
 
     Usage
     -----
@@ -141,9 +146,10 @@ def jerk_cost(t, a, complete):
         raise ValueError("complete must be True: J needs the whole run, and this one stopped before T")
     t, a = _samples(t, a)
     T, D = t[-1] - t[0], displacement(t, a)
-    # trajectory.py set C = 1 here; the author's choice is to refuse
-    if D == 0:
-        raise ValueError("D = 0, so C = T^5/D^2 is undefined")
+    # trajectory.py set C = 1 here; the author's choice is to refuse, below his floor rather than only at an exact 0:
+    # quadrature leaves an analytically zero D at about 1e-16 m, which would make C, and J, astronomically large
+    if D < D_MIN:
+        raise ValueError(f"D = {D:.3g} m is below the {D_MIN:g} m floor, so C = T^5/D^2 is undefined or meaningless")
     j = np.gradient(a, t)
     return float(simpson(T**5/D**2*j**2/2, x=t))
 

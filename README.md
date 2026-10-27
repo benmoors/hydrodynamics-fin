@@ -243,7 +243,7 @@ starting speed.
 | `a` (input) | float array | m/s² | finite | numeric, the same length as t |
 | `complete` (input) | bool | — | must be True | the whole run, from `simulate()` |
 | `J` (output) | float | dimensionless | ≥ 0 | |
-| `D`, from `displacement` (output) | float | m | ≥ 0 | `jerk_cost` raises at D = 0, because C is undefined |
+| `D`, from `displacement` (output) | float | m | ≥ 0 | `jerk_cost` raises below 1e-5 m: C is undefined at 0 and meaningless near it |
 
 Each of those conditions, broken, raises `ValueError` with its own message.
 

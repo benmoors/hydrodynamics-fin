@@ -94,10 +94,12 @@
 <h6 id="scope-boundary">Scope boundary</h6>
 
 <p><code>SWD/</code> is data acquisition and is <strong>frozen and extract-only</strong>: <code>extract_board.ps1</code>
-and <code>census_board.ps1</code> carry a CLEAN SQA verdict and 67 Pester tests, and nothing
-this project computes is ever written back into <code>SWD/data/</code>. So the training table
-is built here, in memory, at load time. Every function in this module reads; none
-writes.</p>
+and <code>census_board.ps1</code> carry a CLEAN SQA verdict and 67 Pester tests (both kept
+local since 2026-10-28), and nothing this project computes is written over the
+extracted CSVs. Computed views go only into <code>computed-data/</code> folders beside them,
+from <code>src/swd_model/</code> and <code>src/friction/rerun_live_screen_ff.py</code>. The training
+table is built here, in memory, at load time. Every function in this module reads;
+none writes.</p>
 
 <h6 id="what-is-a-feature-and-what-is-not">What is a feature and what is not</h6>
 
@@ -132,233 +134,239 @@ would make the model score well and be useless:</p>
 </span><span id="L-3"><a href="#L-3"><span class="linenos">  3</span></a><span class="sd">Scope boundary</span>
 </span><span id="L-4"><a href="#L-4"><span class="linenos">  4</span></a><span class="sd">--------------</span>
 </span><span id="L-5"><a href="#L-5"><span class="linenos">  5</span></a><span class="sd">``SWD/`` is data acquisition and is **frozen and extract-only**: ``extract_board.ps1``</span>
-</span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="sd">and ``census_board.ps1`` carry a CLEAN SQA verdict and 67 Pester tests, and nothing</span>
-</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="sd">this project computes is ever written back into ``SWD/data/``. So the training table</span>
-</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="sd">is built here, in memory, at load time. Every function in this module reads; none</span>
-</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="sd">writes.</span>
-</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a>
-</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="sd">What is a feature and what is not</span>
-</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a><span class="sd">---------------------------------</span>
-</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="sd">The surrogate exists to *replace the solver*. A feature must therefore be something</span>
-</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="sd">known **before** SWD runs -- board geometry and the operating condition. Several</span>
-</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="sd">columns in ``operating_points.csv`` are solver *outputs* and using them as inputs</span>
-</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="sd">would make the model score well and be useless:</span>
-</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a>
-</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="sd">``contact_area_m2``, ``volume_litres``, ``n_elements``</span>
-</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a><span class="sd">    The wetted contact patch, displaced volume and mesh size are results of the</span>
-</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="sd">    planing solution. At query time none of them is known.</span>
-</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a>
-</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">``turn_radius_m``</span>
-</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">    Per-board metadata, 9 distinct values across 14 boards and the straight-line</span>
-</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">    sentinel ``100000.0`` on 309 of 720 rows. Regressing on it teaches board</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">    identity, which is exactly what a board-grouped split is designed to prevent.</span>
-</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a>
-</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a><span class="sd">``scan_speed_ms``, ``board_speed_setting_ms``</span>
-</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a><span class="sd">    Speed is not a feature. Every row was computed at 20.000 m/s;</span>
-</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a><span class="sd">    ``board_speed_setting_ms`` is the GUI box as last saved and is *not* the</span>
-</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a><span class="sd">    condition the solver ran at.</span>
-</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a>
-</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a><span class="sd">See :data:`FEATURES` and :data:`EXCLUDED` for the resulting lists.</span>
-</span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a><span class="sd">"""</span>
-</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a>
-</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="L-6"><a href="#L-6"><span class="linenos">  6</span></a><span class="sd">and ``census_board.ps1`` carry a CLEAN SQA verdict and 67 Pester tests (both kept</span>
+</span><span id="L-7"><a href="#L-7"><span class="linenos">  7</span></a><span class="sd">local since 2026-10-28), and nothing this project computes is written over the</span>
+</span><span id="L-8"><a href="#L-8"><span class="linenos">  8</span></a><span class="sd">extracted CSVs. Computed views go only into ``computed-data/`` folders beside them,</span>
+</span><span id="L-9"><a href="#L-9"><span class="linenos">  9</span></a><span class="sd">from ``src/swd_model/`` and ``src/friction/rerun_live_screen_ff.py``. The training</span>
+</span><span id="L-10"><a href="#L-10"><span class="linenos"> 10</span></a><span class="sd">table is built here, in memory, at load time. Every function in this module reads;</span>
+</span><span id="L-11"><a href="#L-11"><span class="linenos"> 11</span></a><span class="sd">none writes.</span>
+</span><span id="L-12"><a href="#L-12"><span class="linenos"> 12</span></a>
+</span><span id="L-13"><a href="#L-13"><span class="linenos"> 13</span></a><span class="sd">What is a feature and what is not</span>
+</span><span id="L-14"><a href="#L-14"><span class="linenos"> 14</span></a><span class="sd">---------------------------------</span>
+</span><span id="L-15"><a href="#L-15"><span class="linenos"> 15</span></a><span class="sd">The surrogate exists to *replace the solver*. A feature must therefore be something</span>
+</span><span id="L-16"><a href="#L-16"><span class="linenos"> 16</span></a><span class="sd">known **before** SWD runs -- board geometry and the operating condition. Several</span>
+</span><span id="L-17"><a href="#L-17"><span class="linenos"> 17</span></a><span class="sd">columns in ``operating_points.csv`` are solver *outputs* and using them as inputs</span>
+</span><span id="L-18"><a href="#L-18"><span class="linenos"> 18</span></a><span class="sd">would make the model score well and be useless:</span>
+</span><span id="L-19"><a href="#L-19"><span class="linenos"> 19</span></a>
+</span><span id="L-20"><a href="#L-20"><span class="linenos"> 20</span></a><span class="sd">``contact_area_m2``, ``volume_litres``, ``n_elements``</span>
+</span><span id="L-21"><a href="#L-21"><span class="linenos"> 21</span></a><span class="sd">    The wetted contact patch, displaced volume and mesh size are results of the</span>
+</span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">    planing solution. At query time none of them is known.</span>
+</span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a>
+</span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">``turn_radius_m``</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">    Per-board metadata, 9 distinct values across 14 boards and the straight-line</span>
+</span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">    sentinel ``100000.0`` on 309 of 720 rows. Regressing on it teaches board</span>
+</span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a><span class="sd">    identity, which is exactly what a board-grouped split is designed to prevent.</span>
+</span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>
+</span><span id="L-29"><a href="#L-29"><span class="linenos"> 29</span></a><span class="sd">``scan_speed_ms``, ``board_speed_setting_ms``</span>
+</span><span id="L-30"><a href="#L-30"><span class="linenos"> 30</span></a><span class="sd">    Speed is not a feature. Every row was computed at 20.000 m/s;</span>
+</span><span id="L-31"><a href="#L-31"><span class="linenos"> 31</span></a><span class="sd">    ``board_speed_setting_ms`` is the GUI box as last saved and is *not* the</span>
+</span><span id="L-32"><a href="#L-32"><span class="linenos"> 32</span></a><span class="sd">    condition the solver ran at.</span>
+</span><span id="L-33"><a href="#L-33"><span class="linenos"> 33</span></a>
+</span><span id="L-34"><a href="#L-34"><span class="linenos"> 34</span></a><span class="sd">See :data:`FEATURES` and :data:`EXCLUDED` for the resulting lists.</span>
+</span><span id="L-35"><a href="#L-35"><span class="linenos"> 35</span></a><span class="sd">"""</span>
 </span><span id="L-36"><a href="#L-36"><span class="linenos"> 36</span></a>
-</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a>
-</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a>
-</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">aspect_ratio</span><span class="p">,</span> <span class="n">reconstruct_dimensions</span>
+</span><span id="L-37"><a href="#L-37"><span class="linenos"> 37</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="L-38"><a href="#L-38"><span class="linenos"> 38</span></a>
+</span><span id="L-39"><a href="#L-39"><span class="linenos"> 39</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+</span><span id="L-40"><a href="#L-40"><span class="linenos"> 40</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="L-41"><a href="#L-41"><span class="linenos"> 41</span></a>
+</span><span id="L-42"><a href="#L-42"><span class="linenos"> 42</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="L-43"><a href="#L-43"><span class="linenos"> 43</span></a><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 </span><span id="L-44"><a href="#L-44"><span class="linenos"> 44</span></a>
-</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>    <span class="s2">"DATA_DIR"</span><span class="p">,</span>
-</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a>    <span class="s2">"EXCLUDED"</span><span class="p">,</span>
-</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a>    <span class="s2">"FEATURES"</span><span class="p">,</span>
-</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a>    <span class="s2">"TARGETS"</span><span class="p">,</span>
-</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a>    <span class="s2">"build_training_table"</span><span class="p">,</span>
-</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>    <span class="s2">"load_boards"</span><span class="p">,</span>
-</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a>    <span class="s2">"load_operating_points"</span><span class="p">,</span>
-</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a><span class="p">]</span>
-</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>
-</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="c1">#: Extracted corpus. Read-only from this module's point of view.</span>
-</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a><span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="s2">"SWD"</span> <span class="o">/</span> <span class="s2">"data"</span>
-</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a>
-</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="c1">#: Model inputs: board shape plus the operating condition, all knowable before a solve.</span>
-</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a><span class="c1">#:</span>
-</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a><span class="c1">#: Absolute ``length_m`` is deliberately NOT here. It is ``cbrt(V*lw/(k*tl))`` -- a</span>
-</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a><span class="c1">#: deterministic function of the three shape features -- so it carries no information</span>
-</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a><span class="c1">#: an RBF kernel could not already reach, while importing collinearity (r = 0.715 with</span>
-</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a><span class="c1">#: volume) and the calibration's 1.56 % uncertainty. It is still returned by</span>
-</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="c1">#: :func:`load_boards` for reporting and for the physics baseline, which genuinely</span>
-</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a><span class="c1">#: needs a Reynolds length.</span>
-</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a><span class="n">FEATURES</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a>    <span class="s2">"volume_shape_l"</span><span class="p">,</span>        <span class="c1"># L     board volume,                       24.0 - 130.7</span>
-</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a>    <span class="s2">"length_over_width"</span><span class="p">,</span>     <span class="c1"># -     outline aspect ratio,               2.91 - 5.56</span>
-</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>    <span class="s2">"thickness_over_length"</span><span class="p">,</span> <span class="c1"># -     relative thickness at wide point, 0.0105 - 0.0425</span>
-</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>    <span class="s2">"drift_deg"</span><span class="p">,</span>             <span class="c1"># deg   operating condition,                   0 - 20</span>
-</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a>    <span class="s2">"roll_rad"</span><span class="p">,</span>              <span class="c1"># rad   operating condition,             -0.397 - 1.368</span>
-</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a><span class="p">]</span>
-</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>
-</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a><span class="c1">#: Model outputs, all newtons, all board totals for one (board, drift, roll_case).</span>
-</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a><span class="n">TARGETS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a>    <span class="s2">"drag_total_n"</span><span class="p">,</span>
-</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a>    <span class="s2">"drag_friction_n"</span><span class="p">,</span>
-</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>    <span class="s2">"drag_planing_n"</span><span class="p">,</span>
-</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>    <span class="s2">"drag_rail_n"</span><span class="p">,</span>
-</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>    <span class="s2">"lift_total_n"</span><span class="p">,</span>
-</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a><span class="p">]</span>
-</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>
-</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="c1">#: Columns deliberately withheld, with the reason. Quoted in the report.</span>
-</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a><span class="n">EXCLUDED</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a>    <span class="s2">"contact_area_m2"</span><span class="p">:</span> <span class="s2">"solver output, unknown at query time"</span><span class="p">,</span>
-</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a>    <span class="s2">"volume_litres"</span><span class="p">:</span> <span class="s2">"solver output (displaced volume), not board volume"</span><span class="p">,</span>
-</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>    <span class="s2">"n_elements"</span><span class="p">:</span> <span class="s2">"solver mesh size, an output"</span><span class="p">,</span>
-</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>    <span class="s2">"turn_radius_m"</span><span class="p">:</span> <span class="s2">"per-board metadata; regressing on it learns board identity"</span><span class="p">,</span>
-</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>    <span class="s2">"scan_speed_ms"</span><span class="p">:</span> <span class="s2">"constant 20.000 m/s across all 720 rows -- zero variance"</span><span class="p">,</span>
-</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>    <span class="s2">"board_speed_setting_ms"</span><span class="p">:</span> <span class="s2">"GUI setting, not the condition the solver ran at"</span><span class="p">,</span>
-</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>    <span class="s2">"total_mass_kg"</span><span class="p">:</span> <span class="s2">"r = 0.9915 with volume_shape_l; collinear duplicate"</span><span class="p">,</span>
-</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>    <span class="s2">"foam_mass_kg"</span><span class="p">:</span> <span class="s2">"r = 1.0000 with volume_shape_l; exact collinear duplicate"</span><span class="p">,</span>
-</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>    <span class="s2">"volume_float_l"</span><span class="p">:</span> <span class="s2">"a flag, not a measurement: 0.0 or exactly volume_shape_l"</span><span class="p">,</span>
-</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>    <span class="s2">"yaw_rate_rad_s"</span><span class="p">:</span> <span class="s2">"derived from turn_radius_m; inherits its board-identity leak"</span><span class="p">,</span>
-</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a><span class="p">}</span>
-</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>
-</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a>
-</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a><span class="w">    </span><span class="sd">"""Read every per-board ``board.csv`` and derive its shape descriptors.</span>
-</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a>
-</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="sd">    Parameters</span>
-</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a><span class="sd">    ----------</span>
-</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
-</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">        Root of the extracted corpus. Defaults to :data:`DATA_DIR`.</span>
-</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a>
-</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a><span class="sd">    Returns</span>
-</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a><span class="sd">    -------</span>
-</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a><span class="sd">        One row per board with columns ``board``, ``volume_shape_l``,</span>
-</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a><span class="sd">        ``length_over_width``, ``thickness_over_length``, ``length_m``, ``width_m``,</span>
-</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a><span class="sd">        ``thickness_m``.</span>
-</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a>
-</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a><span class="sd">    Raises</span>
-</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a><span class="sd">    ------</span>
-</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a><span class="sd">    FileNotFoundError</span>
-</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a><span class="sd">        If no ``board.csv`` is found at all, which means the extractor has not been</span>
-</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="sd">        run and every downstream number would be silently empty.</span>
-</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a>
-</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="sd">    Notes</span>
-</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a><span class="sd">    -----</span>
-</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">    Directories without a ``board.csv`` are skipped rather than faked. That is a</span>
-</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd">    live case: ``default_shortboard_Copy_1`` was refused by the provenance gate</span>
-</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a><span class="sd">    because its ``.fynbs`` content changed after the trust manifest was built.</span>
-</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">    """</span>
-</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a>    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a>    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">data_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*/board.csv"</span><span class="p">)):</span>
-</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>        <span class="n">record</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>        <span class="n">record</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span>
-</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
-</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">:</span>
-</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>            <span class="sa">f</span><span class="s2">"no board.csv under </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">. Run SWD/tools/extract_board.ps1 first."</span>
-</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>        <span class="p">)</span>
-</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>
-</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">]</span> <span class="o">=</span> <span class="n">aspect_ratio</span><span class="p">(</span>
-</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"x_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"x_max"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_max"</span><span class="p">]</span>
-</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>    <span class="p">)</span>
-</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">]</span> <span class="o">=</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"relative_thickness_at_wide_point"</span><span class="p">]</span>
-</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">boards</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"volume_shape_litres"</span><span class="p">:</span> <span class="s2">"volume_shape_l"</span><span class="p">})</span>
-</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>
-</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>    <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span> <span class="o">=</span> <span class="n">reconstruct_dimensions</span><span class="p">(</span>
-</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"volume_shape_l"</span><span class="p">],</span>
-</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">],</span>
-</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">],</span>
-</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>    <span class="p">)</span>
-</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"width_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_m"</span><span class="p">]</span> <span class="o">=</span> <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span>
-</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>
-</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>    <span class="k">return</span> <span class="n">boards</span><span class="p">[[</span>
-</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>        <span class="s2">"board"</span><span class="p">,</span> <span class="s2">"volume_shape_l"</span><span class="p">,</span> <span class="s2">"length_over_width"</span><span class="p">,</span> <span class="s2">"thickness_over_length"</span><span class="p">,</span>
-</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>        <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span>
-</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>    <span class="p">]]</span>
-</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>
-</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>
-</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a><span class="w">    </span><span class="sd">"""Read the corpus-level ``operating_points.csv``.</span>
-</span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a>
-</span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a><span class="sd">    Parameters</span>
-</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a><span class="sd">    ----------</span>
-</span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
-</span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a><span class="sd">        Root of the extracted corpus.</span>
-</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a>
-</span><span id="L-163"><a href="#L-163"><span class="linenos">163</span></a><span class="sd">    Returns</span>
-</span><span id="L-164"><a href="#L-164"><span class="linenos">164</span></a><span class="sd">    -------</span>
-</span><span id="L-165"><a href="#L-165"><span class="linenos">165</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="L-166"><a href="#L-166"><span class="linenos">166</span></a><span class="sd">        720 rows x 22 columns as extracted; nothing is added or renamed here.</span>
-</span><span id="L-167"><a href="#L-167"><span class="linenos">167</span></a>
-</span><span id="L-168"><a href="#L-168"><span class="linenos">168</span></a><span class="sd">    Raises</span>
-</span><span id="L-169"><a href="#L-169"><span class="linenos">169</span></a><span class="sd">    ------</span>
-</span><span id="L-170"><a href="#L-170"><span class="linenos">170</span></a><span class="sd">    FileNotFoundError</span>
-</span><span id="L-171"><a href="#L-171"><span class="linenos">171</span></a><span class="sd">        If the file is absent.</span>
-</span><span id="L-172"><a href="#L-172"><span class="linenos">172</span></a><span class="sd">    """</span>
-</span><span id="L-173"><a href="#L-173"><span class="linenos">173</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="s2">"operating_points.csv"</span>
-</span><span id="L-174"><a href="#L-174"><span class="linenos">174</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="L-175"><a href="#L-175"><span class="linenos">175</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> not found. Run SWD/tools/swd_extract.ps1 first."</span><span class="p">)</span>
-</span><span id="L-176"><a href="#L-176"><span class="linenos">176</span></a>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="L-177"><a href="#L-177"><span class="linenos">177</span></a>
-</span><span id="L-178"><a href="#L-178"><span class="linenos">178</span></a>
-</span><span id="L-179"><a href="#L-179"><span class="linenos">179</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_training_table</span><span class="p">(</span>
-</span><span id="L-180"><a href="#L-180"><span class="linenos">180</span></a>    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">,</span>
-</span><span id="L-181"><a href="#L-181"><span class="linenos">181</span></a>    <span class="n">max_drift_deg</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span>
-</span><span id="L-182"><a href="#L-182"><span class="linenos">182</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="L-183"><a href="#L-183"><span class="linenos">183</span></a><span class="w">    </span><span class="sd">"""Join operating points to board geometry and apply the operating envelope.</span>
-</span><span id="L-184"><a href="#L-184"><span class="linenos">184</span></a>
-</span><span id="L-185"><a href="#L-185"><span class="linenos">185</span></a><span class="sd">    Parameters</span>
-</span><span id="L-186"><a href="#L-186"><span class="linenos">186</span></a><span class="sd">    ----------</span>
-</span><span id="L-187"><a href="#L-187"><span class="linenos">187</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
-</span><span id="L-188"><a href="#L-188"><span class="linenos">188</span></a><span class="sd">        Root of the extracted corpus.</span>
-</span><span id="L-189"><a href="#L-189"><span class="linenos">189</span></a><span class="sd">    max_drift_deg : float or None, optional</span>
-</span><span id="L-190"><a href="#L-190"><span class="linenos">190</span></a><span class="sd">        Drop rows above this drift angle. Defaults to 20 deg. Beyond it the board is</span>
-</span><span id="L-191"><a href="#L-191"><span class="linenos">191</span></a><span class="sd">        approaching broadside and drag reaches 522 kN -- roughly 53 tonnes of force,</span>
-</span><span id="L-192"><a href="#L-192"><span class="linenos">192</span></a><span class="sd">        which is bluff-body drag rather than surfing, and it dominates every error</span>
-</span><span id="L-193"><a href="#L-193"><span class="linenos">193</span></a><span class="sd">        metric computed over the full angle set. Pass ``None`` to keep all 11 angles.</span>
-</span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a>
-</span><span id="L-195"><a href="#L-195"><span class="linenos">195</span></a><span class="sd">    Returns</span>
-</span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a><span class="sd">    -------</span>
-</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a><span class="sd">        Columns ``board`` + :data:`FEATURES` + :data:`TARGETS`, one row per</span>
-</span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a><span class="sd">        (board, drift, roll_case).</span>
-</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a>
-</span><span id="L-201"><a href="#L-201"><span class="linenos">201</span></a><span class="sd">    Warns</span>
-</span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a><span class="sd">    -----</span>
-</span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a><span class="sd">    UserWarning</span>
-</span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a><span class="sd">        If any board has operating points but no extracted geometry. Those rows are</span>
-</span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a><span class="sd">        dropped -- they cannot be featurised -- and the warning names the boards so</span>
-</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="sd">        the loss is visible rather than silent.</span>
-</span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a>
-</span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a><span class="sd">    Notes</span>
-</span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a><span class="sd">    -----</span>
-</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a><span class="sd">    The join is on the exact ``board`` key. A substring or ``str.contains`` join</span>
-</span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a><span class="sd">    would conflate ``2003_Taylor_Knox_channel_island`` (unscanned) with</span>
-</span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a><span class="sd">    ``2003_Taylor_Knox_channel_island_Copy_1`` (scanned) and double-count.</span>
-</span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a><span class="sd">    """</span>
-</span><span id="L-214"><a href="#L-214"><span class="linenos">214</span></a>    <span class="n">points</span> <span class="o">=</span> <span class="n">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
-</span><span id="L-215"><a href="#L-215"><span class="linenos">215</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
-</span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a>
-</span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a>    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="s2">"board"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">boards</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]))</span>
-</span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a>    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
-</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a>        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-</span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> board(s) have operating points but no extracted geometry "</span>
-</span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a>            <span class="sa">f</span><span class="s2">"and are dropped: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>            <span class="ne">UserWarning</span><span class="p">,</span>
-</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a>            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-</span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>        <span class="p">)</span>
-</span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a>
-</span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">boards</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"board"</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="s2">"many_to_one"</span><span class="p">)</span>
+</span><span id="L-45"><a href="#L-45"><span class="linenos"> 45</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">src.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">aspect_ratio</span><span class="p">,</span> <span class="n">reconstruct_dimensions</span>
+</span><span id="L-46"><a href="#L-46"><span class="linenos"> 46</span></a>
+</span><span id="L-47"><a href="#L-47"><span class="linenos"> 47</span></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="L-48"><a href="#L-48"><span class="linenos"> 48</span></a>    <span class="s2">"DATA_DIR"</span><span class="p">,</span>
+</span><span id="L-49"><a href="#L-49"><span class="linenos"> 49</span></a>    <span class="s2">"EXCLUDED"</span><span class="p">,</span>
+</span><span id="L-50"><a href="#L-50"><span class="linenos"> 50</span></a>    <span class="s2">"FEATURES"</span><span class="p">,</span>
+</span><span id="L-51"><a href="#L-51"><span class="linenos"> 51</span></a>    <span class="s2">"TARGETS"</span><span class="p">,</span>
+</span><span id="L-52"><a href="#L-52"><span class="linenos"> 52</span></a>    <span class="s2">"build_training_table"</span><span class="p">,</span>
+</span><span id="L-53"><a href="#L-53"><span class="linenos"> 53</span></a>    <span class="s2">"load_boards"</span><span class="p">,</span>
+</span><span id="L-54"><a href="#L-54"><span class="linenos"> 54</span></a>    <span class="s2">"load_operating_points"</span><span class="p">,</span>
+</span><span id="L-55"><a href="#L-55"><span class="linenos"> 55</span></a><span class="p">]</span>
+</span><span id="L-56"><a href="#L-56"><span class="linenos"> 56</span></a>
+</span><span id="L-57"><a href="#L-57"><span class="linenos"> 57</span></a><span class="c1">#: Extracted corpus. Read-only from this module's point of view.</span>
+</span><span id="L-58"><a href="#L-58"><span class="linenos"> 58</span></a><span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="s2">"SWD"</span> <span class="o">/</span> <span class="s2">"data"</span>
+</span><span id="L-59"><a href="#L-59"><span class="linenos"> 59</span></a>
+</span><span id="L-60"><a href="#L-60"><span class="linenos"> 60</span></a><span class="c1">#: Model inputs: board shape plus the operating condition, all knowable before a solve.</span>
+</span><span id="L-61"><a href="#L-61"><span class="linenos"> 61</span></a><span class="c1">#:</span>
+</span><span id="L-62"><a href="#L-62"><span class="linenos"> 62</span></a><span class="c1">#: Absolute ``length_m`` is deliberately NOT here. It is ``cbrt(V*lw/(k*tl))`` -- a</span>
+</span><span id="L-63"><a href="#L-63"><span class="linenos"> 63</span></a><span class="c1">#: deterministic function of the three shape features -- so it carries no information</span>
+</span><span id="L-64"><a href="#L-64"><span class="linenos"> 64</span></a><span class="c1">#: an RBF kernel could not already reach, while importing collinearity (r = 0.715 with</span>
+</span><span id="L-65"><a href="#L-65"><span class="linenos"> 65</span></a><span class="c1">#: volume) and the calibration's 1.56 % uncertainty. It is still returned by</span>
+</span><span id="L-66"><a href="#L-66"><span class="linenos"> 66</span></a><span class="c1">#: :func:`load_boards` for reporting and for the physics baseline, which genuinely</span>
+</span><span id="L-67"><a href="#L-67"><span class="linenos"> 67</span></a><span class="c1">#: needs a Reynolds length.</span>
+</span><span id="L-68"><a href="#L-68"><span class="linenos"> 68</span></a><span class="n">FEATURES</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="L-69"><a href="#L-69"><span class="linenos"> 69</span></a>    <span class="s2">"volume_shape_l"</span><span class="p">,</span>        <span class="c1"># L     board volume,                       24.0 - 130.7</span>
+</span><span id="L-70"><a href="#L-70"><span class="linenos"> 70</span></a>    <span class="s2">"length_over_width"</span><span class="p">,</span>     <span class="c1"># -     outline aspect ratio,               2.91 - 5.56</span>
+</span><span id="L-71"><a href="#L-71"><span class="linenos"> 71</span></a>    <span class="s2">"thickness_over_length"</span><span class="p">,</span> <span class="c1"># -     relative thickness at wide point, 0.0105 - 0.0425</span>
+</span><span id="L-72"><a href="#L-72"><span class="linenos"> 72</span></a>    <span class="s2">"drift_deg"</span><span class="p">,</span>             <span class="c1"># deg   operating condition,                   0 - 20</span>
+</span><span id="L-73"><a href="#L-73"><span class="linenos"> 73</span></a>    <span class="s2">"roll_rad"</span><span class="p">,</span>              <span class="c1"># rad   operating condition,             -0.397 - 1.368</span>
+</span><span id="L-74"><a href="#L-74"><span class="linenos"> 74</span></a><span class="p">]</span>
+</span><span id="L-75"><a href="#L-75"><span class="linenos"> 75</span></a>
+</span><span id="L-76"><a href="#L-76"><span class="linenos"> 76</span></a><span class="c1">#: Model outputs, all newtons, all board totals for one (board, drift, roll_case).</span>
+</span><span id="L-77"><a href="#L-77"><span class="linenos"> 77</span></a><span class="n">TARGETS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="L-78"><a href="#L-78"><span class="linenos"> 78</span></a>    <span class="s2">"drag_total_n"</span><span class="p">,</span>
+</span><span id="L-79"><a href="#L-79"><span class="linenos"> 79</span></a>    <span class="s2">"drag_friction_n"</span><span class="p">,</span>
+</span><span id="L-80"><a href="#L-80"><span class="linenos"> 80</span></a>    <span class="s2">"drag_planing_n"</span><span class="p">,</span>
+</span><span id="L-81"><a href="#L-81"><span class="linenos"> 81</span></a>    <span class="s2">"drag_rail_n"</span><span class="p">,</span>
+</span><span id="L-82"><a href="#L-82"><span class="linenos"> 82</span></a>    <span class="s2">"lift_total_n"</span><span class="p">,</span>
+</span><span id="L-83"><a href="#L-83"><span class="linenos"> 83</span></a><span class="p">]</span>
+</span><span id="L-84"><a href="#L-84"><span class="linenos"> 84</span></a>
+</span><span id="L-85"><a href="#L-85"><span class="linenos"> 85</span></a><span class="c1">#: Columns deliberately withheld, with the reason. Quoted in the report.</span>
+</span><span id="L-86"><a href="#L-86"><span class="linenos"> 86</span></a><span class="n">EXCLUDED</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="L-87"><a href="#L-87"><span class="linenos"> 87</span></a>    <span class="s2">"contact_area_m2"</span><span class="p">:</span> <span class="s2">"solver output, unknown at query time"</span><span class="p">,</span>
+</span><span id="L-88"><a href="#L-88"><span class="linenos"> 88</span></a>    <span class="s2">"volume_litres"</span><span class="p">:</span> <span class="s2">"solver output (displaced volume), not board volume"</span><span class="p">,</span>
+</span><span id="L-89"><a href="#L-89"><span class="linenos"> 89</span></a>    <span class="s2">"n_elements"</span><span class="p">:</span> <span class="s2">"solver mesh size, an output"</span><span class="p">,</span>
+</span><span id="L-90"><a href="#L-90"><span class="linenos"> 90</span></a>    <span class="s2">"turn_radius_m"</span><span class="p">:</span> <span class="s2">"per-board metadata; regressing on it learns board identity"</span><span class="p">,</span>
+</span><span id="L-91"><a href="#L-91"><span class="linenos"> 91</span></a>    <span class="s2">"scan_speed_ms"</span><span class="p">:</span> <span class="s2">"constant 20.000 m/s across all 720 rows -- zero variance"</span><span class="p">,</span>
+</span><span id="L-92"><a href="#L-92"><span class="linenos"> 92</span></a>    <span class="s2">"board_speed_setting_ms"</span><span class="p">:</span> <span class="s2">"GUI setting, not the condition the solver ran at"</span><span class="p">,</span>
+</span><span id="L-93"><a href="#L-93"><span class="linenos"> 93</span></a>    <span class="s2">"total_mass_kg"</span><span class="p">:</span> <span class="s2">"r = 0.9915 with volume_shape_l; collinear duplicate"</span><span class="p">,</span>
+</span><span id="L-94"><a href="#L-94"><span class="linenos"> 94</span></a>    <span class="s2">"foam_mass_kg"</span><span class="p">:</span> <span class="s2">"r = 1.0000 with volume_shape_l; exact collinear duplicate"</span><span class="p">,</span>
+</span><span id="L-95"><a href="#L-95"><span class="linenos"> 95</span></a>    <span class="s2">"volume_float_l"</span><span class="p">:</span> <span class="s2">"a flag, not a measurement: 0.0 or exactly volume_shape_l"</span><span class="p">,</span>
+</span><span id="L-96"><a href="#L-96"><span class="linenos"> 96</span></a>    <span class="s2">"yaw_rate_rad_s"</span><span class="p">:</span> <span class="s2">"derived from turn_radius_m; inherits its board-identity leak"</span><span class="p">,</span>
+</span><span id="L-97"><a href="#L-97"><span class="linenos"> 97</span></a><span class="p">}</span>
+</span><span id="L-98"><a href="#L-98"><span class="linenos"> 98</span></a>
+</span><span id="L-99"><a href="#L-99"><span class="linenos"> 99</span></a>
+</span><span id="L-100"><a href="#L-100"><span class="linenos">100</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+</span><span id="L-101"><a href="#L-101"><span class="linenos">101</span></a><span class="w">    </span><span class="sd">"""Read every per-board ``board.csv`` and derive its shape descriptors.</span>
+</span><span id="L-102"><a href="#L-102"><span class="linenos">102</span></a>
+</span><span id="L-103"><a href="#L-103"><span class="linenos">103</span></a><span class="sd">    Parameters</span>
+</span><span id="L-104"><a href="#L-104"><span class="linenos">104</span></a><span class="sd">    ----------</span>
+</span><span id="L-105"><a href="#L-105"><span class="linenos">105</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
+</span><span id="L-106"><a href="#L-106"><span class="linenos">106</span></a><span class="sd">        Root of the extracted corpus. Defaults to :data:`DATA_DIR`.</span>
+</span><span id="L-107"><a href="#L-107"><span class="linenos">107</span></a>
+</span><span id="L-108"><a href="#L-108"><span class="linenos">108</span></a><span class="sd">    Returns</span>
+</span><span id="L-109"><a href="#L-109"><span class="linenos">109</span></a><span class="sd">    -------</span>
+</span><span id="L-110"><a href="#L-110"><span class="linenos">110</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="L-111"><a href="#L-111"><span class="linenos">111</span></a><span class="sd">        One row per board with columns ``board``, ``volume_shape_l``,</span>
+</span><span id="L-112"><a href="#L-112"><span class="linenos">112</span></a><span class="sd">        ``length_over_width``, ``thickness_over_length``, ``length_m``, ``width_m``,</span>
+</span><span id="L-113"><a href="#L-113"><span class="linenos">113</span></a><span class="sd">        ``thickness_m``.</span>
+</span><span id="L-114"><a href="#L-114"><span class="linenos">114</span></a>
+</span><span id="L-115"><a href="#L-115"><span class="linenos">115</span></a><span class="sd">    Raises</span>
+</span><span id="L-116"><a href="#L-116"><span class="linenos">116</span></a><span class="sd">    ------</span>
+</span><span id="L-117"><a href="#L-117"><span class="linenos">117</span></a><span class="sd">    FileNotFoundError</span>
+</span><span id="L-118"><a href="#L-118"><span class="linenos">118</span></a><span class="sd">        If no ``board.csv`` is found at all, which means the extractor has not been</span>
+</span><span id="L-119"><a href="#L-119"><span class="linenos">119</span></a><span class="sd">        run and every downstream number would be silently empty.</span>
+</span><span id="L-120"><a href="#L-120"><span class="linenos">120</span></a>
+</span><span id="L-121"><a href="#L-121"><span class="linenos">121</span></a><span class="sd">    Notes</span>
+</span><span id="L-122"><a href="#L-122"><span class="linenos">122</span></a><span class="sd">    -----</span>
+</span><span id="L-123"><a href="#L-123"><span class="linenos">123</span></a><span class="sd">    Directories without a ``board.csv`` are skipped rather than faked. That is a</span>
+</span><span id="L-124"><a href="#L-124"><span class="linenos">124</span></a><span class="sd">    live case: ``default_shortboard_Copy_1`` was refused by the provenance gate</span>
+</span><span id="L-125"><a href="#L-125"><span class="linenos">125</span></a><span class="sd">    because its ``.fynbs`` content changed after the trust manifest was built.</span>
+</span><span id="L-126"><a href="#L-126"><span class="linenos">126</span></a><span class="sd">    """</span>
+</span><span id="L-127"><a href="#L-127"><span class="linenos">127</span></a>    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="L-128"><a href="#L-128"><span class="linenos">128</span></a>    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">data_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*/board.csv"</span><span class="p">)):</span>
+</span><span id="L-129"><a href="#L-129"><span class="linenos">129</span></a>        <span class="n">record</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="L-130"><a href="#L-130"><span class="linenos">130</span></a>        <span class="n">record</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span>
+</span><span id="L-131"><a href="#L-131"><span class="linenos">131</span></a>        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+</span><span id="L-132"><a href="#L-132"><span class="linenos">132</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">:</span>
+</span><span id="L-133"><a href="#L-133"><span class="linenos">133</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+</span><span id="L-134"><a href="#L-134"><span class="linenos">134</span></a>            <span class="sa">f</span><span class="s2">"no board.csv under </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">. Run SWD/tools/extract_board.ps1 first."</span>
+</span><span id="L-135"><a href="#L-135"><span class="linenos">135</span></a>        <span class="p">)</span>
+</span><span id="L-136"><a href="#L-136"><span class="linenos">136</span></a>
+</span><span id="L-137"><a href="#L-137"><span class="linenos">137</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-138"><a href="#L-138"><span class="linenos">138</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">]</span> <span class="o">=</span> <span class="n">aspect_ratio</span><span class="p">(</span>
+</span><span id="L-139"><a href="#L-139"><span class="linenos">139</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"x_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"x_max"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_max"</span><span class="p">]</span>
+</span><span id="L-140"><a href="#L-140"><span class="linenos">140</span></a>    <span class="p">)</span>
+</span><span id="L-141"><a href="#L-141"><span class="linenos">141</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">]</span> <span class="o">=</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"relative_thickness_at_wide_point"</span><span class="p">]</span>
+</span><span id="L-142"><a href="#L-142"><span class="linenos">142</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">boards</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"volume_shape_litres"</span><span class="p">:</span> <span class="s2">"volume_shape_l"</span><span class="p">})</span>
+</span><span id="L-143"><a href="#L-143"><span class="linenos">143</span></a>
+</span><span id="L-144"><a href="#L-144"><span class="linenos">144</span></a>    <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span> <span class="o">=</span> <span class="n">reconstruct_dimensions</span><span class="p">(</span>
+</span><span id="L-145"><a href="#L-145"><span class="linenos">145</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"volume_shape_l"</span><span class="p">],</span>
+</span><span id="L-146"><a href="#L-146"><span class="linenos">146</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">],</span>
+</span><span id="L-147"><a href="#L-147"><span class="linenos">147</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">],</span>
+</span><span id="L-148"><a href="#L-148"><span class="linenos">148</span></a>    <span class="p">)</span>
+</span><span id="L-149"><a href="#L-149"><span class="linenos">149</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"width_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_m"</span><span class="p">]</span> <span class="o">=</span> <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span>
+</span><span id="L-150"><a href="#L-150"><span class="linenos">150</span></a>
+</span><span id="L-151"><a href="#L-151"><span class="linenos">151</span></a>    <span class="k">return</span> <span class="n">boards</span><span class="p">[[</span>
+</span><span id="L-152"><a href="#L-152"><span class="linenos">152</span></a>        <span class="s2">"board"</span><span class="p">,</span> <span class="s2">"volume_shape_l"</span><span class="p">,</span> <span class="s2">"length_over_width"</span><span class="p">,</span> <span class="s2">"thickness_over_length"</span><span class="p">,</span>
+</span><span id="L-153"><a href="#L-153"><span class="linenos">153</span></a>        <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span>
+</span><span id="L-154"><a href="#L-154"><span class="linenos">154</span></a>    <span class="p">]]</span>
+</span><span id="L-155"><a href="#L-155"><span class="linenos">155</span></a>
+</span><span id="L-156"><a href="#L-156"><span class="linenos">156</span></a>
+</span><span id="L-157"><a href="#L-157"><span class="linenos">157</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+</span><span id="L-158"><a href="#L-158"><span class="linenos">158</span></a><span class="w">    </span><span class="sd">"""Read the corpus-level ``operating_points.csv``.</span>
+</span><span id="L-159"><a href="#L-159"><span class="linenos">159</span></a>
+</span><span id="L-160"><a href="#L-160"><span class="linenos">160</span></a><span class="sd">    Parameters</span>
+</span><span id="L-161"><a href="#L-161"><span class="linenos">161</span></a><span class="sd">    ----------</span>
+</span><span id="L-162"><a href="#L-162"><span class="linenos">162</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
+</span><span id="L-163"><a href="#L-163"><span class="linenos">163</span></a><span class="sd">        Root of the extracted corpus.</span>
+</span><span id="L-164"><a href="#L-164"><span class="linenos">164</span></a>
+</span><span id="L-165"><a href="#L-165"><span class="linenos">165</span></a><span class="sd">    Returns</span>
+</span><span id="L-166"><a href="#L-166"><span class="linenos">166</span></a><span class="sd">    -------</span>
+</span><span id="L-167"><a href="#L-167"><span class="linenos">167</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="L-168"><a href="#L-168"><span class="linenos">168</span></a><span class="sd">        720 rows x 22 columns as extracted; nothing is added or renamed here.</span>
+</span><span id="L-169"><a href="#L-169"><span class="linenos">169</span></a>
+</span><span id="L-170"><a href="#L-170"><span class="linenos">170</span></a><span class="sd">    Raises</span>
+</span><span id="L-171"><a href="#L-171"><span class="linenos">171</span></a><span class="sd">    ------</span>
+</span><span id="L-172"><a href="#L-172"><span class="linenos">172</span></a><span class="sd">    FileNotFoundError</span>
+</span><span id="L-173"><a href="#L-173"><span class="linenos">173</span></a><span class="sd">        If the file is absent.</span>
+</span><span id="L-174"><a href="#L-174"><span class="linenos">174</span></a><span class="sd">    """</span>
+</span><span id="L-175"><a href="#L-175"><span class="linenos">175</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="s2">"operating_points.csv"</span>
+</span><span id="L-176"><a href="#L-176"><span class="linenos">176</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="L-177"><a href="#L-177"><span class="linenos">177</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> not found. Run SWD/tools/swd_extract.ps1 first."</span><span class="p">)</span>
+</span><span id="L-178"><a href="#L-178"><span class="linenos">178</span></a>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="L-179"><a href="#L-179"><span class="linenos">179</span></a>
+</span><span id="L-180"><a href="#L-180"><span class="linenos">180</span></a>
+</span><span id="L-181"><a href="#L-181"><span class="linenos">181</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_training_table</span><span class="p">(</span>
+</span><span id="L-182"><a href="#L-182"><span class="linenos">182</span></a>    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">,</span>
+</span><span id="L-183"><a href="#L-183"><span class="linenos">183</span></a>    <span class="n">max_drift_deg</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span>
+</span><span id="L-184"><a href="#L-184"><span class="linenos">184</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+</span><span id="L-185"><a href="#L-185"><span class="linenos">185</span></a><span class="w">    </span><span class="sd">"""Join operating points to board geometry and apply the operating envelope.</span>
+</span><span id="L-186"><a href="#L-186"><span class="linenos">186</span></a>
+</span><span id="L-187"><a href="#L-187"><span class="linenos">187</span></a><span class="sd">    Parameters</span>
+</span><span id="L-188"><a href="#L-188"><span class="linenos">188</span></a><span class="sd">    ----------</span>
+</span><span id="L-189"><a href="#L-189"><span class="linenos">189</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
+</span><span id="L-190"><a href="#L-190"><span class="linenos">190</span></a><span class="sd">        Root of the extracted corpus.</span>
+</span><span id="L-191"><a href="#L-191"><span class="linenos">191</span></a><span class="sd">    max_drift_deg : float or None, optional</span>
+</span><span id="L-192"><a href="#L-192"><span class="linenos">192</span></a><span class="sd">        Drop rows above this drift angle. Defaults to 20 deg. Beyond it the board is</span>
+</span><span id="L-193"><a href="#L-193"><span class="linenos">193</span></a><span class="sd">        approaching broadside and drag reaches 522 kN -- roughly 53 tonnes of force,</span>
+</span><span id="L-194"><a href="#L-194"><span class="linenos">194</span></a><span class="sd">        which is bluff-body drag rather than surfing, and it dominates every error</span>
+</span><span id="L-195"><a href="#L-195"><span class="linenos">195</span></a><span class="sd">        metric computed over the full angle set. Pass ``None`` to keep all 11 angles.</span>
+</span><span id="L-196"><a href="#L-196"><span class="linenos">196</span></a>
+</span><span id="L-197"><a href="#L-197"><span class="linenos">197</span></a><span class="sd">    Returns</span>
+</span><span id="L-198"><a href="#L-198"><span class="linenos">198</span></a><span class="sd">    -------</span>
+</span><span id="L-199"><a href="#L-199"><span class="linenos">199</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="L-200"><a href="#L-200"><span class="linenos">200</span></a><span class="sd">        Columns ``board`` + :data:`FEATURES` + :data:`TARGETS`, one row per</span>
+</span><span id="L-201"><a href="#L-201"><span class="linenos">201</span></a><span class="sd">        (board, drift, roll_case).</span>
+</span><span id="L-202"><a href="#L-202"><span class="linenos">202</span></a>
+</span><span id="L-203"><a href="#L-203"><span class="linenos">203</span></a><span class="sd">    Warns</span>
+</span><span id="L-204"><a href="#L-204"><span class="linenos">204</span></a><span class="sd">    -----</span>
+</span><span id="L-205"><a href="#L-205"><span class="linenos">205</span></a><span class="sd">    UserWarning</span>
+</span><span id="L-206"><a href="#L-206"><span class="linenos">206</span></a><span class="sd">        If any board has operating points but no extracted geometry. Those rows are</span>
+</span><span id="L-207"><a href="#L-207"><span class="linenos">207</span></a><span class="sd">        dropped -- they cannot be featurised -- and the warning names the boards so</span>
+</span><span id="L-208"><a href="#L-208"><span class="linenos">208</span></a><span class="sd">        the loss is visible rather than silent.</span>
+</span><span id="L-209"><a href="#L-209"><span class="linenos">209</span></a>
+</span><span id="L-210"><a href="#L-210"><span class="linenos">210</span></a><span class="sd">    Notes</span>
+</span><span id="L-211"><a href="#L-211"><span class="linenos">211</span></a><span class="sd">    -----</span>
+</span><span id="L-212"><a href="#L-212"><span class="linenos">212</span></a><span class="sd">    The join is on the exact ``board`` key. A substring or ``str.contains`` join</span>
+</span><span id="L-213"><a href="#L-213"><span class="linenos">213</span></a><span class="sd">    would conflate ``2003_Taylor_Knox_channel_island`` (unscanned) with</span>
+</span><span id="L-214"><a href="#L-214"><span class="linenos">214</span></a><span class="sd">    ``2003_Taylor_Knox_channel_island_Copy_1`` (scanned) and double-count.</span>
+</span><span id="L-215"><a href="#L-215"><span class="linenos">215</span></a><span class="sd">    """</span>
+</span><span id="L-216"><a href="#L-216"><span class="linenos">216</span></a>    <span class="n">points</span> <span class="o">=</span> <span class="n">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</span><span id="L-217"><a href="#L-217"><span class="linenos">217</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</span><span id="L-218"><a href="#L-218"><span class="linenos">218</span></a>
+</span><span id="L-219"><a href="#L-219"><span class="linenos">219</span></a>    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="s2">"board"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">boards</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]))</span>
+</span><span id="L-220"><a href="#L-220"><span class="linenos">220</span></a>    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+</span><span id="L-221"><a href="#L-221"><span class="linenos">221</span></a>        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+</span><span id="L-222"><a href="#L-222"><span class="linenos">222</span></a>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> board(s) have operating points but no extracted geometry "</span>
+</span><span id="L-223"><a href="#L-223"><span class="linenos">223</span></a>            <span class="sa">f</span><span class="s2">"and are dropped: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="L-224"><a href="#L-224"><span class="linenos">224</span></a>            <span class="ne">UserWarning</span><span class="p">,</span>
+</span><span id="L-225"><a href="#L-225"><span class="linenos">225</span></a>            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="L-226"><a href="#L-226"><span class="linenos">226</span></a>        <span class="p">)</span>
 </span><span id="L-227"><a href="#L-227"><span class="linenos">227</span></a>
-</span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a>    <span class="k">if</span> <span class="n">max_drift_deg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>        <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="s2">"drift_deg"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_drift_deg</span><span class="p">]</span>
-</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a>
-</span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a>    <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"board"</span><span class="p">,</span> <span class="o">*</span><span class="n">FEATURES</span><span class="p">,</span> <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span> <span class="o">*</span><span class="n">TARGETS</span><span class="p">]</span>
-</span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a>    <span class="k">return</span> <span class="n">table</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="L-228"><a href="#L-228"><span class="linenos">228</span></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">boards</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"board"</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="s2">"many_to_one"</span><span class="p">)</span>
+</span><span id="L-229"><a href="#L-229"><span class="linenos">229</span></a>
+</span><span id="L-230"><a href="#L-230"><span class="linenos">230</span></a>    <span class="k">if</span> <span class="n">max_drift_deg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="L-231"><a href="#L-231"><span class="linenos">231</span></a>        <span class="c1"># True would compare as 1 degree and keep 64 rows instead of 389</span>
+</span><span id="L-232"><a href="#L-232"><span class="linenos">232</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">max_drift_deg</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+</span><span id="L-233"><a href="#L-233"><span class="linenos">233</span></a>                <span class="n">max_drift_deg</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">max_drift_deg</span><span class="p">):</span>
+</span><span id="L-234"><a href="#L-234"><span class="linenos">234</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"max_drift_deg must be a finite number of degrees, or None"</span><span class="p">)</span>
+</span><span id="L-235"><a href="#L-235"><span class="linenos">235</span></a>        <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="s2">"drift_deg"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_drift_deg</span><span class="p">]</span>
+</span><span id="L-236"><a href="#L-236"><span class="linenos">236</span></a>
+</span><span id="L-237"><a href="#L-237"><span class="linenos">237</span></a>    <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"board"</span><span class="p">,</span> <span class="o">*</span><span class="n">FEATURES</span><span class="p">,</span> <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span> <span class="o">*</span><span class="n">TARGETS</span><span class="p">]</span>
+</span><span id="L-238"><a href="#L-238"><span class="linenos">238</span></a>    <span class="k">return</span> <span class="n">table</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -423,60 +431,64 @@ would make the model score well and be useless:</p>
 
     </div>
     <a class="headerlink" href="#build_training_table"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="build_training_table-180"><a href="#build_training_table-180"><span class="linenos">180</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_training_table</span><span class="p">(</span>
-</span><span id="build_training_table-181"><a href="#build_training_table-181"><span class="linenos">181</span></a>    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">,</span>
-</span><span id="build_training_table-182"><a href="#build_training_table-182"><span class="linenos">182</span></a>    <span class="n">max_drift_deg</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span>
-</span><span id="build_training_table-183"><a href="#build_training_table-183"><span class="linenos">183</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="build_training_table-184"><a href="#build_training_table-184"><span class="linenos">184</span></a><span class="w">    </span><span class="sd">"""Join operating points to board geometry and apply the operating envelope.</span>
-</span><span id="build_training_table-185"><a href="#build_training_table-185"><span class="linenos">185</span></a>
-</span><span id="build_training_table-186"><a href="#build_training_table-186"><span class="linenos">186</span></a><span class="sd">    Parameters</span>
-</span><span id="build_training_table-187"><a href="#build_training_table-187"><span class="linenos">187</span></a><span class="sd">    ----------</span>
-</span><span id="build_training_table-188"><a href="#build_training_table-188"><span class="linenos">188</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
-</span><span id="build_training_table-189"><a href="#build_training_table-189"><span class="linenos">189</span></a><span class="sd">        Root of the extracted corpus.</span>
-</span><span id="build_training_table-190"><a href="#build_training_table-190"><span class="linenos">190</span></a><span class="sd">    max_drift_deg : float or None, optional</span>
-</span><span id="build_training_table-191"><a href="#build_training_table-191"><span class="linenos">191</span></a><span class="sd">        Drop rows above this drift angle. Defaults to 20 deg. Beyond it the board is</span>
-</span><span id="build_training_table-192"><a href="#build_training_table-192"><span class="linenos">192</span></a><span class="sd">        approaching broadside and drag reaches 522 kN -- roughly 53 tonnes of force,</span>
-</span><span id="build_training_table-193"><a href="#build_training_table-193"><span class="linenos">193</span></a><span class="sd">        which is bluff-body drag rather than surfing, and it dominates every error</span>
-</span><span id="build_training_table-194"><a href="#build_training_table-194"><span class="linenos">194</span></a><span class="sd">        metric computed over the full angle set. Pass ``None`` to keep all 11 angles.</span>
-</span><span id="build_training_table-195"><a href="#build_training_table-195"><span class="linenos">195</span></a>
-</span><span id="build_training_table-196"><a href="#build_training_table-196"><span class="linenos">196</span></a><span class="sd">    Returns</span>
-</span><span id="build_training_table-197"><a href="#build_training_table-197"><span class="linenos">197</span></a><span class="sd">    -------</span>
-</span><span id="build_training_table-198"><a href="#build_training_table-198"><span class="linenos">198</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="build_training_table-199"><a href="#build_training_table-199"><span class="linenos">199</span></a><span class="sd">        Columns ``board`` + :data:`FEATURES` + :data:`TARGETS`, one row per</span>
-</span><span id="build_training_table-200"><a href="#build_training_table-200"><span class="linenos">200</span></a><span class="sd">        (board, drift, roll_case).</span>
-</span><span id="build_training_table-201"><a href="#build_training_table-201"><span class="linenos">201</span></a>
-</span><span id="build_training_table-202"><a href="#build_training_table-202"><span class="linenos">202</span></a><span class="sd">    Warns</span>
-</span><span id="build_training_table-203"><a href="#build_training_table-203"><span class="linenos">203</span></a><span class="sd">    -----</span>
-</span><span id="build_training_table-204"><a href="#build_training_table-204"><span class="linenos">204</span></a><span class="sd">    UserWarning</span>
-</span><span id="build_training_table-205"><a href="#build_training_table-205"><span class="linenos">205</span></a><span class="sd">        If any board has operating points but no extracted geometry. Those rows are</span>
-</span><span id="build_training_table-206"><a href="#build_training_table-206"><span class="linenos">206</span></a><span class="sd">        dropped -- they cannot be featurised -- and the warning names the boards so</span>
-</span><span id="build_training_table-207"><a href="#build_training_table-207"><span class="linenos">207</span></a><span class="sd">        the loss is visible rather than silent.</span>
-</span><span id="build_training_table-208"><a href="#build_training_table-208"><span class="linenos">208</span></a>
-</span><span id="build_training_table-209"><a href="#build_training_table-209"><span class="linenos">209</span></a><span class="sd">    Notes</span>
-</span><span id="build_training_table-210"><a href="#build_training_table-210"><span class="linenos">210</span></a><span class="sd">    -----</span>
-</span><span id="build_training_table-211"><a href="#build_training_table-211"><span class="linenos">211</span></a><span class="sd">    The join is on the exact ``board`` key. A substring or ``str.contains`` join</span>
-</span><span id="build_training_table-212"><a href="#build_training_table-212"><span class="linenos">212</span></a><span class="sd">    would conflate ``2003_Taylor_Knox_channel_island`` (unscanned) with</span>
-</span><span id="build_training_table-213"><a href="#build_training_table-213"><span class="linenos">213</span></a><span class="sd">    ``2003_Taylor_Knox_channel_island_Copy_1`` (scanned) and double-count.</span>
-</span><span id="build_training_table-214"><a href="#build_training_table-214"><span class="linenos">214</span></a><span class="sd">    """</span>
-</span><span id="build_training_table-215"><a href="#build_training_table-215"><span class="linenos">215</span></a>    <span class="n">points</span> <span class="o">=</span> <span class="n">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
-</span><span id="build_training_table-216"><a href="#build_training_table-216"><span class="linenos">216</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
-</span><span id="build_training_table-217"><a href="#build_training_table-217"><span class="linenos">217</span></a>
-</span><span id="build_training_table-218"><a href="#build_training_table-218"><span class="linenos">218</span></a>    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="s2">"board"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">boards</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]))</span>
-</span><span id="build_training_table-219"><a href="#build_training_table-219"><span class="linenos">219</span></a>    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
-</span><span id="build_training_table-220"><a href="#build_training_table-220"><span class="linenos">220</span></a>        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-</span><span id="build_training_table-221"><a href="#build_training_table-221"><span class="linenos">221</span></a>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> board(s) have operating points but no extracted geometry "</span>
-</span><span id="build_training_table-222"><a href="#build_training_table-222"><span class="linenos">222</span></a>            <span class="sa">f</span><span class="s2">"and are dropped: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
-</span><span id="build_training_table-223"><a href="#build_training_table-223"><span class="linenos">223</span></a>            <span class="ne">UserWarning</span><span class="p">,</span>
-</span><span id="build_training_table-224"><a href="#build_training_table-224"><span class="linenos">224</span></a>            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-</span><span id="build_training_table-225"><a href="#build_training_table-225"><span class="linenos">225</span></a>        <span class="p">)</span>
-</span><span id="build_training_table-226"><a href="#build_training_table-226"><span class="linenos">226</span></a>
-</span><span id="build_training_table-227"><a href="#build_training_table-227"><span class="linenos">227</span></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">boards</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"board"</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="s2">"many_to_one"</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="build_training_table-182"><a href="#build_training_table-182"><span class="linenos">182</span></a><span class="k">def</span><span class="w"> </span><span class="nf">build_training_table</span><span class="p">(</span>
+</span><span id="build_training_table-183"><a href="#build_training_table-183"><span class="linenos">183</span></a>    <span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">,</span>
+</span><span id="build_training_table-184"><a href="#build_training_table-184"><span class="linenos">184</span></a>    <span class="n">max_drift_deg</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">,</span>
+</span><span id="build_training_table-185"><a href="#build_training_table-185"><span class="linenos">185</span></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+</span><span id="build_training_table-186"><a href="#build_training_table-186"><span class="linenos">186</span></a><span class="w">    </span><span class="sd">"""Join operating points to board geometry and apply the operating envelope.</span>
+</span><span id="build_training_table-187"><a href="#build_training_table-187"><span class="linenos">187</span></a>
+</span><span id="build_training_table-188"><a href="#build_training_table-188"><span class="linenos">188</span></a><span class="sd">    Parameters</span>
+</span><span id="build_training_table-189"><a href="#build_training_table-189"><span class="linenos">189</span></a><span class="sd">    ----------</span>
+</span><span id="build_training_table-190"><a href="#build_training_table-190"><span class="linenos">190</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
+</span><span id="build_training_table-191"><a href="#build_training_table-191"><span class="linenos">191</span></a><span class="sd">        Root of the extracted corpus.</span>
+</span><span id="build_training_table-192"><a href="#build_training_table-192"><span class="linenos">192</span></a><span class="sd">    max_drift_deg : float or None, optional</span>
+</span><span id="build_training_table-193"><a href="#build_training_table-193"><span class="linenos">193</span></a><span class="sd">        Drop rows above this drift angle. Defaults to 20 deg. Beyond it the board is</span>
+</span><span id="build_training_table-194"><a href="#build_training_table-194"><span class="linenos">194</span></a><span class="sd">        approaching broadside and drag reaches 522 kN -- roughly 53 tonnes of force,</span>
+</span><span id="build_training_table-195"><a href="#build_training_table-195"><span class="linenos">195</span></a><span class="sd">        which is bluff-body drag rather than surfing, and it dominates every error</span>
+</span><span id="build_training_table-196"><a href="#build_training_table-196"><span class="linenos">196</span></a><span class="sd">        metric computed over the full angle set. Pass ``None`` to keep all 11 angles.</span>
+</span><span id="build_training_table-197"><a href="#build_training_table-197"><span class="linenos">197</span></a>
+</span><span id="build_training_table-198"><a href="#build_training_table-198"><span class="linenos">198</span></a><span class="sd">    Returns</span>
+</span><span id="build_training_table-199"><a href="#build_training_table-199"><span class="linenos">199</span></a><span class="sd">    -------</span>
+</span><span id="build_training_table-200"><a href="#build_training_table-200"><span class="linenos">200</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="build_training_table-201"><a href="#build_training_table-201"><span class="linenos">201</span></a><span class="sd">        Columns ``board`` + :data:`FEATURES` + :data:`TARGETS`, one row per</span>
+</span><span id="build_training_table-202"><a href="#build_training_table-202"><span class="linenos">202</span></a><span class="sd">        (board, drift, roll_case).</span>
+</span><span id="build_training_table-203"><a href="#build_training_table-203"><span class="linenos">203</span></a>
+</span><span id="build_training_table-204"><a href="#build_training_table-204"><span class="linenos">204</span></a><span class="sd">    Warns</span>
+</span><span id="build_training_table-205"><a href="#build_training_table-205"><span class="linenos">205</span></a><span class="sd">    -----</span>
+</span><span id="build_training_table-206"><a href="#build_training_table-206"><span class="linenos">206</span></a><span class="sd">    UserWarning</span>
+</span><span id="build_training_table-207"><a href="#build_training_table-207"><span class="linenos">207</span></a><span class="sd">        If any board has operating points but no extracted geometry. Those rows are</span>
+</span><span id="build_training_table-208"><a href="#build_training_table-208"><span class="linenos">208</span></a><span class="sd">        dropped -- they cannot be featurised -- and the warning names the boards so</span>
+</span><span id="build_training_table-209"><a href="#build_training_table-209"><span class="linenos">209</span></a><span class="sd">        the loss is visible rather than silent.</span>
+</span><span id="build_training_table-210"><a href="#build_training_table-210"><span class="linenos">210</span></a>
+</span><span id="build_training_table-211"><a href="#build_training_table-211"><span class="linenos">211</span></a><span class="sd">    Notes</span>
+</span><span id="build_training_table-212"><a href="#build_training_table-212"><span class="linenos">212</span></a><span class="sd">    -----</span>
+</span><span id="build_training_table-213"><a href="#build_training_table-213"><span class="linenos">213</span></a><span class="sd">    The join is on the exact ``board`` key. A substring or ``str.contains`` join</span>
+</span><span id="build_training_table-214"><a href="#build_training_table-214"><span class="linenos">214</span></a><span class="sd">    would conflate ``2003_Taylor_Knox_channel_island`` (unscanned) with</span>
+</span><span id="build_training_table-215"><a href="#build_training_table-215"><span class="linenos">215</span></a><span class="sd">    ``2003_Taylor_Knox_channel_island_Copy_1`` (scanned) and double-count.</span>
+</span><span id="build_training_table-216"><a href="#build_training_table-216"><span class="linenos">216</span></a><span class="sd">    """</span>
+</span><span id="build_training_table-217"><a href="#build_training_table-217"><span class="linenos">217</span></a>    <span class="n">points</span> <span class="o">=</span> <span class="n">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</span><span id="build_training_table-218"><a href="#build_training_table-218"><span class="linenos">218</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</span><span id="build_training_table-219"><a href="#build_training_table-219"><span class="linenos">219</span></a>
+</span><span id="build_training_table-220"><a href="#build_training_table-220"><span class="linenos">220</span></a>    <span class="n">missing</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">points</span><span class="p">[</span><span class="s2">"board"</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">boards</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]))</span>
+</span><span id="build_training_table-221"><a href="#build_training_table-221"><span class="linenos">221</span></a>    <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+</span><span id="build_training_table-222"><a href="#build_training_table-222"><span class="linenos">222</span></a>        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+</span><span id="build_training_table-223"><a href="#build_training_table-223"><span class="linenos">223</span></a>            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> board(s) have operating points but no extracted geometry "</span>
+</span><span id="build_training_table-224"><a href="#build_training_table-224"><span class="linenos">224</span></a>            <span class="sa">f</span><span class="s2">"and are dropped: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+</span><span id="build_training_table-225"><a href="#build_training_table-225"><span class="linenos">225</span></a>            <span class="ne">UserWarning</span><span class="p">,</span>
+</span><span id="build_training_table-226"><a href="#build_training_table-226"><span class="linenos">226</span></a>            <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+</span><span id="build_training_table-227"><a href="#build_training_table-227"><span class="linenos">227</span></a>        <span class="p">)</span>
 </span><span id="build_training_table-228"><a href="#build_training_table-228"><span class="linenos">228</span></a>
-</span><span id="build_training_table-229"><a href="#build_training_table-229"><span class="linenos">229</span></a>    <span class="k">if</span> <span class="n">max_drift_deg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="build_training_table-230"><a href="#build_training_table-230"><span class="linenos">230</span></a>        <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="s2">"drift_deg"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_drift_deg</span><span class="p">]</span>
-</span><span id="build_training_table-231"><a href="#build_training_table-231"><span class="linenos">231</span></a>
-</span><span id="build_training_table-232"><a href="#build_training_table-232"><span class="linenos">232</span></a>    <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"board"</span><span class="p">,</span> <span class="o">*</span><span class="n">FEATURES</span><span class="p">,</span> <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span> <span class="o">*</span><span class="n">TARGETS</span><span class="p">]</span>
-</span><span id="build_training_table-233"><a href="#build_training_table-233"><span class="linenos">233</span></a>    <span class="k">return</span> <span class="n">table</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="build_training_table-229"><a href="#build_training_table-229"><span class="linenos">229</span></a>    <span class="n">table</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">boards</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s2">"board"</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">"inner"</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="s2">"many_to_one"</span><span class="p">)</span>
+</span><span id="build_training_table-230"><a href="#build_training_table-230"><span class="linenos">230</span></a>
+</span><span id="build_training_table-231"><a href="#build_training_table-231"><span class="linenos">231</span></a>    <span class="k">if</span> <span class="n">max_drift_deg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="build_training_table-232"><a href="#build_training_table-232"><span class="linenos">232</span></a>        <span class="c1"># True would compare as 1 degree and keep 64 rows instead of 389</span>
+</span><span id="build_training_table-233"><a href="#build_training_table-233"><span class="linenos">233</span></a>        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">max_drift_deg</span><span class="p">,</span> <span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">bool_</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span>
+</span><span id="build_training_table-234"><a href="#build_training_table-234"><span class="linenos">234</span></a>                <span class="n">max_drift_deg</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">floating</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">max_drift_deg</span><span class="p">):</span>
+</span><span id="build_training_table-235"><a href="#build_training_table-235"><span class="linenos">235</span></a>            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"max_drift_deg must be a finite number of degrees, or None"</span><span class="p">)</span>
+</span><span id="build_training_table-236"><a href="#build_training_table-236"><span class="linenos">236</span></a>        <span class="n">table</span> <span class="o">=</span> <span class="n">table</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="s2">"drift_deg"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_drift_deg</span><span class="p">]</span>
+</span><span id="build_training_table-237"><a href="#build_training_table-237"><span class="linenos">237</span></a>
+</span><span id="build_training_table-238"><a href="#build_training_table-238"><span class="linenos">238</span></a>    <span class="n">keep</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"board"</span><span class="p">,</span> <span class="o">*</span><span class="n">FEATURES</span><span class="p">,</span> <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span> <span class="o">*</span><span class="n">TARGETS</span><span class="p">]</span>
+</span><span id="build_training_table-239"><a href="#build_training_table-239"><span class="linenos">239</span></a>    <span class="k">return</span> <span class="n">table</span><span class="p">[</span><span class="n">keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span></pre></div>
 
 
@@ -529,61 +541,61 @@ would conflate <code>2003_Taylor_Knox_channel_island</code> (unscanned) with
 
     </div>
     <a class="headerlink" href="#load_boards"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load_boards-99"><a href="#load_boards-99"><span class="linenos"> 99</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="load_boards-100"><a href="#load_boards-100"><span class="linenos">100</span></a><span class="w">    </span><span class="sd">"""Read every per-board ``board.csv`` and derive its shape descriptors.</span>
-</span><span id="load_boards-101"><a href="#load_boards-101"><span class="linenos">101</span></a>
-</span><span id="load_boards-102"><a href="#load_boards-102"><span class="linenos">102</span></a><span class="sd">    Parameters</span>
-</span><span id="load_boards-103"><a href="#load_boards-103"><span class="linenos">103</span></a><span class="sd">    ----------</span>
-</span><span id="load_boards-104"><a href="#load_boards-104"><span class="linenos">104</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
-</span><span id="load_boards-105"><a href="#load_boards-105"><span class="linenos">105</span></a><span class="sd">        Root of the extracted corpus. Defaults to :data:`DATA_DIR`.</span>
-</span><span id="load_boards-106"><a href="#load_boards-106"><span class="linenos">106</span></a>
-</span><span id="load_boards-107"><a href="#load_boards-107"><span class="linenos">107</span></a><span class="sd">    Returns</span>
-</span><span id="load_boards-108"><a href="#load_boards-108"><span class="linenos">108</span></a><span class="sd">    -------</span>
-</span><span id="load_boards-109"><a href="#load_boards-109"><span class="linenos">109</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="load_boards-110"><a href="#load_boards-110"><span class="linenos">110</span></a><span class="sd">        One row per board with columns ``board``, ``volume_shape_l``,</span>
-</span><span id="load_boards-111"><a href="#load_boards-111"><span class="linenos">111</span></a><span class="sd">        ``length_over_width``, ``thickness_over_length``, ``length_m``, ``width_m``,</span>
-</span><span id="load_boards-112"><a href="#load_boards-112"><span class="linenos">112</span></a><span class="sd">        ``thickness_m``.</span>
-</span><span id="load_boards-113"><a href="#load_boards-113"><span class="linenos">113</span></a>
-</span><span id="load_boards-114"><a href="#load_boards-114"><span class="linenos">114</span></a><span class="sd">    Raises</span>
-</span><span id="load_boards-115"><a href="#load_boards-115"><span class="linenos">115</span></a><span class="sd">    ------</span>
-</span><span id="load_boards-116"><a href="#load_boards-116"><span class="linenos">116</span></a><span class="sd">    FileNotFoundError</span>
-</span><span id="load_boards-117"><a href="#load_boards-117"><span class="linenos">117</span></a><span class="sd">        If no ``board.csv`` is found at all, which means the extractor has not been</span>
-</span><span id="load_boards-118"><a href="#load_boards-118"><span class="linenos">118</span></a><span class="sd">        run and every downstream number would be silently empty.</span>
-</span><span id="load_boards-119"><a href="#load_boards-119"><span class="linenos">119</span></a>
-</span><span id="load_boards-120"><a href="#load_boards-120"><span class="linenos">120</span></a><span class="sd">    Notes</span>
-</span><span id="load_boards-121"><a href="#load_boards-121"><span class="linenos">121</span></a><span class="sd">    -----</span>
-</span><span id="load_boards-122"><a href="#load_boards-122"><span class="linenos">122</span></a><span class="sd">    Directories without a ``board.csv`` are skipped rather than faked. That is a</span>
-</span><span id="load_boards-123"><a href="#load_boards-123"><span class="linenos">123</span></a><span class="sd">    live case: ``default_shortboard_Copy_1`` was refused by the provenance gate</span>
-</span><span id="load_boards-124"><a href="#load_boards-124"><span class="linenos">124</span></a><span class="sd">    because its ``.fynbs`` content changed after the trust manifest was built.</span>
-</span><span id="load_boards-125"><a href="#load_boards-125"><span class="linenos">125</span></a><span class="sd">    """</span>
-</span><span id="load_boards-126"><a href="#load_boards-126"><span class="linenos">126</span></a>    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
-</span><span id="load_boards-127"><a href="#load_boards-127"><span class="linenos">127</span></a>    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">data_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*/board.csv"</span><span class="p">)):</span>
-</span><span id="load_boards-128"><a href="#load_boards-128"><span class="linenos">128</span></a>        <span class="n">record</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="load_boards-129"><a href="#load_boards-129"><span class="linenos">129</span></a>        <span class="n">record</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span>
-</span><span id="load_boards-130"><a href="#load_boards-130"><span class="linenos">130</span></a>        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
-</span><span id="load_boards-131"><a href="#load_boards-131"><span class="linenos">131</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">:</span>
-</span><span id="load_boards-132"><a href="#load_boards-132"><span class="linenos">132</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
-</span><span id="load_boards-133"><a href="#load_boards-133"><span class="linenos">133</span></a>            <span class="sa">f</span><span class="s2">"no board.csv under </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">. Run SWD/tools/extract_board.ps1 first."</span>
-</span><span id="load_boards-134"><a href="#load_boards-134"><span class="linenos">134</span></a>        <span class="p">)</span>
-</span><span id="load_boards-135"><a href="#load_boards-135"><span class="linenos">135</span></a>
-</span><span id="load_boards-136"><a href="#load_boards-136"><span class="linenos">136</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="load_boards-137"><a href="#load_boards-137"><span class="linenos">137</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">]</span> <span class="o">=</span> <span class="n">aspect_ratio</span><span class="p">(</span>
-</span><span id="load_boards-138"><a href="#load_boards-138"><span class="linenos">138</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"x_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"x_max"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_max"</span><span class="p">]</span>
-</span><span id="load_boards-139"><a href="#load_boards-139"><span class="linenos">139</span></a>    <span class="p">)</span>
-</span><span id="load_boards-140"><a href="#load_boards-140"><span class="linenos">140</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">]</span> <span class="o">=</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"relative_thickness_at_wide_point"</span><span class="p">]</span>
-</span><span id="load_boards-141"><a href="#load_boards-141"><span class="linenos">141</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">boards</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"volume_shape_litres"</span><span class="p">:</span> <span class="s2">"volume_shape_l"</span><span class="p">})</span>
-</span><span id="load_boards-142"><a href="#load_boards-142"><span class="linenos">142</span></a>
-</span><span id="load_boards-143"><a href="#load_boards-143"><span class="linenos">143</span></a>    <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span> <span class="o">=</span> <span class="n">reconstruct_dimensions</span><span class="p">(</span>
-</span><span id="load_boards-144"><a href="#load_boards-144"><span class="linenos">144</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"volume_shape_l"</span><span class="p">],</span>
-</span><span id="load_boards-145"><a href="#load_boards-145"><span class="linenos">145</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">],</span>
-</span><span id="load_boards-146"><a href="#load_boards-146"><span class="linenos">146</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">],</span>
-</span><span id="load_boards-147"><a href="#load_boards-147"><span class="linenos">147</span></a>    <span class="p">)</span>
-</span><span id="load_boards-148"><a href="#load_boards-148"><span class="linenos">148</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"width_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_m"</span><span class="p">]</span> <span class="o">=</span> <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span>
-</span><span id="load_boards-149"><a href="#load_boards-149"><span class="linenos">149</span></a>
-</span><span id="load_boards-150"><a href="#load_boards-150"><span class="linenos">150</span></a>    <span class="k">return</span> <span class="n">boards</span><span class="p">[[</span>
-</span><span id="load_boards-151"><a href="#load_boards-151"><span class="linenos">151</span></a>        <span class="s2">"board"</span><span class="p">,</span> <span class="s2">"volume_shape_l"</span><span class="p">,</span> <span class="s2">"length_over_width"</span><span class="p">,</span> <span class="s2">"thickness_over_length"</span><span class="p">,</span>
-</span><span id="load_boards-152"><a href="#load_boards-152"><span class="linenos">152</span></a>        <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span>
-</span><span id="load_boards-153"><a href="#load_boards-153"><span class="linenos">153</span></a>    <span class="p">]]</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load_boards-101"><a href="#load_boards-101"><span class="linenos">101</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_boards</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+</span><span id="load_boards-102"><a href="#load_boards-102"><span class="linenos">102</span></a><span class="w">    </span><span class="sd">"""Read every per-board ``board.csv`` and derive its shape descriptors.</span>
+</span><span id="load_boards-103"><a href="#load_boards-103"><span class="linenos">103</span></a>
+</span><span id="load_boards-104"><a href="#load_boards-104"><span class="linenos">104</span></a><span class="sd">    Parameters</span>
+</span><span id="load_boards-105"><a href="#load_boards-105"><span class="linenos">105</span></a><span class="sd">    ----------</span>
+</span><span id="load_boards-106"><a href="#load_boards-106"><span class="linenos">106</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
+</span><span id="load_boards-107"><a href="#load_boards-107"><span class="linenos">107</span></a><span class="sd">        Root of the extracted corpus. Defaults to :data:`DATA_DIR`.</span>
+</span><span id="load_boards-108"><a href="#load_boards-108"><span class="linenos">108</span></a>
+</span><span id="load_boards-109"><a href="#load_boards-109"><span class="linenos">109</span></a><span class="sd">    Returns</span>
+</span><span id="load_boards-110"><a href="#load_boards-110"><span class="linenos">110</span></a><span class="sd">    -------</span>
+</span><span id="load_boards-111"><a href="#load_boards-111"><span class="linenos">111</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="load_boards-112"><a href="#load_boards-112"><span class="linenos">112</span></a><span class="sd">        One row per board with columns ``board``, ``volume_shape_l``,</span>
+</span><span id="load_boards-113"><a href="#load_boards-113"><span class="linenos">113</span></a><span class="sd">        ``length_over_width``, ``thickness_over_length``, ``length_m``, ``width_m``,</span>
+</span><span id="load_boards-114"><a href="#load_boards-114"><span class="linenos">114</span></a><span class="sd">        ``thickness_m``.</span>
+</span><span id="load_boards-115"><a href="#load_boards-115"><span class="linenos">115</span></a>
+</span><span id="load_boards-116"><a href="#load_boards-116"><span class="linenos">116</span></a><span class="sd">    Raises</span>
+</span><span id="load_boards-117"><a href="#load_boards-117"><span class="linenos">117</span></a><span class="sd">    ------</span>
+</span><span id="load_boards-118"><a href="#load_boards-118"><span class="linenos">118</span></a><span class="sd">    FileNotFoundError</span>
+</span><span id="load_boards-119"><a href="#load_boards-119"><span class="linenos">119</span></a><span class="sd">        If no ``board.csv`` is found at all, which means the extractor has not been</span>
+</span><span id="load_boards-120"><a href="#load_boards-120"><span class="linenos">120</span></a><span class="sd">        run and every downstream number would be silently empty.</span>
+</span><span id="load_boards-121"><a href="#load_boards-121"><span class="linenos">121</span></a>
+</span><span id="load_boards-122"><a href="#load_boards-122"><span class="linenos">122</span></a><span class="sd">    Notes</span>
+</span><span id="load_boards-123"><a href="#load_boards-123"><span class="linenos">123</span></a><span class="sd">    -----</span>
+</span><span id="load_boards-124"><a href="#load_boards-124"><span class="linenos">124</span></a><span class="sd">    Directories without a ``board.csv`` are skipped rather than faked. That is a</span>
+</span><span id="load_boards-125"><a href="#load_boards-125"><span class="linenos">125</span></a><span class="sd">    live case: ``default_shortboard_Copy_1`` was refused by the provenance gate</span>
+</span><span id="load_boards-126"><a href="#load_boards-126"><span class="linenos">126</span></a><span class="sd">    because its ``.fynbs`` content changed after the trust manifest was built.</span>
+</span><span id="load_boards-127"><a href="#load_boards-127"><span class="linenos">127</span></a><span class="sd">    """</span>
+</span><span id="load_boards-128"><a href="#load_boards-128"><span class="linenos">128</span></a>    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span id="load_boards-129"><a href="#load_boards-129"><span class="linenos">129</span></a>    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">data_dir</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">"*/board.csv"</span><span class="p">)):</span>
+</span><span id="load_boards-130"><a href="#load_boards-130"><span class="linenos">130</span></a>        <span class="n">record</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="load_boards-131"><a href="#load_boards-131"><span class="linenos">131</span></a>        <span class="n">record</span><span class="p">[</span><span class="s2">"board"</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">name</span>
+</span><span id="load_boards-132"><a href="#load_boards-132"><span class="linenos">132</span></a>        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+</span><span id="load_boards-133"><a href="#load_boards-133"><span class="linenos">133</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">rows</span><span class="p">:</span>
+</span><span id="load_boards-134"><a href="#load_boards-134"><span class="linenos">134</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span>
+</span><span id="load_boards-135"><a href="#load_boards-135"><span class="linenos">135</span></a>            <span class="sa">f</span><span class="s2">"no board.csv under </span><span class="si">{</span><span class="n">data_dir</span><span class="si">}</span><span class="s2">. Run SWD/tools/extract_board.ps1 first."</span>
+</span><span id="load_boards-136"><a href="#load_boards-136"><span class="linenos">136</span></a>        <span class="p">)</span>
+</span><span id="load_boards-137"><a href="#load_boards-137"><span class="linenos">137</span></a>
+</span><span id="load_boards-138"><a href="#load_boards-138"><span class="linenos">138</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="load_boards-139"><a href="#load_boards-139"><span class="linenos">139</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">]</span> <span class="o">=</span> <span class="n">aspect_ratio</span><span class="p">(</span>
+</span><span id="load_boards-140"><a href="#load_boards-140"><span class="linenos">140</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"x_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"x_max"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_min"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"y_max"</span><span class="p">]</span>
+</span><span id="load_boards-141"><a href="#load_boards-141"><span class="linenos">141</span></a>    <span class="p">)</span>
+</span><span id="load_boards-142"><a href="#load_boards-142"><span class="linenos">142</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">]</span> <span class="o">=</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"relative_thickness_at_wide_point"</span><span class="p">]</span>
+</span><span id="load_boards-143"><a href="#load_boards-143"><span class="linenos">143</span></a>    <span class="n">boards</span> <span class="o">=</span> <span class="n">boards</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">"volume_shape_litres"</span><span class="p">:</span> <span class="s2">"volume_shape_l"</span><span class="p">})</span>
+</span><span id="load_boards-144"><a href="#load_boards-144"><span class="linenos">144</span></a>
+</span><span id="load_boards-145"><a href="#load_boards-145"><span class="linenos">145</span></a>    <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span> <span class="o">=</span> <span class="n">reconstruct_dimensions</span><span class="p">(</span>
+</span><span id="load_boards-146"><a href="#load_boards-146"><span class="linenos">146</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"volume_shape_l"</span><span class="p">],</span>
+</span><span id="load_boards-147"><a href="#load_boards-147"><span class="linenos">147</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"length_over_width"</span><span class="p">],</span>
+</span><span id="load_boards-148"><a href="#load_boards-148"><span class="linenos">148</span></a>        <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_over_length"</span><span class="p">],</span>
+</span><span id="load_boards-149"><a href="#load_boards-149"><span class="linenos">149</span></a>    <span class="p">)</span>
+</span><span id="load_boards-150"><a href="#load_boards-150"><span class="linenos">150</span></a>    <span class="n">boards</span><span class="p">[</span><span class="s2">"length_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"width_m"</span><span class="p">],</span> <span class="n">boards</span><span class="p">[</span><span class="s2">"thickness_m"</span><span class="p">]</span> <span class="o">=</span> <span class="n">length</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">thickness</span>
+</span><span id="load_boards-151"><a href="#load_boards-151"><span class="linenos">151</span></a>
+</span><span id="load_boards-152"><a href="#load_boards-152"><span class="linenos">152</span></a>    <span class="k">return</span> <span class="n">boards</span><span class="p">[[</span>
+</span><span id="load_boards-153"><a href="#load_boards-153"><span class="linenos">153</span></a>        <span class="s2">"board"</span><span class="p">,</span> <span class="s2">"volume_shape_l"</span><span class="p">,</span> <span class="s2">"length_over_width"</span><span class="p">,</span> <span class="s2">"thickness_over_length"</span><span class="p">,</span>
+</span><span id="load_boards-154"><a href="#load_boards-154"><span class="linenos">154</span></a>        <span class="s2">"length_m"</span><span class="p">,</span> <span class="s2">"width_m"</span><span class="p">,</span> <span class="s2">"thickness_m"</span><span class="p">,</span>
+</span><span id="load_boards-155"><a href="#load_boards-155"><span class="linenos">155</span></a>    <span class="p">]]</span>
 </span></pre></div>
 
 
@@ -631,28 +643,28 @@ because its <code>.fynbs</code> content changed after the trust manifest was bui
 
     </div>
     <a class="headerlink" href="#load_operating_points"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="load_operating_points-156"><a href="#load_operating_points-156"><span class="linenos">156</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="load_operating_points-157"><a href="#load_operating_points-157"><span class="linenos">157</span></a><span class="w">    </span><span class="sd">"""Read the corpus-level ``operating_points.csv``.</span>
-</span><span id="load_operating_points-158"><a href="#load_operating_points-158"><span class="linenos">158</span></a>
-</span><span id="load_operating_points-159"><a href="#load_operating_points-159"><span class="linenos">159</span></a><span class="sd">    Parameters</span>
-</span><span id="load_operating_points-160"><a href="#load_operating_points-160"><span class="linenos">160</span></a><span class="sd">    ----------</span>
-</span><span id="load_operating_points-161"><a href="#load_operating_points-161"><span class="linenos">161</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
-</span><span id="load_operating_points-162"><a href="#load_operating_points-162"><span class="linenos">162</span></a><span class="sd">        Root of the extracted corpus.</span>
-</span><span id="load_operating_points-163"><a href="#load_operating_points-163"><span class="linenos">163</span></a>
-</span><span id="load_operating_points-164"><a href="#load_operating_points-164"><span class="linenos">164</span></a><span class="sd">    Returns</span>
-</span><span id="load_operating_points-165"><a href="#load_operating_points-165"><span class="linenos">165</span></a><span class="sd">    -------</span>
-</span><span id="load_operating_points-166"><a href="#load_operating_points-166"><span class="linenos">166</span></a><span class="sd">    pandas.DataFrame</span>
-</span><span id="load_operating_points-167"><a href="#load_operating_points-167"><span class="linenos">167</span></a><span class="sd">        720 rows x 22 columns as extracted; nothing is added or renamed here.</span>
-</span><span id="load_operating_points-168"><a href="#load_operating_points-168"><span class="linenos">168</span></a>
-</span><span id="load_operating_points-169"><a href="#load_operating_points-169"><span class="linenos">169</span></a><span class="sd">    Raises</span>
-</span><span id="load_operating_points-170"><a href="#load_operating_points-170"><span class="linenos">170</span></a><span class="sd">    ------</span>
-</span><span id="load_operating_points-171"><a href="#load_operating_points-171"><span class="linenos">171</span></a><span class="sd">    FileNotFoundError</span>
-</span><span id="load_operating_points-172"><a href="#load_operating_points-172"><span class="linenos">172</span></a><span class="sd">        If the file is absent.</span>
-</span><span id="load_operating_points-173"><a href="#load_operating_points-173"><span class="linenos">173</span></a><span class="sd">    """</span>
-</span><span id="load_operating_points-174"><a href="#load_operating_points-174"><span class="linenos">174</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="s2">"operating_points.csv"</span>
-</span><span id="load_operating_points-175"><a href="#load_operating_points-175"><span class="linenos">175</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
-</span><span id="load_operating_points-176"><a href="#load_operating_points-176"><span class="linenos">176</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> not found. Run SWD/tools/swd_extract.ps1 first."</span><span class="p">)</span>
-</span><span id="load_operating_points-177"><a href="#load_operating_points-177"><span class="linenos">177</span></a>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="load_operating_points-158"><a href="#load_operating_points-158"><span class="linenos">158</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_operating_points</span><span class="p">(</span><span class="n">data_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">DATA_DIR</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+</span><span id="load_operating_points-159"><a href="#load_operating_points-159"><span class="linenos">159</span></a><span class="w">    </span><span class="sd">"""Read the corpus-level ``operating_points.csv``.</span>
+</span><span id="load_operating_points-160"><a href="#load_operating_points-160"><span class="linenos">160</span></a>
+</span><span id="load_operating_points-161"><a href="#load_operating_points-161"><span class="linenos">161</span></a><span class="sd">    Parameters</span>
+</span><span id="load_operating_points-162"><a href="#load_operating_points-162"><span class="linenos">162</span></a><span class="sd">    ----------</span>
+</span><span id="load_operating_points-163"><a href="#load_operating_points-163"><span class="linenos">163</span></a><span class="sd">    data_dir : pathlib.Path, optional</span>
+</span><span id="load_operating_points-164"><a href="#load_operating_points-164"><span class="linenos">164</span></a><span class="sd">        Root of the extracted corpus.</span>
+</span><span id="load_operating_points-165"><a href="#load_operating_points-165"><span class="linenos">165</span></a>
+</span><span id="load_operating_points-166"><a href="#load_operating_points-166"><span class="linenos">166</span></a><span class="sd">    Returns</span>
+</span><span id="load_operating_points-167"><a href="#load_operating_points-167"><span class="linenos">167</span></a><span class="sd">    -------</span>
+</span><span id="load_operating_points-168"><a href="#load_operating_points-168"><span class="linenos">168</span></a><span class="sd">    pandas.DataFrame</span>
+</span><span id="load_operating_points-169"><a href="#load_operating_points-169"><span class="linenos">169</span></a><span class="sd">        720 rows x 22 columns as extracted; nothing is added or renamed here.</span>
+</span><span id="load_operating_points-170"><a href="#load_operating_points-170"><span class="linenos">170</span></a>
+</span><span id="load_operating_points-171"><a href="#load_operating_points-171"><span class="linenos">171</span></a><span class="sd">    Raises</span>
+</span><span id="load_operating_points-172"><a href="#load_operating_points-172"><span class="linenos">172</span></a><span class="sd">    ------</span>
+</span><span id="load_operating_points-173"><a href="#load_operating_points-173"><span class="linenos">173</span></a><span class="sd">    FileNotFoundError</span>
+</span><span id="load_operating_points-174"><a href="#load_operating_points-174"><span class="linenos">174</span></a><span class="sd">        If the file is absent.</span>
+</span><span id="load_operating_points-175"><a href="#load_operating_points-175"><span class="linenos">175</span></a><span class="sd">    """</span>
+</span><span id="load_operating_points-176"><a href="#load_operating_points-176"><span class="linenos">176</span></a>    <span class="n">path</span> <span class="o">=</span> <span class="n">data_dir</span> <span class="o">/</span> <span class="s2">"operating_points.csv"</span>
+</span><span id="load_operating_points-177"><a href="#load_operating_points-177"><span class="linenos">177</span></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+</span><span id="load_operating_points-178"><a href="#load_operating_points-178"><span class="linenos">178</span></a>        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2"> not found. Run SWD/tools/swd_extract.ps1 first."</span><span class="p">)</span>
+</span><span id="load_operating_points-179"><a href="#load_operating_points-179"><span class="linenos">179</span></a>    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 </span></pre></div>
 
 

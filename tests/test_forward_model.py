@@ -120,9 +120,9 @@ def test_run_stops_where_it_leaves_the_data() -> None:
 
 
 # (d) The author's run
-def test_authors_run_completes() -> None:
+def test_authors_run_completes(authors_run) -> None:
     """20 -> 0 deg over 3 s from 6 m/s stays inside the data, and a at t = 0 is E15 written out here."""
-    t, V, a, complete = fm.simulate()
+    t, V, a, complete = authors_run
     assert complete and t[-1] == pytest.approx(3.0) and np.all((V >= 2.0) & (V <= 10.0))
     D = fm.load_forces().D
     assert a[0] == pytest.approx(G*np.sin(np.radians(20.0)) - D(6.0, 20.0, 1.0)/MASS, rel=1e-12)
@@ -243,3 +243,23 @@ def test_theta_rejects_invalid_inputs(t, T, match) -> None:
 def test_simulate_rejects_invalid_inputs(kwargs, match) -> None:
     with pytest.raises(ValueError, match=match):
         fm.simulate(**kwargs)
+
+# The author's decision of 2026-10-28 (AI-USE.md section 4): a regression value for V(3 s) at his tolerance
+V_3S_AUTHORS_RUN = 6.090559208497497  # m/s, simulate() at its defaults, measured 2026-10-28 on main fd53694
+REGRESSION_RTOL = 1e-6
+
+
+def test_authors_run_V_regression(authors_run) -> None:
+    _, V, _, complete = authors_run
+    assert complete and V[-1] == pytest.approx(V_3S_AUTHORS_RUN, rel=REGRESSION_RTOL, abs=0)
+
+
+def test_rk4_solve_first_k1_changes_nothing() -> None:
+    """Handing rk4_solve the first slope (march does, 2026-10-28) gives the same step, bit for bit."""
+    from src.friction.blasius_shooting.shooting_blasius import rk4_solve
+
+    def rhs(t, y):
+        return np.array([-0.3*y[0] + np.sin(t)])
+
+    t = np.array([0.4, 0.45])
+    assert np.array_equal(rk4_solve(rhs, [1.7], t, 0.05), rk4_solve(rhs, [1.7], t, 0.05, first_k1=rhs(0.4, [1.7])))

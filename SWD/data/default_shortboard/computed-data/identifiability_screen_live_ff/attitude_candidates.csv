@@ -1,0 +1,2 @@
+pos_y,pos_x,v_lo,v_hi,width,friction_n_at_lo,fx_planing_n_at_lo,fx_rail_n_at_lo,friction_n_at_hi,fx_planing_n_at_hi,fx_rail_n_at_hi,v_eq_swd_total_k1,v_eq_model_k_planted
+0.0,0.45,2.0,10.0,8.0,4.37838925348345,381.6363,1.77702141,93.76789073086806,47.514250000000004,44.4255333,4.399; 7.216,4.598; 6.672

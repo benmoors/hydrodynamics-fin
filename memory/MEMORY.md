@@ -8,3 +8,5 @@
 - [A comparison needs a real truncation error](numerical-check-needs-truncation-error.md) — RK4 on a constant RHS is exact, not a check; march the singular ODE from x0 instead.
 - [Author picks grids and tolerances](author-picks-grids-and-tolerances.md) — show an x0/h/p_obs exploration table and wait; never tune to reach the expected order.
 - [Authorship: only what the author derived or chose](authorship-only-what-author-derived.md) — anything Claude wrote out, offered as options or framed is recorded as Claude's, even if confirmed.
+- [Test constants are hard-coded](test-constants-hard-coded.md) — reference values go into tests as numbers with provenance, never recomputed from the data under test.
+- [Archive, don't delete, his files](archive-not-delete.md) — removing work from the repo means a hash-checked move to UNIVERSITY\…\Project\, not a deletion.

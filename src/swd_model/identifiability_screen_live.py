@@ -76,6 +76,9 @@ ASSUMPTIONS = (
     "A path-frame model compared against board-frame IMU noise.",
     "mmc1's board, surfer and wave differ from default_shortboard with an 80 kg surfer.",
     "The noise sigma bounds are carried over from the first screen.",
+    "Set (b) at 3 s, the window kept to match the forward model's 3 s run, depends on the optimiser's start point "
+    "and on the V0 <= 10 m/s bound (about 22 % of its fits end on it), so its V0 spread is not the data's alone "
+    "(the author's stated limitation, AI-USE.md section 4, 2026-10-28).",
 )
 READINGS = (
     "Tie-break 'median converged pos_x' is the median over the kept rows (the median over positions gives the same pick).",

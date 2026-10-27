@@ -404,6 +404,11 @@ little of it at 13 hulls.
   −22.1 N at (2 m/s, −10°).
 - The jerk cost is not compared with the paper; that comparison is future work. J here is for a
   3 s straight glide with no turns, not a surfed wave, and Radicality is not computed.
+- The screens' set (b), which fits k and V0 together, is taken at 3 s to match the forward model's
+  3 s run. At 3 s its fits depend on the optimiser's starting point and on the V0 ≤ 10 m/s bound:
+  about 22 % of them stop on the bound, so its V0 spread is not what the data alone give. At
+  10.055 s, mmc1's full wave, only 3 % do at the lower noise level, but the forward model cannot
+  run that long at this attitude: held at 0° after its ramp, it leaves the force data at 5.07 s.
 - The surrogate says nothing about other flow speeds. All 720 operating points were computed at
   20.000 m/s, and SWD's turbulent friction scales as `V^1.857`, not `V²`.
 - Nothing about hulls outside 24–131 L, and little about combinations of shape not

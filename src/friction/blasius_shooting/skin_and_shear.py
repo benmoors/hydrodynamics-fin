@@ -3,7 +3,8 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
-from shooting_blasius import ETA_0, ETA_MAX, GUESS2_ddf, GUESS_ddf, STEP_SIZE, F, secant_for_shooting
+from src.friction.blasius_shooting.shooting_blasius import (ETA_0, ETA_MAX, GUESS2_ddf, GUESS_ddf, STEP_SIZE, F,
+                                                            secant_for_shooting)
 
 # Secant precision, in this module only: shooting_blasius keeps TOLERANCE = 1e-6
 PRECISION = 1e-9

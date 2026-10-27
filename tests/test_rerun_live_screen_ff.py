@@ -6,21 +6,14 @@ geometry read from the same CSV; select_held must hold the original run's attitu
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-for folder in (ROOT / "SWD" / "model", ROOT / "friction-function"):
-    if str(folder) not in sys.path:
-        sys.path.insert(0, str(folder))
-
-import friction_force as ff  # noqa: E402
-import identifiability_screen_live as screen  # noqa: E402
-import rerun_live_screen_ff as rerun  # noqa: E402
+from src.friction import friction_force as ff
+from src.friction import rerun_live_screen_ff as rerun
+from src.swd_model import identifiability_screen_live as screen
 
 
 def test_only_friction_at_the_held_attitude_changes() -> None:

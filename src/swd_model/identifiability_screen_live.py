@@ -21,7 +21,7 @@ Both are provisional, pending the author's review. Nothing here gives a pass/fai
 
 Run
 ---
-    python SWD/model/identifiability_screen_live.py
+    python -m src.swd_model.identifiability_screen_live        # from the repository root
 """
 
 from __future__ import annotations
@@ -37,8 +37,7 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import PchipInterpolator, PPoly
 from scipy.optimize import brentq, least_squares
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import identifiability_screen as ids  # noqa: E402  (mmc1 parser, sample times, metrics, palette)
+from src.swd_model import identifiability_screen as ids  # mmc1 parser, sample times, metrics, palette
 
 # The author's settings. Do not change them without asking.
 PLANTED = 1.10
@@ -50,7 +49,8 @@ G = ids.tr.G  # the constant only (9.81, as in the first screen); trajectory's m
 WEIGHT_N = 802.21  # the live solver's weight plateau, SWD/data/live_solver/README.md
 MASS_KG = WEIGHT_N / G
 
-SOLVER_CSV = Path(__file__).resolve().parents[1] / "data" / "live_solver" / "default_shortboard" / "converged" / "solver_points.csv"
+SOLVER_CSV = (Path(__file__).resolve().parents[2] / "SWD" / "data" / "live_solver" / "default_shortboard" / "converged"
+              / "solver_points.csv")
 FIRST_DIR = ids.OUT_DIR  # the first screen's outputs: read for sigma and for comparison, never written
 OUT_DIR = ids.tr.BOARD_DIR / "computed-data" / "identifiability_screen_live"
 

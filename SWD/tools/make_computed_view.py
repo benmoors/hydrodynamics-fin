@@ -60,7 +60,7 @@ def build(board_dir: Path) -> Path:
     elif dst.exists():
         print(f"  moved   trajectory.csv (already in place)")
     else:
-        print("  WARNING trajectory.csv not found - run SWD/model/trajectory.py")
+        print("  WARNING trajectory.csv not found - run python -m src.swd_model.trajectory")
 
     for name in COPIES:
         s = board_dir / name

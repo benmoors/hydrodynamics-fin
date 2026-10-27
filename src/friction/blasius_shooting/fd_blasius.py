@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.integrate import cumulative_trapezoid
 
-from shooting_blasius import ETA_ARRAY, FINAL_df, INITIAL_df, INITIAL_f
+from src.friction.blasius_shooting.shooting_blasius import ETA_ARRAY, FINAL_df, INITIAL_df, INITIAL_f
 
 # Grid: the RK4 grid itself, so h is STEP_SIZE and eta_max is where RK4 applies f'(eta_max) = 1
 N = len(ETA_ARRAY) - 1

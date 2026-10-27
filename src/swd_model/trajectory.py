@@ -18,14 +18,14 @@ That last point is the honest limit of this module. SWD supplies the force
 speed, so any ``V`` dependence here is a modelling choice rather than a measurement.
 
 **Superseded (2026-10-27).** The board's speed history is now computed by
-``forward-model/forward_model.py``. That module uses the live solver's forces at
+``src/forward_model/forward_model.py``. That module uses the live solver's forces at
 one attitude, slope-matched, together with the author's friction law F_f. This
 module is kept as it was. Its summed polar (``AI-USE.md`` section 5, E133) is not
 fixed, so its forces, Board-Jerk and Radicality are still inflated.
 
 Run
 ---
-    python SWD/model/trajectory.py            # writes computed-data/trajectory.csv, self-checks
+    python -m src.swd_model.trajectory        # from the repo root; writes computed-data/trajectory.csv, self-checks
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ from scipy.integrate import cumulative_trapezoid, simpson
 from scipy.optimize import brentq
 
 G = 9.81
-BOARD_DIR = Path(__file__).resolve().parents[1] / "data" / "default_shortboard"
+BOARD_DIR = Path(__file__).resolve().parents[2] / "SWD" / "data" / "default_shortboard"
 
 # Force scaling off the scan's reference speed.
 #

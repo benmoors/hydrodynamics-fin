@@ -13,7 +13,7 @@ from it and deliver ML-ready CSVs. Plan: `~/.claude/plans/could-you-do-some-purr
 | 6 | Regression: new `elements.csv` == existing 22 cols on 467 rows | ✅ done — max\|diff\| = 0 on all 14 |
 | 7 | `alpha` derived vs `list_incidences_deg` stored | ✅ done — they differ; see finding 8 |
 | 8 | [`DATA-DICTIONARY.md`](DATA-DICTIONARY.md), generated from the data | ✅ done — 18.9 KB, 54+ columns |
-| 9 | Trajectory: equilibrium + `Vt(t)` at 100 Hz → `trajectory.csv` | ✅ done — `SWD/model/trajectory.py` |
+| 9 | Trajectory: equilibrium + `Vt(t)` at 100 Hz → `trajectory.csv` | ✅ done — `src/swd_model/trajectory.py` |
 | 10 | Bounded decompile: water density literal, friction correlation | ✅ done — both recovered, see findings 10–11 |
 | 11 | **SQA loop on the `.ps1` files that need it** | ✅ **done** — see verdict progression below |
 | 12 | Gitignore `geometry_contact.csv`; correct stale docs | ✅ done 2026-09-01 — 8 documents |

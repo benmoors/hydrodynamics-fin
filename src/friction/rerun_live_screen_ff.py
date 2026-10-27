@@ -1,6 +1,6 @@
 """Gate B rerun: the live-solver feasibility screen with F_f(V) in place of SWD's friction_n.
 
-FEASIBILITY SCREEN ONLY, like the screen it re-runs (SWD/model/identifiability_screen_live.py); nothing here is the
+FEASIBILITY SCREEN ONLY, like the screen it re-runs (src/swd_model/identifiability_screen_live.py); nothing here is the
 project's forward model. The screen is imported unchanged and run end to end, with three of its module-level names
 replaced before main() looks them up:
 
@@ -22,21 +22,15 @@ Reading the outputs: three of them mix F_f with SWD-only quantities.
 
 Run
 ---
-    python friction-function/rerun_live_screen_ff.py
+    python -m src.friction.rerun_live_screen_ff        # from the repository root
 """
 
 import sys
-from pathlib import Path
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
-for folder in (ROOT / "SWD" / "model", Path(__file__).resolve().parent):
-    if str(folder) not in sys.path:
-        sys.path.insert(0, str(folder))
-
-import friction_force as ff  # noqa: E402
-import identifiability_screen_live as screen  # noqa: E402
+from src.friction import friction_force as ff
+from src.swd_model import identifiability_screen_live as screen
 
 ORIGINAL_DIR = screen.OUT_DIR
 OUT_DIR = ORIGINAL_DIR.with_name("identifiability_screen_live_ff")

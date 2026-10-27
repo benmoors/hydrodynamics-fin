@@ -32,8 +32,8 @@ both of his sinusoid results need sin(omega T) = 0. With D_a, J_sinusoidal = (n 
 
 Usage
 -----
-    >>> import forward_model as fm
-    >>> import board_jerk as bj
+    >>> from src.forward_model import board_jerk as bj
+    >>> from src.forward_model import forward_model as fm
     >>> t, V, a, complete = fm.simulate()      # the author's run: 20 -> 0 deg over 3 s from 6 m/s, h = 0.001 s
     >>> bj.jerk_cost(t, a, complete)           # J, dimensionless
     >>> bj.displacement(t, a)                  # D, m
@@ -42,7 +42,7 @@ Usage
 import numpy as np
 from scipy.integrate import cumulative_simpson, simpson
 
-import forward_model as fm
+from src.forward_model import forward_model as fm
 
 # Limit: one axis, the acceleration along the face. No lateral or normal acceleration, no turns, no pitch.
 # Limit: D is Eq 7 taken literally (D_a): it leaves out V0 T. On the author's run D_a = 2.657 m and J = 64.58; the

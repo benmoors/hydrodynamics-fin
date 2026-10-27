@@ -3,8 +3,9 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
-from shooting_blasius import (ETA_ARRAY, GUESS2_ddf, GUESS_ddf, INITIAL_df, INITIAL_f, STEP_SIZE, F,
-                              blasius_rhs, rk4_solve, secant_for_shooting, white_df, white_eta)
+from src.friction.blasius_shooting.shooting_blasius import (ETA_ARRAY, GUESS2_ddf, GUESS_ddf, INITIAL_df, INITIAL_f,
+                                                            STEP_SIZE, F, blasius_rhs, rk4_solve, secant_for_shooting,
+                                                            white_df, white_eta)
 
 # The 99 % edge: u/U = f' = 0.99
 EDGE = 0.99

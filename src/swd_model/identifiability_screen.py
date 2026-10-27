@@ -16,8 +16,8 @@ and writes them to ``SWD/data/default_shortboard/computed-data/identifiability_s
 
 Run
 ---
-    python SWD/model/identifiability_screen.py               # stops before a Monte Carlo over 30 min
-    python SWD/model/identifiability_screen.py --allow-long  # runs it regardless
+    python -m src.swd_model.identifiability_screen               # stops before a Monte Carlo over 30 min
+    python -m src.swd_model.identifiability_screen --allow-long  # runs it regardless
 """
 
 from __future__ import annotations
@@ -33,8 +33,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import least_squares
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import trajectory as tr  # noqa: E402  (sibling module, importable as a script and under pytest)
+from src.swd_model import trajectory as tr
 
 # The author's settings (AI-USE.md section 4). Do not change them without asking.
 PLANTED = 1.10  # friction multiplier behind the "measured" data: friction 10 % above SWD's
@@ -42,7 +41,7 @@ FRICTION_SHIFT = 0.10
 V0_SHIFT = 0.20
 SLOPE_DEG = 10.0
 
-MMC1 = Path(__file__).resolve().parents[1] / "data" / "paper-supplementary" / "mmc1.zip"
+MMC1 = Path(__file__).resolve().parents[2] / "SWD" / "data" / "paper-supplementary" / "mmc1.zip"
 MMC1_COLUMNS = ["t_ms", "sg1", "sg2", "sg3", "sg4", "sg5",
                 "ax_g", "ay_g", "az_g", "rx", "ry", "rz"]
 OUT_DIR = tr.BOARD_DIR / "computed-data" / "identifiability_screen"

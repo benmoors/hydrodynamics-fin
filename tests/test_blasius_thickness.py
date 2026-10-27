@@ -2,17 +2,11 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-BLASIUS_DIR = Path(__file__).resolve().parents[1] / "friction-function" / "blasius-shooting"
-if str(BLASIUS_DIR) not in sys.path:
-    sys.path.insert(0, str(BLASIUS_DIR))
-
-import blasius_thickness as bt  # noqa: E402
+from src.friction.blasius_shooting import blasius_thickness as bt
 
 # White and Majdalani (2022), Table 4-3 footnote: the 99 % edge in the book's scaling, eta = y sqrt(U/(2 nu x))
 ETA_DELTA_BOOK = 3.471886880405967

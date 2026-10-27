@@ -74,7 +74,7 @@ SWD/tools/phase2/**/*.png
 # --- Computed views ---
 # Everything under a board's computed-data/ folder is produced from the extracted
 # CSVs beside it, by `python SWD/tools/make_computed_view.py` and
-# `python SWD/model/trajectory.py`. The extracted data itself stays tracked.
+# `python -m src.swd_model.trajectory`. The extracted data itself stays tracked.
 # NOTE: default_shortboard's computed-data/ files are already tracked and stay
 # that way by choice, so this rule only keeps NEW computed views out of the tree.
 SWD/data/**/computed-data/

@@ -6,32 +6,27 @@ wetted area is laminar and the rest turbulent:
     F_f = 1/2 rho V^2 A(V) [ (x_tr/L) C_lam(Re_xtr) + (1 - x_tr/L) C_turb(Re_L) ],   Re_xtr = min(Re_L, RE_CRIT)
 
 C_lam is the average laminar coefficient over the run 0 <= x <= x_tr, by default the Blasius avg_C_f from the RK4
-shooting (blasius-shooting/skin_and_shear.py); any law of the same form, such as von-karman/von_karman.avg_C_f, can
+shooting (blasius_shooting/skin_and_shear.py); any law of the same form, such as von_karman/von_karman.avg_C_f, can
 be passed instead. C_turb = 0.031/Re_L^(1/7) is SWD's turbulent closure.
 
 Design of F_f: Benjamin Moors, the author's own (AI-USE.md section 4, 2026-10-27).
 
 Usage
 -----
-    >>> import friction_force as ff
+    >>> from src.friction import friction_force as ff
     >>> A, L = ff.wetted_geometry()                # the live-solver screen's attitude
     >>> ff.F_f([2.0, 8.3], A, L)                   # N, Blasius laminar run
-    >>> import von_karman as vk
+    >>> from src.friction.von_karman import von_karman as vk
     >>> ff.F_f(8.3, A, L, laminar_avg_C_f=vk.avg_C_f)
 """
 
-import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from scipy.interpolate import PchipInterpolator
 
-BLASIUS_DIR = Path(__file__).resolve().parent / "blasius-shooting"
-if str(BLASIUS_DIR) not in sys.path:
-    sys.path.insert(0, str(BLASIUS_DIR))
-
-import skin_and_shear  # noqa: E402
+from src.friction.blasius_shooting import skin_and_shear
 
 # SWD's transition Reynolds number (Module_couche_limite)
 RE_CRIT = 5*10**5
@@ -39,9 +34,9 @@ RE_CRIT = 5*10**5
 RHO = 1025.0
 MU = 0.00107
 
-SOLVER_CSV = (Path(__file__).resolve().parents[1] / "SWD" / "data" / "live_solver" / "default_shortboard" / "converged"
+SOLVER_CSV = (Path(__file__).resolve().parents[2] / "SWD" / "data" / "live_solver" / "default_shortboard" / "converged"
               / "solver_points.csv")
-# The live-solver screen's attitude (SWD/model/identifiability_screen_live.py): slope 0, drift 0
+# The live-solver screen's attitude (src/swd_model/identifiability_screen_live.py): slope 0, drift 0
 POS_Y, POS_X = 0.0, 0.45
 
 # Limit: at a fixed attitude the live solver's wetted area and length are constant in speed (all 1,276 of the

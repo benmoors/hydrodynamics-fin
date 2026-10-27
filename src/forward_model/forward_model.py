@@ -17,34 +17,27 @@ force here. A positive slope is downhill: drag_total_n = F + P + R - W sin(theta
 Derivation of E15 and E16: Benjamin Moors, the author's own (AI-USE.md section 4, 2026-10-27). In his E16 the ramp
 runs from theta_min to theta_max; it is written here from theta_start to theta_end because his ramp descends.
 
-RK4 is the author's rk4_solve (blasius-shooting/shooting_blasius.py, from MMA3001 notebook 7.4), called one step at a
+RK4 is the author's rk4_solve (blasius_shooting/shooting_blasius.py, from MMA3001 notebook 7.4), called one step at a
 time so that a run can stop where V leaves the force data.
 
 Usage
 -----
-    >>> import forward_model as fm
+    >>> from src.forward_model import forward_model as fm
     >>> t, V, a, complete = fm.simulate()          # the author's run: 20 -> 0 deg over 3 s from 6 m/s
     >>> t, V, a, complete = fm.simulate(V0=6.5, k=1.1)
     >>> forces = fm.load_forces()
     >>> forces.D(7.0, 10.0, 1.0)                   # N, at 7 m/s on a 10 deg slope
 """
 
-import sys
 from functools import lru_cache
-from pathlib import Path
 from typing import Callable, NamedTuple
 
 import numpy as np
 import pandas as pd
 from scipy.interpolate import PchipInterpolator
 
-FRICTION_DIR = Path(__file__).resolve().parents[1] / "friction-function"
-for folder in (FRICTION_DIR, FRICTION_DIR / "blasius-shooting"):
-    if str(folder) not in sys.path:
-        sys.path.insert(0, str(folder))
-
-import friction_force as ff  # noqa: E402
-from shooting_blasius import rk4_solve  # noqa: E402
+from src.friction import friction_force as ff
+from src.friction.blasius_shooting.shooting_blasius import rk4_solve
 
 G = 9.81
 # The weight the live solver trimmed lift to (SWD/data/live_solver/README.md); m is the mass that weight implies

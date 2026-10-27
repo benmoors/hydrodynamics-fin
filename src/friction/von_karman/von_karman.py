@@ -11,24 +11,17 @@ d(delta)/dx = nu*BETA/(U*ALPHA*delta), started from the closed form at x0 > 0.
 
 Usage
 -----
-    >>> import von_karman as vk
+    >>> from src.friction.von_karman import von_karman as vk
     >>> nu = 0.00107/1025                          # SWD salt water, m^2/s
     >>> vk.delta(0.1, 2.0, nu)                     # m, at x = 0.1 m and U = 2 m/s
     >>> vk.avg_C_f(2.0*0.5/nu)                     # over L = 0.5 m
     >>> x, d = vk.march_delta(0.01, 0.5, 2.0, nu, 0.49/64)
 """
 
-import sys
-from pathlib import Path
-
 import numpy as np
 
-BLASIUS_DIR = Path(__file__).resolve().parents[1] / "blasius-shooting"
-if str(BLASIUS_DIR) not in sys.path:
-    sys.path.insert(0, str(BLASIUS_DIR))
-
-from shooting_blasius import rk4_solve  # noqa: E402
-from skin_and_shear import RE_MAX, _check  # noqa: E402  (the author's laminar range 0 < Re <= 1e6)
+from src.friction.blasius_shooting.shooting_blasius import rk4_solve
+from src.friction.blasius_shooting.skin_and_shear import RE_MAX, _check  # the author's laminar range 0 < Re <= 1e6
 
 # theta/delta = integral of g(1 - g) from 0 to 1, and the wall slope g'(0), both exact for the quartic
 ALPHA = 379/2835

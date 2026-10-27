@@ -1,4 +1,4 @@
-"""Tests for the jerk cost J, Eq 4-7 (forward-model/board_jerk.py).
+"""Tests for the jerk cost J, Eq 4-7 (src/forward_model/board_jerk.py).
 
 (a) The author's linear case, a = a0 + beta t: J and D against his J_linear and D_a. Every step is exact here
     (np.gradient on a line, Simpson on a cubic), so this checks the plumbing, not convergence.
@@ -14,19 +14,13 @@ Every case, grid and tolerance here is the author's, chosen from the exploration
 
 from __future__ import annotations
 
-import sys
 from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
 import pytest
 
-FORWARD_DIR = Path(__file__).resolve().parents[1] / "forward-model"
-if str(FORWARD_DIR) not in sys.path:
-    sys.path.insert(0, str(FORWARD_DIR))
-
-import board_jerk as bj  # noqa: E402
-import forward_model as fm  # noqa: E402
+from src.forward_model import board_jerk as bj
+from src.forward_model import forward_model as fm
 
 T = 3.0  # s
 H = 0.001  # s

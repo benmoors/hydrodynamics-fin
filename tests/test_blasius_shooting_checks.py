@@ -3,16 +3,11 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 
-BLASIUS_DIR = Path(__file__).resolve().parents[1] / "friction-function" / "blasius-shooting"
-if str(BLASIUS_DIR) not in sys.path:
-    sys.path.insert(0, str(BLASIUS_DIR))
-
-import shooting_blasius as sb  # noqa: E402
+from src.friction.blasius_shooting import shooting_blasius as sb
 
 
 def test_rk4_fourth_order_on_harmonic_oscillator() -> None:
@@ -87,7 +82,7 @@ def test_f_double_prime_zero_settles_under_eta_max_and_step_halving() -> None:
 
 def test_notebook_enforces_table_and_settle_assertions() -> None:
     """rk4_blasius_checks_cc.ipynb asserts the 5-decimal table bound and f''(0) p_obs check."""
-    nb_path = BLASIUS_DIR / "rk4_blasius_checks_cc.ipynb"
+    nb_path = Path(sb.__file__).with_name("rk4_blasius_checks_cc.ipynb")
     nb = json.loads(nb_path.read_text(encoding="utf-8"))
     cells_by_id = {cell.get("id"): "".join(cell.get("source", [])) for cell in nb["cells"]}
 

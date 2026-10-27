@@ -10,7 +10,7 @@ out of a SWD report file. The parent directory holds the extracted data.
 | `field_census.csv` | Statistics over the extracted fields, plus the status label this project assigned each one |
 | `elements_derived.csv` | The computed columns of `elements.csv`, with their keys |
 | `sub_elements_derived.csv` | The computed columns of `sub_elements.csv`, with their keys |
-| `identifiability_screen/` | 100% model output, from `python SWD/model/identifiability_screen.py`. How far a friction-only drag shift moves the trajectory model's acceleration at mmc1's sample times, set against a starting-speed shift and two noise levels, plus Monte Carlo fits of the friction multiplier |
+| `identifiability_screen/` | 100% model output, from `python -m src.swd_model.identifiability_screen`. How far a friction-only drag shift moves the trajectory model's acceleration at mmc1's sample times, set against a starting-speed shift and two noise levels, plus Monte Carlo fits of the friction multiplier |
 
 ## Three things to know
 

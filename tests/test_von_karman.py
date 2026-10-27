@@ -10,21 +10,14 @@
 
 from __future__ import annotations
 
-import sys
 from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
 import pytest
 from scipy.integrate import quad
 
-FRICTION_DIR = Path(__file__).resolve().parents[1] / "friction-function"
-for folder in ("blasius-shooting", "von-karman"):
-    if str(FRICTION_DIR / folder) not in sys.path:
-        sys.path.insert(0, str(FRICTION_DIR / folder))
-
-import skin_and_shear as ss  # noqa: E402
-import von_karman as vk  # noqa: E402
+from src.friction.blasius_shooting import skin_and_shear as ss
+from src.friction.von_karman import von_karman as vk
 
 # The author's derivation, hard-coded here, not imported, so a typo in the module cannot pass against itself
 ALPHA = 379/2835

@@ -1,4 +1,4 @@
-"""Known-answer tests for the identifiability screen (``SWD/model/identifiability_screen.py``).
+"""Known-answer tests for the identifiability screen (``src/swd_model/identifiability_screen.py``).
 
 Each case has an exact answer that does not depend on the physics being right: the shape of
 the published archive, bit-for-bit agreement with ``trajectory.simulate``, zero difference
@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from SWD.model import identifiability_screen as ids
-import trajectory as tr  # put on sys.path by the import above
+from src.swd_model import identifiability_screen as ids
+from src.swd_model import trajectory as tr
 
 
 @pytest.fixture(scope="module")

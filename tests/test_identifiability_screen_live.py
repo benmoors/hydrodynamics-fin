@@ -1,4 +1,4 @@
-"""Known-answer tests for the second identifiability screen (``SWD/model/identifiability_screen_live.py``).
+"""Known-answer tests for the second identifiability screen (``src/swd_model/identifiability_screen_live.py``).
 
 Each has an answer that does not depend on the physics being right: an arithmetic filter, an
 interpolant through its own data, a drag law with a closed-form speed history, and recovery of
@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from SWD.model import identifiability_screen as ids
-from SWD.model import identifiability_screen_live as live
+from src.swd_model import identifiability_screen as ids
+from src.swd_model import identifiability_screen_live as live
 
 
 @pytest.fixture(scope="module")

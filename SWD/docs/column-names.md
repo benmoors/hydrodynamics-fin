@@ -37,7 +37,7 @@ py -3.14 SWD/tools/translate_columns.py --self-test
 ```
 
 > **Point of note:** re-running `extract_board.ps1` writes the French headers again. `src/data.py`,
-> `SWD/model/trajectory.py` and `SWD/tools/make_data_dictionary.py` read the English names, so run
+> `src/swd_model/trajectory.py` and `SWD/tools/make_data_dictionary.py` read the English names, so run
 > `translate_columns.py` before any of them. The extractor itself was deliberately left untouched: it
 > carries a clean SQA verdict.
 

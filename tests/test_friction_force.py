@@ -10,22 +10,15 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
-FRICTION_DIR = Path(__file__).resolve().parents[1] / "friction-function"
-for folder in (FRICTION_DIR, FRICTION_DIR / "von-karman"):
-    if str(folder) not in sys.path:
-        sys.path.insert(0, str(folder))
-
-import friction_force as ff  # noqa: E402
-import von_karman as vk  # noqa: E402
-from src.physics_baseline import friction_force as baseline_friction_force  # noqa: E402
-from tests.test_skin_and_shear import WHITE, error_budget  # noqa: E402
+from src.friction import friction_force as ff
+from src.friction.von_karman import von_karman as vk
+from src.physics_baseline import friction_force as baseline_friction_force
+from tests.test_skin_and_shear import WHITE, error_budget
 
 RHO, MU = 1025.0, 0.00107  # SWD salt water, 20 degC: physics_baseline looks mu up from rho = 1025
 NU = MU/RHO

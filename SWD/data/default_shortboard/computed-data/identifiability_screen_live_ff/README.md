@@ -1,7 +1,7 @@
 # 📘 Gate B rerun: the live-solver screen with F_f(V) as the friction
 
 > **No verdict.** This is the feasibility screen in `../identifiability_screen_live/` with one change: the friction is
-> F_f(V) from `friction-function/friction_force.py`, not SWD's `friction_n`. The attitude (pos_y 0, pos_x 0.45, slope 0,
+> F_f(V) from `src/friction/friction_force.py`, not SWD's `friction_n`. The attitude (pos_y 0, pos_x 0.45, slope 0,
 > drift 0) and the starting speed V0 = 8.3 m/s are held at the original run's values, so friction is the only change.
 >
 > **PLANTED (1.10) and FRICTION_SHIFT (0.10) now scale F_f, not SWD's `friction_n`.**
@@ -18,7 +18,7 @@ C_lam is the Blasius average coefficient from the RK4 shooting, at the laminar r
 part uses SWD's closure. A and L are the live solver's wetted area and length at the held attitude: 0.631094 m² and
 1.530 m, the same at every speed. At this attitude F_f is 0.985–0.989 of SWD's own `friction_n` from 2 to 10 m/s.
 
-The screen file, `SWD/model/identifiability_screen_live.py`, is not edited. `friction-function/rerun_live_screen_ff.py`
+The screen file, `src/swd_model/identifiability_screen_live.py`, is not edited. `src/friction/rerun_live_screen_ff.py`
 imports it and swaps out three of its names before running it. At the held attitude, `friction_n` becomes F_f at the
 same 1 m/s speeds, so the screen's own PCHIP and drag sum work unchanged; the decomposition check runs first, on SWD's
 friction, so the same 158 rows are kept and the same 11 dropped. The attitude and V0 are read from the original run's
@@ -70,7 +70,7 @@ These are the same files as the original. Three of them put F_f beside quantitie
 
 ## 4. Regenerating
 
-    python friction-function/rerun_live_screen_ff.py
+    python -m src.friction.rerun_live_screen_ff
     python -m pytest tests/test_rerun_live_screen_ff.py tests/test_friction_force.py
 
 The script prints every number, the screen's assumptions, and the table of SWD's friction against F_f at the end.

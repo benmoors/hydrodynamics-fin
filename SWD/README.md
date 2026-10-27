@@ -6,6 +6,10 @@ ShaperWaveDynamics (SWD) is a commercial surfboard-hydrodynamics application wit
 API. This component reads its binary project files directly and produces the tabular data the
 "Virtual Surfer" surrogate model is trained on.
 
+> ### 🧩 Point of note
+> Since 2026-10-28 the PowerShell tools this document describes (`*.ps1`, with their Pester tests) are
+> kept locally and are no longer in the public repository. The data they produced, in `SWD/data/`, is.
+
 ---
 
 ### 🎯 What this component does

@@ -51,7 +51,7 @@ m/s² (upper) and 0.0283 m/s² (lower).
 
 ## 3. Regenerating
 
-    python SWD/model/identifiability_screen_live.py              # about 7 minutes
+    python -m src.swd_model.identifiability_screen_live # about 7 minutes
     python -m pytest tests/test_identifiability_screen_live.py
 
 The script prints every number, the assumptions below, and the readings it took where the brief left a choice open.

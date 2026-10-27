@@ -7,20 +7,14 @@ rounding to the measured RK4, eta_max cutoff and secant errors.
 
 from __future__ import annotations
 
-import sys
 from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
 import pytest
 from scipy.integrate import quad
 
-BLASIUS_DIR = Path(__file__).resolve().parents[1] / "friction-function" / "blasius-shooting"
-if str(BLASIUS_DIR) not in sys.path:
-    sys.path.insert(0, str(BLASIUS_DIR))
-
-import shooting_blasius as sb  # noqa: E402
-import skin_and_shear as ss  # noqa: E402
+from src.friction.blasius_shooting import shooting_blasius as sb
+from src.friction.blasius_shooting import skin_and_shear as ss
 
 # White and Majdalani (2022) Eq. 4-64, p.170: f''(0) in the book's scaling, eta = y sqrt(U/(2 nu x)).
 # Hard-coded here, not imported, so a typo in the module cannot pass against itself.

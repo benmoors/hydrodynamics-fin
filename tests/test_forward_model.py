@@ -1,4 +1,4 @@
-"""Tests for the forward model of V(t), E15-E19 (forward-model/forward_model.py).
+"""Tests for the forward model of V(t), E15-E19 (src/forward_model/forward_model.py).
 
 (a) E19, the author's closed form for m dV/dt = -c V^n with n = 2, against march: the error at h/4 is within the
     h/2 -> h/4 change, and the observed order p_obs on h, h/2, h/4 is 4 to within 0.1.
@@ -13,20 +13,14 @@ Every grid and tolerance here is the author's, chosen from the step-2 tables (AI
 
 from __future__ import annotations
 
-import sys
 from functools import lru_cache
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 from scipy.optimize import brentq
 
-FORWARD_DIR = Path(__file__).resolve().parents[1] / "forward-model"
-if str(FORWARD_DIR) not in sys.path:
-    sys.path.insert(0, str(FORWARD_DIR))
-
-import forward_model as fm  # noqa: E402
+from src.forward_model import forward_model as fm
 
 # Hard-coded here, not imported, so a typo in the module cannot pass against itself
 G = 9.81

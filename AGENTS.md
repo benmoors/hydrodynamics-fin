@@ -45,10 +45,11 @@ This is 25% of a unit mark, and the student answers for every line in an intervi
 
 ## Project in five lines
 
-MMA3001 individual project (25% of the unit): the **"Virtual Surfer"**, an ML surrogate trained on
-ShaperWaveDynamics (SWD) hydrodynamic output and queried at 100 Hz along a trajectory to compute
-**Board-Jerk (BJ)** and **Radicality (Ra = θz² / (t1 − t0), Eq 11)**. `SWD/` is data acquisition
-only (PowerShell). `src/` + `tests/` are the Python ML pipeline.
+MMA3001 individual project (25% of the unit): the **"Virtual Surfer"**. The friction force F_f from
+boundary-layer theory, a forward model of the board's speed V(t) down a wave face from ShaperWaveDynamics
+(SWD) forces, and the jerk cost J (Charles et al. Eq 4–7); an earlier ML surrogate of SWD's forces.
+`SWD/` holds the acquired data (its PowerShell is local only, gitignored). `src/` (packages `friction`,
+`forward_model`, `swd_model`, plus the surrogate modules) and `tests/` are the Python.
 
 ## Commands (Windows; run from the repo root)
 
@@ -56,7 +57,8 @@ only (PowerShell). `src/` + `tests/` are the Python ML pipeline.
 |---|---|
 | Python tests (guard) | `py -3.14 -m pytest tests -q` (config in `pyproject.toml`) |
 | One test file | `py -3.14 -m pytest tests/test_splits.py -q` |
-| HTML docs build | `py -3.14 -m pdoc --output-directory %TEMP%\hfin-docs --docformat numpy src` |
+| HTML docs build | `py -3.14 -m pdoc --math --output-directory %TEMP%\hfin-docs --docformat numpy src` |
+| Run a module | `py -3.14 -m src.forward_model.board_jerk` (a package: never by file path) |
 | PowerShell/shell static lint (parses, never runs) | `py -3.14 %USERPROFILE%\.claude\tools\lint_probe.py --files <paths>` |
 | Pester | `Invoke-Pester <file>.Tests.ps1` (pwsh 7; Pester 6 syntax) |
 

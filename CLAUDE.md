@@ -152,7 +152,12 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
     |- CLAUDE.md                    this file
     |- GEMINI.md                    Antigravity / Gemini CLI root config & SQA protocol
     |- AI-USE.md                    the AI-use record -- section 3
-    |- memory/                      Claude Code auto memory, committed and shared
+    |- memory/                      Claude Code auto memory (local, gitignored since 2026-10-28)
+    |- src/                         all project code, as packages: friction/ (blasius_shooting/, von_karman/),
+    |                               forward_model/, swd_model/, plus the earlier surrogate modules; notebooks
+    |                               sit beside their modules; run with `python -m src.<pkg>.<module>`
+    |- tests/                       pytest
+    |- docs/                        pdoc HTML (absolute paths scrubbed before commit)
     |- .claude/
     |   |- rules/                   path-scoped rules moved out of this file (sections 3.1-3.2, 5)
     |   |- skills/obsidian-memory/  link-graph work through the Obsidian CLI and MCP
@@ -165,21 +170,22 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
     |                               SCHEMA.md full schema, rubric.base; searched by qmd (local MCP)
     |- SWD/                         data acquisition
     |   |- TODO.md                  live progress checklist
-    |   |- tools/swd_extract.ps1    SWD binary -> CSV
+    |   |- tools/swd_extract.ps1    SWD binary -> CSV (every *.ps1 is local, gitignored since 2026-10-28)
     |   |- data/                    extracted CSVs
     |   \- docs/
     |       |- plans/              stage plans -- see section 9
     |       \- worklist/           one note per worklist item + worklist.base
-    |- fin_sensor_pcb_overview.md   downstream hardware
-    |- surfing-performance-io.md    BJ / Ra specifications
-    \- mma3001-project-spec.md      project + syllabus reference
+    |- TODO.md                      report worklist and equation sources owed (local, gitignored)
+    |- fin_sensor_pcb_overview.md   downstream hardware (local, gitignored)
+    |- surfing-performance-io.md    BJ / Ra specifications (local, gitignored)
+    \- mma3001-project-spec.md      project + syllabus reference (local, gitignored)
 
 **Known defect in the supplied specs:** `surfing-performance-io.md` and `mma3001-project-spec.md`
 disagree on the trajectory length `D` in the Board-Jerk normalisation. The paper (Charles et al. 2026,
 *Results in Engineering* 29:108868, DOI 10.1016/j.rineng.2025.108868) **Eq 7** defines `D` as the
 double integral of acceleration — net displacement. `mma3001-project-spec.md` Part 4 section 2 uses
 the arc length (integral of V(t) dt), a different quantity, and it enters `J` squared through
-`C = T^5/D^2`. **Follow the paper** (`1-s2.0-S2590123025049114-main.pdf`, in the repo). Confirmed
+`C = T^5/D^2`. **Follow the paper** (`1-s2.0-S2590123025049114-main.pdf`, local, gitignored). Confirmed
 correct in both docs: Eq 4, 5, 6, 10, and Eq 11 (`Ra = theta_z^2 / (t1 - t0)`).
 
 ## 8. Working style
@@ -265,7 +271,7 @@ and `wiki/syntheses/Rubric Criteria Map.md`.
   and auto-loads; `wiki/SCHEMA.md` is read only for ingest, lint or schema changes.
 - **Ingest toolkit:** `%LOCALAPPDATA%\uni-sync\mma3001-ingest\` (registry, writer spec, digests,
   `merge_contrib.py`, `wiki_lint.py`, `RESUME.md`).
-- **Memory:** [memory/](memory/MEMORY.md), committed and shared. Memory holds how to work with
+- **Memory:** [memory/](memory/MEMORY.md), local and gitignored since 2026-10-28. Memory holds how to work with
   Benjamin; the wiki holds knowledge. Never duplicate across the two.
 
 **Query protocol (token-lean).**

@@ -1,37 +1,56 @@
-# 📘 Virtual Surfer — a board-geometry surrogate for SWD
+# 📘 Virtual Surfer — a surfboard's speed and jerk cost from SWD's forces
 
 MMA3001 Numerical Methods and Machine Learning — individual project.
 
-A physics-based hydrodynamic solver (ShaperWaveDynamics, "SWD") takes **12 to 31 minutes**
-to evaluate one surfboard across 11 drift angles. A shaper comparing hulls cannot wait that
-long per design. This repository trains a machine-learning surrogate on SWD's own output so
-the same forces can be predicted in microseconds, and reports honestly on where that
-surrogate works and where it does not.
+A physics-based hydrodynamic solver (ShaperWaveDynamics, "SWD") gives the forces on a surfboard at a
+fixed attitude, but no trajectory. It never says how fast a board travels down a wave face, or how
+smoothly. This repository supplies that missing step. It:
+
+- builds the friction drag on the board's bottom from boundary-layer theory;
+- adds SWD's own planing and rail drag from its live solver;
+- integrates the board's speed along the face with RK4;
+- scores the run with the jerk cost of Charles et al. (2026), a smoothness measure from their
+  surfing-performance study.
+
+An earlier stage of the project, a machine-learning surrogate trained on SWD's output, is kept and
+reported too, including where it fails.
+
+The equations the code implements are the author's derivations. Each is recorded, with the choices
+behind it, in [`AI-USE.md`](AI-USE.md) § 4.
 
 ---
 
 ## 📂 1. What is in here
 
     HYDRODYNAMICS-FIN/
-    ├── src/                     the surrogate (this project's own work)
-    │   ├── geometry.py          recover board dimensions from SWD's binary fields
-    │   ├── data.py              build the training table; feature/target contract
-    │   ├── splits.py            board- and family-grouped splitting
-    │   ├── models.py            SVR, decision tree, 5-NN, mean floor
-    │   ├── physics_baseline.py  SWD's own friction law, as a comparator
-    │   ├── evaluate.py          leave-one-board-out, per-fold and pooled
-    │   └── predict.py           query API with envelope checking
-    ├── tests/                   92 pytest tests
-    ├── docs/                    pdoc HTML, generated
-    ├── SWD/                     DATA ACQUISITION ONLY — see section 6
-    ├── AI-USE.md                the AI-use record — see section 8
-    ├── GEMINI.md                Antigravity / Gemini CLI root config & SQA protocol
-    ├── tools/extract_prompts.py regenerates the prompt appendix in AI-USE.md
-    └── TODO.md                  live worklist
+    ├── src/
+    │   ├── friction/                 friction drag F_f(V) on the board bottom
+    │   │   ├── blasius_shooting/     Blasius by RK4 shooting, a central-difference check,
+    │   │   │                         the layer thicknesses and the skin friction
+    │   │   ├── von_karman/           the Kármán momentum integral, Majdalani–Xuan quartic
+    │   │   ├── friction_force.py     F_f(V) on the live solver's wetted area and length
+    │   │   └── rerun_live_screen_ff.py   Gate B: the second screen re-run with F_f
+    │   ├── forward_model/
+    │   │   ├── forward_model.py      V(t) down the face: the author's E15 and E16, by RK4
+    │   │   └── board_jerk.py         the jerk cost J, Charles et al. Eq 4–7
+    │   ├── swd_model/                two identifiability screens, and the superseded trajectory model
+    │   └── geometry.py, data.py, splits.py, models.py, physics_baseline.py,
+    │       evaluate.py, predict.py, profiling.py      the earlier surrogate
+    ├── tests/                        pytest: 318 pass, 1 expected failure
+    ├── docs/                         pdoc HTML, generated
+    ├── SWD/                          the data acquired from SWD, and its documentation (section 6)
+    ├── tools/                        regenerates the prompt appendix in AI-USE.md
+    ├── AI-USE.md                     the AI-use record (section 8)
+    ├── AGENTS.md, GEMINI.md          instructions for the agy and Devin reviewers
+    └── requirements.txt, pyproject.toml
 
-**`src/` and `SWD/` are separate on purpose.** `SWD/` extracts data out of a licensed
-third-party application and is frozen; `src/` is the modelling. Nothing in `src/` writes
-into `SWD/data/`.
+Every folder under `src/` is a Python package, so modules import each other as
+`from src.friction import friction_force`. The Jupyter notebooks sit beside the modules they
+exercise, in `src/friction/blasius_shooting/` and `src/friction/von_karman/`.
+
+**`src/` and `SWD/` are separate on purpose.** `SWD/` holds what was taken out of a licensed
+third-party application. `src/` is the modelling. Code in `src/` writes only into the `computed-data/`
+folders under `SWD/data/`, and never into the extracted CSVs.
 
 ---
 
@@ -46,8 +65,9 @@ pip install -r requirements.txt
 | Package | Why |
 |---|---|
 | numpy, pandas | array and table handling |
-| scipy | integration and root-finding in the trajectory model |
-| scikit-learn ≥ 1.9 | SVR, decision tree, k-NN, pipelines, metrics |
+| scipy | PCHIP interpolation, Simpson's rule, root-finding, least squares |
+| scikit-learn ≥ 1.9 | SVR, decision tree, k-NN, pipelines, metrics (the surrogate) |
+| matplotlib | the screens' figures and the notebooks' plots |
 | pytest | the test suite |
 | pdoc | HTML API documentation |
 
@@ -56,14 +76,15 @@ pip install -r requirements.txt
 > **scikit-learn 1.9.0 or later** — earlier releases have no `cp314` wheel and `pip` will
 > fall back to a source build that requires a C++ toolchain.
 
-The data acquisition half additionally needs **Windows PowerShell 5.1** (`powershell.exe`,
-not `pwsh` 7) and a licensed SWD installation. Neither is needed to run the model.
+Run everything from the repository root. The modules are a package, so a script runs as
+`python -m src.<package>.<module>`, not by its file path.
 
 ### 🔹 Optional: Obsidian and Claude Code
 
 The repository root is also an Obsidian vault. Project notes link to each other with relative
-Markdown links, the worklist is a Base (`SWD/docs/worklist/worklist.base`), and Claude Code's
-memory for this project lives in `memory/`. None of this is needed to run the model.
+Markdown links, and the worklist is a Base (`SWD/docs/worklist/worklist.base`). Claude Code's memory
+for this project lives in `memory/`, which is local and gitignored. None of this is needed to run the
+code.
 
 1. Clone the repository.
 2. Install Obsidian **1.12.7 or newer from the installer**. The in-app updater does not create
@@ -81,6 +102,7 @@ memory for this project lives in `memory/`. None of this is needed to run the mo
 6. Point Claude Code's memory at your own clone. Run this from the repository root:
 
    ```powershell
+   New-Item -ItemType Directory -Force memory | Out-Null
    [IO.File]::WriteAllText("$PWD\.claude\settings.local.json", '{"autoMemoryDirectory": "' + ((Resolve-Path memory).Path -replace '\\','/') + '/"}')
    ```
 
@@ -104,15 +126,50 @@ Every number quoted in section 5 comes from these commands.
 python -m pytest tests/ -q
 ```
 
-### 🔹 Build the training table and inspect the features
+### 🔹 The forward model and the jerk cost
+
+```bash
+python -m src.forward_model.forward_model    # the author's run: t, theta, V and a every 0.5 s
+python -m src.forward_model.board_jerk       # T, D, C and J for the same run
+```
+
+```python
+from src.forward_model import forward_model as fm, board_jerk as bj
+
+t, V, a, complete = fm.simulate()            # 20 -> 0 deg over 3 s from 6 m/s, h = 0.001 s
+bj.jerk_cost(t, a, complete)                 # J, dimensionless
+fm.simulate(V0=6.5, k=1.1)                   # another start speed, friction scaled by 1.1
+```
+
+### 🔹 The friction force
+
+```python
+from src.friction import friction_force as ff
+from src.friction.von_karman import von_karman as vk
+
+A, L = ff.wetted_geometry()                  # the live solver's wetted area and length, pos_x 0.45
+ff.F_f([2.0, 8.3], A, L)                     # N, Blasius laminar run
+ff.F_f(8.3, A, L, laminar_avg_C_f=vk.avg_C_f)   # the Kármán laminar run instead
+```
+
+The Blasius and Kármán checks are notebooks, opened from their own folders:
+`src/friction/blasius_shooting/rk4_blasius_checks_cc.ipynb`, `fd_vs_shooting_cc.ipynb`,
+`shooting_for_blasius.ipynb` and `src/friction/von_karman/vonkarman.ipynb`.
+
+### 🔹 The screens
+
+```bash
+python -m src.swd_model.identifiability_screen_live    # screen 2, about 7 minutes
+python -m src.friction.rerun_live_screen_ff            # Gate B: screen 2 with F_f
+```
+
+### 🔹 The earlier surrogate
 
 ```python
 from src.data import build_training_table, FEATURES
 table = build_training_table()          # 389 rows, 13 boards, drift <= 20 deg
 print(table[FEATURES].corr().round(3))
 ```
-
-### 🔹 Reproduce the evaluation
 
 ```python
 from src.data import build_training_table
@@ -123,8 +180,6 @@ print(evaluate_all(table))                                   # every model x tar
 print(summarise(fold_scores(table, "drag_friction_n", "decision_tree")))
 print(pooled_score(table, "drag_friction_n", "knn5"))        # the +0.52 reconciliation
 ```
-
-### 🔹 Query the surrogate
 
 ```python
 import pandas as pd
@@ -141,12 +196,71 @@ model.predict(pd.DataFrame([{
 ### 🔹 Regenerate the HTML documentation
 
 ```bash
-python -m pdoc --output-directory docs --docformat numpy src
+python -m pdoc --math --docformat numpy -o docs src
 ```
+
+pdoc renders default arguments, which writes the absolute path of your checkout into the HTML. The
+committed `docs/` has those paths cut back to repo-relative ones (`SWD/data/…`).
 
 ---
 
 ## 📂 4. Inputs and outputs
+
+### 🔹 The forward model, `simulate()`
+
+$m\,dV/dt = m g \sin\theta(t) - D(V, \theta)$, with $D = k F_f(V) + P(V, \theta) + R(V, \theta)$. P and R are
+SWD's planing and rail drag at the slope θ, from the live solver at pos_y 0, pos_x 0.45, drift 0.
+m = 802.21 N / 9.81 m/s².
+
+| Input | Type | Unit | Range (default) | Domain |
+|---|---|---|---|---|
+| `V0` | float | m/s | 2–10 (6) | inside the force data |
+| `k` | float | — | ≥ 0 (1) | multiplies F_f |
+| `theta_start`, `theta_end` | float | degrees | −10 to 20 (20, 0) | inside the force data; positive is downhill |
+| `T` | float | s | > 0 (3) | ramp and run length |
+| `h` | float | s | > 0 (0.001) | T/h a whole number of steps |
+
+| Output | Type | Unit | Meaning |
+|---|---|---|---|
+| `t` | float array | s | 0, h, …, up to T |
+| `V` | float array | m/s | speed along the face at each node |
+| `a` | float array | m/s² | dV/dt from the equation of motion at each node, not a finite difference |
+| `complete` | bool | — | False if the run stopped because V left 2–10 m/s |
+
+**Invalid input handling.** A non-finite, non-scalar or out-of-range input raises `ValueError`
+naming the input, as does a step that does not divide T. Nothing is extrapolated: a run whose
+speed leaves the force data stops at the last node inside it and returns `complete = False`.
+
+### 🔹 The jerk cost, `jerk_cost(t, a, complete)`
+
+$j = da/dt$, $J = \int_0^T C\,j^2/2\,dt$, $C = T^5/D^2$, with D the double integral of a (Charles et al.
+2026, Eq 4–7, p.6). Along one axis, $D = |\int_0^T\!\int_0^t a\,ds\,dt|$, taken literally, with no
+starting speed.
+
+| | Type | Unit | Range | Domain |
+|---|---|---|---|---|
+| `t` (input) | float array | s | T = t[−1] − t[0] > 0 | strictly increasing, ≥ 3 samples, an even number of intervals |
+| `a` (input) | float array | m/s² | finite | numeric, the same length as t |
+| `complete` (input) | bool | — | must be True | the whole run, from `simulate()` |
+| `J` (output) | float | dimensionless | ≥ 0 | |
+| `D`, from `displacement` (output) | float | m | ≥ 0 | `jerk_cost` raises at D = 0, because C is undefined |
+
+Each of those conditions, broken, raises `ValueError` with its own message.
+
+### 🔹 The friction force, `F_f(V, A, L)`
+
+| | Type | Unit | Range | Domain |
+|---|---|---|---|---|
+| `V` (input) | float or array | m/s | > 0, finite | inside the converged speeds of A and L (2–10 m/s here) |
+| `A`, `L` (input) | callables | m², m | from `wetted_geometry()` | not extrapolated |
+| `rho`, `mu` (input) | float | kg/m³, Pa·s | SWD's 1025 and 0.00107 | finite, > 0 |
+| `F_f` (output) | float or array | N | ≥ 0 | the same shape as V |
+
+The transition point sits at Re = 5×10⁵, SWD's value, capped at the wetted length. The laminar run uses
+the Blasius average coefficient from the shooting by default, and the turbulent run uses SWD's
+0.031/Re_L^(1/7).
+
+### 🔹 The earlier surrogate
 
 All targets are board totals for one (board, drift, roll case), in newtons.
 
@@ -171,9 +285,9 @@ board near broadside.
 | `drag_rail_n` | N | −5,541 – 15,951 | **negative is thrust**; zero on 113 rows means the rail is not engaged |
 | `lift_total_n` | N | 982 – 894,599 | |
 
-**Invalid input handling.** A NaN in a query is refused, not imputed — there is no
-defensible way to guess a board dimension. A query outside the ranges above is predicted
-but flagged `in_envelope = False`, and by default warns; `policy="refuse"` raises instead.
+A NaN in a query is refused, not imputed — there is no defensible way to guess a board dimension. A
+query outside the ranges above is predicted but flagged `in_envelope = False`, and by default warns;
+`policy="refuse"` raises instead.
 
 > ### 💬 Aside
 > The envelope is a per-feature bounding box, so it will pass a combination that exists
@@ -186,8 +300,65 @@ but flagged `in_envelope = False`, and by default warns; `policy="refuse"` raise
 
 ## 📂 5. Results, including the parts that did not work
 
-Leave-one-board-out over 13 boards, scored in newtons. The SVR column is **nested**:
-hyperparameters are chosen by an inner grouped CV on the training boards only, so the
+Every grid and tolerance in the tests is the author's, chosen from tables of measured values before
+any tolerance was written (`AI-USE.md` § 4).
+
+### 🔹 The friction force
+
+| Check | Result |
+|---|---|
+| RK4 (the author's `rk4_solve`) on y″ + 4y = 0 | fourth order: observed order p_obs → 4 |
+| Blasius f″(0) by RK4 shooting, settled at η∞ = 20, against White's σ/√2 | within 8.9×10⁻¹² |
+| A second-order central difference on the same grid | f″(0) within 1.7×10⁻⁵, against shooting's 1.5×10⁻⁸, in about a quarter of the time |
+| Layer thicknesses against White and Majdalani, Table 4-4 | η₉₉ within 1.4×10⁻⁷; δ*/δ₉₉ to the table's 5 decimals; θ and H 2×10⁻⁴ out, the trapezoid's error |
+| Skin friction C_f√Re_x from the shot | 4.3×10⁻⁹ from 2σ/√2 |
+| Kármán integral with the Majdalani–Xuan quartic, Table 4-1 | all six values within half the last printed digit; C_f 0.517 % above Blasius; RK4 march p_obs = 4.069 |
+| F_f against SWD's own friction, pos_x 0.45, 2–10 m/s | 0.985–0.989 of it |
+
+### 🔹 The forward model
+
+- The author's run, 20° → 0° over 3 s from 6 m/s, stays inside the force data: 6.00 → 7.31 m/s at
+  1.5 s → **6.09056 m/s** at 3 s.
+- RK4 against the author's closed form for m dV/dt = −cV²: p_obs = 3.990 on h = 3/96 to 3/384 s,
+  with the error at h/4 inside the h/2 → h/4 change.
+- Held at a constant 10°, a run from 6 m/s settles to within 0.034 m/s of the steady speed
+  V* = 7.306 m/s after 30 s.
+- SWD's own `drag_total_n`, which the model never uses as a force, crosses zero at 7.2926 m/s on
+  the same slope (linear between 7 and 8 m/s). The model's V* is 0.0135 m/s away. This is the one
+  check against an output the model does not consume.
+- The author's first schedule failed. −10° → 20° over 10.055 s left the 2–10 m/s force data
+  within 0.5–2.6 s for every starting speed from 4 to 10 m/s, so the ramp was changed to 20° → 0°
+  over 3 s.
+
+### 🔹 The jerk cost
+
+On the author's run, D = 2.657 m, C = 34.42 s⁵/m² and **J = 64.58**.
+
+| Check | Result |
+|---|---|
+| The author's linear case, a = 1 − 0.5t: D = 2.25 m, J = 18 | exact to round-off (7.1×10⁻¹⁵) |
+| The author's sinusoid, a = sin(πt/3): J = π⁴/4 | p_obs = 2.0000 on h = 0.001, 0.0005, 0.00025 s |
+| The author's run, subsampled to steps of 4h, 2h and h | p_obs = 2.0054 |
+| J in other units (a in mm/s²; t in ms) | the same to 4.9×10⁻¹⁵, relative: J is dimensionless |
+
+> ### 🧩 Point of note — D is taken literally
+> Eq 7's double integral of acceleration leaves out the board's starting speed. On this run that
+> makes D = 2.657 m. The distance actually travelled is 20.657 m, which would give J = 1.068, sixty
+> times smaller. The author chose the literal form (`AI-USE.md` § 4).
+
+### 🔹 The screens and Gate B
+
+Two identifiability screens (2026-10-24) measured how well a fit recovers a friction multiplier k
+from acceleration sampled at about 15 Hz. Gate B re-ran the second with F_f in place of SWD's
+friction: every spread of the fitted k is 0.2–5.6 % wider. **Neither gate has a verdict yet;**
+the author decides.
+
+### 🔹 The earlier surrogate
+
+A physics solver that takes **12 to 31 minutes** per board across 11 drift angles is too slow for a
+shaper comparing hulls. The surrogate was trained on SWD's own output to predict the same forces in
+microseconds. It was scored leave-one-board-out over 13 boards, in newtons. The SVR column is
+**nested**: an inner grouped cross-validation on the training boards chose the hyperparameters, so the
 held-out board never influences the model it scores.
 
 | Target | SVR (nested) | folds < 0 | Decision tree | 5-NN |
@@ -225,9 +396,16 @@ little of it at 13 hulls.
 
 ### 🔹 What this validation cannot establish
 
-- Nothing about speed. All 720 operating points were computed at 20.000 m/s. Speed is
-  not a feature because it has no variance, and SWD's turbulent friction branch scales as
-  `V^1.857`, not `V²`, so results cannot simply be rescaled.
+- The forward model runs at one attitude (pos_y 0, pos_x 0.45, drift 0), along one axis down the
+  face: no roll, yaw, added mass or unsteady force. Its forces exist only at 2–10 m/s and −10° to
+  20°.
+- SWD's rows do not decompose exactly. At that attitude, `drag_total_n` minus
+  (friction + planing + rail − W sin θ) is within 4.3 N up to 15°. It reaches −10.2 N at 20° and
+  −22.1 N at (2 m/s, −10°).
+- The jerk cost is not compared with the paper; that comparison is future work. J here is for a
+  3 s straight glide with no turns, not a surfed wave, and Radicality is not computed.
+- The surrogate says nothing about other flow speeds. All 720 operating points were computed at
+  20.000 m/s, and SWD's turbulent friction scales as `V^1.857`, not `V²`.
 - Nothing about hulls outside 24–131 L, and little about combinations of shape not
   represented among 13 boards.
 - Absolute dimensions carry a 1.56 % calibration bound. They are reconstructed through
@@ -236,31 +414,44 @@ little of it at 13 hulls.
 - The drag components do not sum to the total in SWD's own data — 0 of 720 rows match,
   median residual +0.25 %. Any consistency audit must be scored against that residual, not
   against zero.
+- `src/swd_model/trajectory.py`, the first trajectory model, sums its polar wrongly (`AI-USE.md`
+  § 5 E133), so its forces, Board-Jerk and Radicality are inflated. It is superseded and not fixed.
 
 ---
 
 ## 📂 6. The data acquisition half
 
-`SWD/` reads SWD's binary report files and writes CSVs. It is **frozen and extract-only**:
-`extract_board.ps1` and `census_board.ps1` carry a clean SQA verdict and 67 Pester tests,
-and nothing this project computes is written back into `SWD/data/`.
+`SWD/` holds what was acquired from SWD:
+- the extracted CSVs in `SWD/data/`;
+- the live solver's tables;
+- the documentation of how they were made, in `SWD/docs/` and `SWD/README.md`.
 
-It is read-only against the installation: it never launches SWD, never writes into the
-program directory, and never modifies a library file in place. A provenance gate will not
-deserialise a file whose SHA-256 is absent from a trust manifest, because
-`BinaryFormatter.Deserialize` on an untrusted stream is arbitrary code execution.
+Nothing in `src/` writes into the extracted data.
 
-`SWD/tools/phase2/` drives the live application through Win32 messages and UI Automation to
-acquire new scans. Those scripts are gated behind their own SQA pass before any live run.
+The PowerShell that did the acquisition has been kept out of the public repository since
+2026-10-28. That is the binary-report extractor, the `SWD/tools/phase2/` scripts that drove the live
+application through Win32 messages and UI Automation to acquire new scans, and their Pester tests.
+They need **Windows PowerShell 5.1** (`powershell.exe`, not `pwsh` 7) and a licensed SWD installation;
+nothing in `src/` needs either. The extractor was read-only against the
+installation: it never launched SWD, never wrote into the program directory, and never modified a
+library file in place. Its provenance gate would not deserialise a file whose SHA-256 was absent from
+a trust manifest, because `BinaryFormatter.Deserialize` on an untrusted stream is arbitrary code
+execution.
+
+The Python helpers in `SWD/tools/` (the column translation, the data dictionary and the computed
+views) stay in the repository.
 
 ---
 
 ## 📂 7. Licence and attribution
 
 See `LICENSE`. The paper this project's performance metrics follow is Charles et al. (2026),
-*Results in Engineering* 29:108868, DOI 10.1016/j.rineng.2025.108868, and its supplementary
+*Results in Engineering* 29:108868, DOI 10.1016/j.rineng.2025.108868. Its supplementary
 data is redistributed here under CC BY 4.0 with attribution recorded in
-`SWD/data/paper-supplementary/SOURCE.md`.
+`SWD/data/paper-supplementary/SOURCE.md`; the paper itself is cited, not redistributed.
+
+The boundary-layer reference values come from White and Majdalani, *Viscous Fluid Flow* (2022),
+chapter 4: Table 4-1 (p.158), Table 4-4, and Eq. 4-64 (p.170).
 
 SWD itself is commercial software and none of it is redistributed here — only measurements
 taken from a licensed installation.
@@ -290,12 +481,12 @@ says where each answer is and how the checking worked.
 
 | Tool | Version | Model | Used for |
 |---|---|---|---|
-| Claude Code (Anthropic) | 2.1.246–2.1.258 | `claude-opus-5` | writing and editing code and documents under direction — 6 sessions, 70 prompts, 26 Aug – 2 Sep 2026 |
-| SQA-loop agents, run inside Claude Code | as installed Aug 2026 | `claude-opus-5` | reviewing and fixing that code — 15 review dispatches, 6 fix rounds |
-| humanizer plugin | 2.11.2 | `claude-opus-5` | three prose passes over this README, each followed by a fact diff |
-| graphify | 0.9.52 | none for code | a navigation graph of the repo; gitignored, not a deliverable |
-| Google Antigravity CLI (agy) | 2026-09 | Gemini | auditing and fixing the SWD extraction code (24–25 Sep 2026); since 27 Sep, the first test-and-fix stage of the SQA pass |
-| Devin CLI (Cognition) | 3000.11.3 | `swe-1-7` | drafting the second-source auditor config (24 Sep 2026); since 27 Sep, the second test-and-fix stage of the SQA pass |
+| Claude Code (Anthropic) | 2.1.246–2.1.311 | `claude-opus-5`; `claude-opus-5-5` from 23 Sep 2026 | writing and editing code and documents under direction — 42 sessions, 435 prompts, 26 Aug – 27 Oct 2026 |
+| SQA-loop agents, run inside Claude Code | as installed Aug 2026; rebuilt 27 Sep 2026 | `claude-opus-5`, then `claude-opus-5-5` | reviewing and fixing that code — 15 review dispatches and 6 fix rounds in Aug–Sep 2026; read-only `sqa-numerical` and `sqa-functional` reviews in Oct 2026 |
+| humanizer plugin | 2.11.2 | the session's model | four prose passes over this README, the latest on 28 Oct 2026, each followed by a fact diff |
+| graphify | 0.9.52 | none for code | a navigation graph of the repo; gitignored, not a deliverable; retired 14 Sep 2026 |
+| Google Antigravity CLI (agy) | 2026-09 onwards | Gemini (3.8 Flash, 3.1 Pro, 4 Argon, as selected) | auditing and fixing the SWD extraction code (24–25 Sep 2026); since 27 Sep, the first stage of the SQA pass; from Oct 2026, review-only checks of the friction, forward-model and jerk-cost code |
+| Devin CLI (Cognition) | 3000.11.3 | `swe-1-7` | drafting the second-source auditor config (24 Sep 2026); since 27 Sep, the second stage of the SQA pass; from Oct 2026, the second review-only check |
 
 `pdoc`, `pytest`, `Pester` and `PSScriptAnalyzer` are not AI and are listed only so the question
 does not arise.
@@ -334,6 +525,9 @@ What that produced here, copied from the repo's own worklists:
 | UIA board switching (`swd_board.ps1`, `swd_geometry.ps1`), round 1 | `C=2 W=16 S=17` | `C=0 W=0 S=2` (2 deferred with reasons, 1 rebutted) | **`C=2 W=6 S=9`** — "fixer's CLEAN did not hold" | `TODO.md`, Tier 2b |
 | same, round 3 | — | `C=0 W=0 S=2`, and the fixer found a third Critical itself that two review rounds had missed | **`C=0 W=2 S=13`**, cap reached, not clean; the two Warnings were then fixed without an independent pass | `TODO.md`, Tier 2b |
 
+The PowerShell scripts in this table, and the root `TODO.md`, have been kept out of the public
+repository since 28 Oct 2026.
+
 > ### 🧩 Point of note — the fixer reports itself clean, and the verifier disagrees
 > In each of the three Phase 2 rounds the fixing agent's own verdict was `Critical=0 | Warning=0`,
 > and each time the independent verifier found more. The extraction loop went the same way: the
@@ -353,24 +547,26 @@ What that produced here, copied from the repo's own worklists:
 > its specialists and one `code-reviewer`, and that verdict is final. There is **no fresh-verifier
 > round any more**, so the fixer's edits in that last step are not re-checked, which is the
 > weakness the table above documents. No pass of this kind had been run on this repository as of
-> 2026-09-29. Details, the reasons, and three faults found in trial runs: `AI-USE.md` § 2
-> (2026-09-26/27 and 2026-09-27) and § 5 E78–E80.
+> 2026-09-29. From October 2026, agy and Devin ran review-only rounds through the same wrapper on
+> the friction, forward-model and jerk-cost code, with Claude Code applying the fixes. Details, the
+> reasons, and three faults found in trial runs: `AI-USE.md` § 2 (2026-09-26/27 and 2026-09-27) and
+> § 5 E78–E80.
 
 ### 🔹 Errors the AI made
 
 The brief's Excellent band asks for "identification of errors", and its Poor band names
 "unrecognised errors". The acquisition half already carries its own acknowledgement,
 `SWD/README.md` § AI Acknowledgment, which names five. `AI-USE.md` § 5 indexes every correction
-recorded anywhere in the repository — 62 harvested from the project's documents, plus the ones
-made while writing this section. Four that changed the work:
+recorded anywhere in the repository — E1 to E160 as of 27 Oct 2026, starting from 62 harvested from
+the project's documents. Four that changed the work:
 
 - An AI-written note computed `rho = 1023.154` with a "0.015% density residual" and inferred a
   second flow speed of 20.039 m/s. Both were artefacts of dividing a bimodal mixture by one assumed
   density; there was one speed at two water temperatures. Re-measuring the ratio on a single board
-  caught it (`CLAUDE.md` § 5).
+  caught it (`.claude/rules/swd-technical-facts.md`, moved there from `CLAUDE.md` § 5).
 - A "2.7× faster at low speed" cost re-base compared two boards that had both been scanned at
   ~20 m/s, so it measured hull geometry, not speed. It was withdrawn after the live run
-  (`CLAUDE.md` § 9).
+  (`SWD/TODO.md`, "Cost model").
 - A stage plan was written against a `NumericUpDownScanSpeed*kmh` control and a km/h conversion.
   The live application has a `flow ms` box, in m/s, and the planned value would have requested
   130 km/h. Reading the control map before scanning caught it.
@@ -381,12 +577,13 @@ made while writing this section. Four that changed the work:
 
 ### 🔹 The prompt log
 
-`AI-USE.md` § 6 is every prompt given to Claude Code for this repository — 70 of them, verbatim,
-timestamped — recovered from the session transcripts Claude Code keeps outside the repo and
-regenerated by `python tools/extract_prompts.py`. The home directory is redacted; anything that
-looks like a licence or registry reference is flagged for a human to check. The brief does not
-ask for this; it is included because "complete disclosure" is easier to demonstrate than to
-assert.
+`AI-USE.md` § 6 is every prompt given to Claude Code, agy and Devin for this repository — 458 across
+58 sessions as of 27 Oct 2026 (Claude Code 435, agy 21, Devin 2), verbatim and timestamped. It is
+recovered from the session transcripts the CLIs keep outside the repo and regenerated by
+`python tools/extract_prompts.py`, which a hook has run at the end of every Claude Code session since
+29 Sep 2026. The home directory is redacted; anything that looks like a licence or registry
+reference is flagged for a human to check. The brief does not ask for this; it is included because
+"complete disclosure" is easier to demonstrate than to assert.
 
 ---
 
@@ -396,19 +593,23 @@ assert.
 ## 🤖 AI Acknowledgment
 
 > Parts of this repository were developed with the assistance of **Claude Code** (Anthropic; CLI
-> versions 2.1.246–2.1.258, model `claude-opus-5`, accessed 26 August – 2 September 2026), which
-> wrote and edited code and documentation under my direction across six sessions and 70 prompts,
-> and ran the **SQA-loop** review agents over its own output. The **humanizer** plugin (2.11.2) was
-> used for three prose passes over this README. **graphify** (0.9.52) built a navigation graph that
-> is not part of the submission.
+> versions 2.1.246–2.1.311, models `claude-opus-5` and `claude-opus-5-5`, accessed 26 August –
+> 28 October 2026), which wrote and edited code and documentation under my direction across 42
+> sessions and 435 prompts (to 27 October), and ran the **SQA-loop** review agents over its own
+> output. **Google Antigravity (agy)** and **Devin CLI** audited the code, and from October reviewed
+> it without editing it. The **humanizer** plugin (2.11.2) was used for four prose passes over this
+> README. **graphify** (0.9.52) built a navigation graph that is not part of the submission; it was
+> retired on 14 September 2026.
 >
 > AI was used for the SWD extraction and UI-automation scripts, the surrogate pipeline in `src/`,
-> the test suites, and the drafting of the documentation. The complete record — what was asked,
-> what came back, what I changed, and what it got wrong — is `AI-USE.md`.
+> the friction-function, forward-model and jerk-cost code in `src/` (implementing my own
+> derivations), the test suites, and the drafting of the documentation. The complete record — what
+> was asked, what came back, what I changed, and what it got wrong — is `AI-USE.md`.
 >
 > All content has been reviewed, verified and adapted by the author. Verification was by
 > measurement against SWD's own output, decompilation of the solver where its formulas were in
-> question, live runs against the application, the pytest and Pester suites, and independent
-> agentic review with a fresh verifier every round. The errors that process caught are listed in
-> `AI-USE.md` § 5 rather than hidden. I am responsible for every claim, result, reference and
-> engineering decision in this repository.
+> question, live runs against the application, the pytest and Pester suites, known-answer and
+> convergence tests against my derivations and textbook values, and independent agentic review
+> (with a fresh verifier every round until 27 September 2026). The errors that process caught are
+> listed in `AI-USE.md` § 5 rather than hidden. I am responsible for every claim, result, reference
+> and engineering decision in this repository.

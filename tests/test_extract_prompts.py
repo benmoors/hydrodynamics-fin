@@ -20,6 +20,7 @@ from tools.extract_prompts import (
     Prompt,
     Session,
     END,
+    clean_scope,
     load_agy_sessions,
     load_claude_ancestors,
     load_devin_sessions,
@@ -367,3 +368,22 @@ def test_times_render_in_melbourne_and_old_utc_headings_convert() -> None:
     rendered = render([session])
     assert "02:30 AEDT" in rendered and "02:30 AEST" in rendered
     assert [p.when for p in parse_appendix(rendered)[0].prompts] == utc
+
+
+# SQA round 2 (sqa-security): a session opened in the home folder rendered "via <username>" (R9)
+@pytest.mark.parametrize("scope, cleaned", [
+    ("via alice", "via ~"),
+    ("via ALICE", "via ~"),  # Windows folder names are case-insensitive
+    ("via OneDrive - Contoso Ltd", "via OneDrive"),
+    ("via UNIVERSITY", "via UNIVERSITY"),
+    ("repo", "repo"),
+])
+def test_clean_scope_redacts_home_and_tenant(scope, cleaned) -> None:
+    assert clean_scope(scope, home=Path("C:/Users/alice")) == cleaned
+
+
+def test_render_cleans_a_carried_forward_scope(monkeypatch) -> None:
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: Path("C:/Users/alice")))
+    session = Session(id="old", cli="Claude Code", scope="via alice", prompts=[
+        Prompt(when=datetime(2026, 9, 1, tzinfo=timezone.utc), session="old", branch="", text="p")])
+    assert "| via ~ |" in render([session]) and "via alice" not in render([session])

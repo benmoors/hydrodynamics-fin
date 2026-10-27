@@ -575,7 +575,7 @@ is at risk, but do not expect it to work until 5b is done.
 **The ACL escalation does not fire.** SQA flagged that if `BUILTIN\Users` or `Everyone` held write on
 `tools/phase2/`, a Medium-integrity replacement of `swd_msg.ps1` before an elevated run would be a
 genuine privilege escalation and that finding became Critical. Measured with `icacls`: only
-`NT AUTHORITY\SYSTEM`, `BUILTIN\Administrators` and `BENMOORS\moors` hold `(F)`. It stays a Warning.
+`NT AUTHORITY\SYSTEM`, `BUILTIN\Administrators` and `<HOST>\<user>` hold `(F)`. It stays a Warning.
 
 
 ---

@@ -91,6 +91,14 @@ SALT_WATER: dict[int, tuple[int, float]] = {
 }
 
 
+def _numbers(name: str, value) -> np.ndarray:
+    """value as a float array, or ValueError if it is not numeric. A bool is refused: it would pass as 0 or 1."""
+    value = np.asarray(value)
+    if value.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a number or an array of numbers (a bool is not)")
+    return value.astype(float)
+
+
 def viscosity_for_density(rho_kgm3: int) -> float:
     """Dynamic viscosity for one of SWD's four salt-water densities.
 
@@ -111,13 +119,14 @@ def viscosity_for_density(rho_kgm3: int) -> float:
         If the density is not a table entry. Refusing is deliberate: interpolating
         between lookup rows would invent a fluid SWD cannot select.
     """
-    key = int(round(rho_kgm3))
-    if key not in SALT_WATER:
+    rho = float(rho_kgm3)
+    # Exact match only: round() would have read 1024.6 as the 1025 entry
+    if not np.isfinite(rho) or rho != int(rho) or int(rho) not in SALT_WATER:
         raise KeyError(
             f"rho={rho_kgm3} is not one of SWD's salt-water densities "
             f"{sorted(SALT_WATER)}; interpolation is not valid on a lookup table"
         )
-    return SALT_WATER[key][1]
+    return SALT_WATER[int(rho)][1]
 
 
 def reynolds_number(
@@ -144,9 +153,18 @@ def reynolds_number(
     numpy.ndarray
         Dimensionless. Around 3.3e7 for a 1.7 m board at 20 m/s in seawater --
         firmly turbulent, which is why the laminar run below is a thin sliver.
+
+    Raises
+    ------
+    ValueError
+        If any input is not finite and strictly positive.
     """
-    return (np.asarray(rho_kgm3, float) * np.asarray(velocity_ms, float)
-            * np.asarray(length_m, float) / np.asarray(mu_pas, float))
+    values = [_numbers(name, v) for name, v in (("rho_kgm3", rho_kgm3), ("velocity_ms", velocity_ms),
+                                               ("length_m", length_m), ("mu_pas", mu_pas))]
+    if not all(np.all(np.isfinite(v) & (v > 0)) for v in values):
+        raise ValueError("velocity, length, density and viscosity must be finite and strictly positive")
+    rho, velocity, length, mu = values
+    return rho * velocity * length / mu
 
 
 def friction_coefficient(
@@ -178,15 +196,25 @@ def friction_coefficient(
         If any Reynolds number is non-positive, or the rough branch is selected
         without ``length_m``.
     """
-    re = np.asarray(reynolds, dtype=float)
-    if np.any(re <= 0):
-        raise ValueError("Reynolds number must be strictly positive")
+    re = _numbers("reynolds", reynolds)
+    # `re <= 0` alone would let a NaN through
+    if not np.all(np.isfinite(re) & (re > 0)):
+        raise ValueError("Reynolds number must be finite and strictly positive")
 
-    if roughness_micron > 50.0:
+    # A NaN or negative roughness would fail `> 50` and quietly select the smooth branch
+    ra = _numbers("roughness_micron", roughness_micron)
+    if ra.ndim != 0 or not (np.isfinite(ra) and ra >= 0):
+        raise ValueError("roughness_micron must be a finite scalar >= 0")
+
+    if ra > 50.0:
         if length_m is None:
             raise ValueError("the fully-rough branch needs length_m")
-        ra_m = roughness_micron * 1e-6
-        return (1.89 + 1.62 * np.log10(np.asarray(length_m, float) / ra_m)) ** -2.5
+        ra_m = float(ra) * 1e-6
+        length = _numbers("length_m", length_m)
+        # The correlation is for a plate much longer than its roughness; at L <= Ra its log is <= 0
+        if not np.all(np.isfinite(length) & (length > ra_m)):
+            raise ValueError("length_m must be finite and longer than the roughness on the fully-rough branch")
+        return (1.89 + 1.62 * np.log10(length / ra_m)) ** -2.5
 
     # Laminar below transition, 1/7-power turbulent above it.
     return np.where(re <= RE_CRIT, 1.328 / np.sqrt(re), 0.031 / re ** (1.0 / 7.0))
@@ -227,17 +255,20 @@ def friction_force(
     Raises
     ------
     ValueError
-        If length is non-positive or area is negative.
+        If length or velocity is not finite and positive, or area is negative or not finite.
     """
-    length = np.asarray(wetted_length_m, dtype=float)
-    area = np.asarray(wetted_area_m2, dtype=float)
-    velocity = np.asarray(velocity_ms, dtype=float)
-    if np.any(length <= 0):
-        raise ValueError("wetted_length_m must be strictly positive")
-    if np.any(area < 0):
-        raise ValueError("wetted_area_m2 must be non-negative")
+    length = _numbers("wetted_length_m", wetted_length_m)
+    area = _numbers("wetted_area_m2", wetted_area_m2)
+    velocity = _numbers("velocity_ms", velocity_ms)
+    # Written as "all valid", not "any invalid", so a NaN fails the check instead of passing it
+    if not np.all(np.isfinite(length) & (length > 0)):
+        raise ValueError("wetted_length_m must be finite and strictly positive")
+    if not np.all(np.isfinite(area) & (area >= 0)):
+        raise ValueError("wetted_area_m2 must be finite and non-negative")
+    if not np.all(np.isfinite(velocity) & (velocity > 0)):
+        raise ValueError("velocity_ms must be finite and strictly positive")
 
-    rho = np.asarray(rho_kgm3, dtype=float)
+    rho = _numbers("rho_kgm3", rho_kgm3)
     # np.vectorize preserves shape, 0-d included, so a scalar query returns a
     # scalar rather than a length-1 array. The list-comprehension version did not,
     # and float() on its result raised.
@@ -295,18 +326,34 @@ def wetted_area_estimate(
     numpy.ndarray
         Wetted area, m2, floored at a small positive value so the friction law
         downstream never sees zero.
+
+    Raises
+    ------
+    ValueError
+        If ``k_area`` is not finite and strictly positive. The floor is for a tiny
+        positive product, not for hiding a failed fit.
     """
-    roll = np.abs(np.asarray(roll_rad, dtype=float))
-    drift = np.radians(np.abs(np.asarray(drift_deg, dtype=float)))
-    planform = np.asarray(length_m, float) * np.asarray(width_m, float)
+    k = _numbers("k_area", k_area)
+    if k.ndim != 0 or not (np.isfinite(k) and k > 0):
+        raise ValueError("k_area must be finite and strictly positive")
+    length, width = _numbers("length_m", length_m), _numbers("width_m", width_m)
+    # Two negatives would multiply to a positive planform and pass as a board
+    if not np.all(np.isfinite(length) & (length > 0) & np.isfinite(width) & (width > 0)):
+        raise ValueError("length_m and width_m must be finite and strictly positive")
+    roll_rad, drift_deg = _numbers("roll_rad", roll_rad), _numbers("drift_deg", drift_deg)
+    if not (np.all(np.isfinite(roll_rad)) and np.all(np.isfinite(drift_deg))):
+        raise ValueError("roll_rad and drift_deg must be finite")
+    roll = np.abs(roll_rad)
+    drift = np.radians(np.abs(drift_deg))
+    planform = length * width
     return np.maximum(k_area * planform * np.cos(roll) * np.cos(drift), 1e-6)
 
 
 class PhysicsFrictionBaseline:
     """One-parameter physical baseline for friction drag, scikit-learn shaped.
 
-    Fits the single scalar ``k_area`` by least squares in log space, then predicts
-    with SWD's own friction law. Implements ``fit``/``predict`` so it drops into the
+    Fits the single scalar ``k_area`` as the median ratio of observed to unit-``k``
+    force, then predicts with SWD's own friction law. Implements ``fit``/``predict`` so it drops into the
     same evaluation loop as the learned models and is scored identically.
 
     Parameters
@@ -336,27 +383,37 @@ class PhysicsFrictionBaseline:
     def fit(self, X: np.ndarray, y: np.ndarray) -> "PhysicsFrictionBaseline":
         """Fit ``k_area`` on the training fold only.
 
-        Force is linear in area and therefore in ``k_area``, so the optimum is a
-        ratio of medians rather than an iterative solve -- median, not mean, so a
-        single extreme hull cannot set the coefficient for all of them.
+        Force is linear in area and therefore in ``k_area``, so ``k_area`` is the
+        median of the per-row ratios rather than an iterative solve -- median, not
+        mean, so a single extreme hull cannot set the coefficient for all of them.
 
         Parameters
         ----------
         X : numpy.ndarray, shape (n, 4)
             ``[length_m, width_m, roll_rad, drift_deg]``.
         y : numpy.ndarray, shape (n,)
-            Observed friction drag, N.
+            Observed friction drag, N. Rows whose y is not finite and positive are
+            skipped, not fitted.
 
         Returns
         -------
         PhysicsFrictionBaseline
             self.
+
+        Raises
+        ------
+        ValueError
+            If X is not a finite (n, 4) array, y has not one value per row, or no row has a usable y.
         """
-        X = np.asarray(X, dtype=float)
-        y = np.asarray(y, dtype=float)
+        X, y = self._checked(X), _numbers("y", y)
+        if y.shape != (X.shape[0],):
+            raise ValueError("y must hold one value per row of X")
         unit = self._force(X, k_area=1.0)
         usable = (unit > 0) & np.isfinite(y) & (y > 0)
-        self.k_area_ = float(np.median(y[usable] / unit[usable])) if usable.any() else 1.0
+        # A default k of 1 here would be a silent, unfitted baseline scored as if it were fitted
+        if not usable.any():
+            raise ValueError("no training row has a positive finite force to fit k_area on")
+        self.k_area_ = float(np.median(y[usable] / unit[usable]))
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
@@ -376,10 +433,20 @@ class PhysicsFrictionBaseline:
         ------
         RuntimeError
             If called before ``fit``.
+        ValueError
+            If X is not a finite (n, 4) array of numbers.
         """
         if self.k_area_ is None:
             raise RuntimeError("PhysicsFrictionBaseline.predict called before fit")
-        return self._force(np.asarray(X, dtype=float), self.k_area_)
+        return self._force(self._checked(X), self.k_area_)
+
+    @staticmethod
+    def _checked(X) -> np.ndarray:
+        """X as a float (n, 4) array, or ValueError: refused here, by name, in fit and predict alike."""
+        X = _numbers("X", X)
+        if X.ndim != 2 or X.shape[1] != 4 or not np.all(np.isfinite(X)):
+            raise ValueError("X must be a finite (n, 4) array: [length_m, width_m, roll_rad, drift_deg]")
+        return X
 
     def _force(self, X: np.ndarray, k_area: float) -> np.ndarray:
         length, width, roll, drift = X[:, 0], X[:, 1], X[:, 2], X[:, 3]

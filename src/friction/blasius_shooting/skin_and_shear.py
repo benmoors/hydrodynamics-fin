@@ -21,7 +21,6 @@ SIGMA = 0.46959999
 # Limit: below Re_L ~ 1000 full Navier-Stokes drag exceeds the boundary-layer value (p.172); not enforced.
 
 
-@lru_cache(maxsize=None)
 def shoot(eta_max=ETA_MAX, h=STEP_SIZE):
     """f''(0) by RK4 shooting on 0 <= eta < eta_max, the secant stopping at |F| < PRECISION.
 
@@ -39,8 +38,25 @@ def shoot(eta_max=ETA_MAX, h=STEP_SIZE):
     secant_error : float
         The step one more secant iteration would take, |F_n (s_n - s_{n-1})/(F_n - F_{n-1})|: the estimate
         of how far s_star is from the root of F because the secant stopped.
+
+    Raises
+    ------
+    ValueError
+        If eta_max or h is not a finite positive scalar, or the grid has fewer than 3 points.
     """
+    # Checked before the cache: a cache in front would serve True from a call made with 1 (they hash equal)
+    if np.ndim(eta_max) != 0 or np.ndim(h) != 0:
+        raise ValueError("eta_max and h must be scalars")
+    return _shoot(float(_check("eta_max", eta_max)), float(_check("h", h)))
+
+
+@lru_cache(maxsize=None)
+def _shoot(eta_max, h):
+    """shoot() after its checks, cached per (eta_max, h)."""
     eta = np.arange(ETA_0, eta_max, h)
+    # Counted on the grid actually built: with fewer than 3 points the secant lands on a wrong f''(0) with no error
+    if len(eta) < 3:
+        raise ValueError("the grid 0, h, 2h, ... below eta_max must have at least 3 points")
     s_star, _, s_history, f_history = secant_for_shooting(lambda s: F(s, eta, h), GUESS_ddf, GUESS2_ddf,
                                                           precision=PRECISION)
     secant_error = abs(f_history[-1]*(s_history[-1] - s_history[-2])/(f_history[-1] - f_history[-2]))
@@ -48,8 +64,12 @@ def shoot(eta_max=ETA_MAX, h=STEP_SIZE):
 
 
 def _check(name, value, upper=np.inf):
-    """value as a float array, or ValueError unless it is non-empty, finite and 0 < value <= upper."""
-    value = np.asarray(value, dtype=float)
+    """value as a float array, or ValueError unless it is numeric, non-empty, finite and 0 < value <= upper."""
+    value = np.asarray(value)
+    # A bool would pass as 1.0
+    if value.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a number or an array of numbers (a bool is not)")
+    value = value.astype(float)
     if value.size == 0 or not np.all(np.isfinite(value) & (value > 0) & (value <= upper)):
         raise ValueError(f"{name} must be finite and in (0, {upper:g}]")
     return value
@@ -166,9 +186,16 @@ def wall_slope(df, h):
     ValueError
         If df is not 1-D with at least 3 values, its first 3 are not finite, or h is not finite and positive.
     """
-    df = np.asarray(df, dtype=float)
+    df = np.asarray(df)
+    # A bool profile would pass as 0s and 1s
+    if df.dtype.kind not in "iuf":
+        raise ValueError("df must be a number array (a bool is not)")
+    df = df.astype(float)
     if df.ndim != 1 or df.size < 3 or not np.all(np.isfinite(df[:3])):
         raise ValueError("df must be 1-D, with at least 3 values and the first 3 finite")
+    # One grid step: an array h would broadcast into one slope per step
+    if np.ndim(h) != 0:
+        raise ValueError("h must be a single step, not an array")
     return (-3*df[0] + 4*df[1] - df[2])/(2*_check("h", h))
 
 

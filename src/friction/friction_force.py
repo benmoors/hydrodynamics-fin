@@ -6,8 +6,8 @@ wetted area is laminar and the rest turbulent:
     F_f = 1/2 rho V^2 A(V) [ (x_tr/L) C_lam(Re_xtr) + (1 - x_tr/L) C_turb(Re_L) ],   Re_xtr = min(Re_L, RE_CRIT)
 
 C_lam is the average laminar coefficient over the run 0 <= x <= x_tr, by default the Blasius avg_C_f from the RK4
-shooting (blasius_shooting/skin_and_shear.py); any law of the same form, such as von_karman/von_karman.avg_C_f, can
-be passed instead. C_turb = 0.031/Re_L^(1/7) is SWD's turbulent closure.
+shooting (src/friction/blasius_shooting/skin_and_shear.py); any law of the same form, such as
+src.friction.von_karman.von_karman.avg_C_f, can be passed instead. C_turb = 0.031/Re_L^(1/7) is SWD's turbulent closure.
 
 Design of F_f: Benjamin Moors, the author's own (AI-USE.md section 4, 2026-10-27).
 
@@ -68,8 +68,21 @@ def wetted_geometry(path=SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_deg=0.0, dr
     Raises
     ------
     ValueError
-        If the attitude has fewer than two converged speeds, or a speed appears twice.
+        If pos_y, pos_x, slope_deg or drift_deg is not a finite real scalar, the attitude has fewer than two
+        converged speeds, or a speed appears twice.
     """
+    selectors = []
+    for name, value in (("pos_y", pos_y), ("pos_x", pos_x), ("slope_deg", slope_deg), ("drift_deg", drift_deg)):
+        # A bool would match the 0.0 rows in pandas (False == 0.0), selecting an attitude by accident. The rule is
+        # forward_model._scalar's, so a 0-d array is accepted here as it is there
+        try:
+            ok = not isinstance(value, (bool, np.bool_)) and np.ndim(value) == 0 and bool(np.isfinite(value))
+        except TypeError:
+            ok = False
+        if not ok:
+            raise ValueError(f"{name} must be a finite real scalar")
+        selectors.append(float(value))
+    pos_y, pos_x, slope_deg, drift_deg = selectors
     data = pd.read_csv(path)
     rows = data[(data.slope_deg == slope_deg) & (data.drift_deg == drift_deg) & (data.pos_y == pos_y)
                 & (data.pos_x == pos_x)].sort_values("speed_ms")
@@ -113,7 +126,11 @@ def F_f(V, A, L, rho=RHO, mu=MU, laminar_avg_C_f=skin_and_shear.avg_C_f):
         not extrapolated), A(V) is negative or L(V) is not positive; if rho or mu is not a finite, positive
         scalar; or if laminar_avg_C_f rejects the laminar Reynolds number.
     """
-    V = np.asarray(V, dtype=float)
+    V = np.asarray(V)
+    # A bool would pass as 1 m/s
+    if V.dtype.kind not in "iuf":
+        raise ValueError("V must be a number or an array of numbers (a bool is not)")
+    V = V.astype(float)
     if V.size == 0 or not np.all(np.isfinite(V) & (V > 0)):
         raise ValueError("V must be finite and positive")
     area, length = np.asarray(A(V), dtype=float), np.asarray(L(V), dtype=float)
@@ -121,7 +138,13 @@ def F_f(V, A, L, rho=RHO, mu=MU, laminar_avg_C_f=skin_and_shear.avg_C_f):
         raise ValueError("V is outside the range of A(V) and L(V), which are not extrapolated")
     if np.any(area < 0) or np.any(length <= 0):
         raise ValueError("A(V) must be >= 0 and L(V) > 0")
-    if np.ndim(rho) != 0 or np.ndim(mu) != 0 or not (np.isfinite(rho) and rho > 0 and np.isfinite(mu) and mu > 0):
+    try:
+        # A bool would pass as 1 kg/m^3 or 1 Pa s; a string raises TypeError inside isfinite, caught here
+        ok = all(not isinstance(v, (bool, np.bool_)) and np.ndim(v) == 0 and bool(np.isfinite(v)) and v > 0
+                 for v in (rho, mu))
+    except TypeError:
+        ok = False
+    if not ok:
         raise ValueError("rho and mu must be finite and positive scalars")
     nu = mu/rho
 

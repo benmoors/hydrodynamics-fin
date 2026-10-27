@@ -17,8 +17,8 @@ force here. A positive slope is downhill: drag_total_n = F + P + R - W sin(theta
 Derivation of E15 and E16: Benjamin Moors, the author's own (AI-USE.md section 4, 2026-10-27). In his E16 the ramp
 runs from theta_min to theta_max; it is written here from theta_start to theta_end because his ramp descends.
 
-RK4 is the author's rk4_solve (blasius_shooting/shooting_blasius.py, from MMA3001 notebook 7.4), called one step at a
-time so that a run can stop where V leaves the force data.
+RK4 is the author's rk4_solve (src/friction/blasius_shooting/shooting_blasius.py, from MMA3001 notebook 7.4), called
+one step at a time so that a run can stop where V leaves the force data.
 
 Usage
 -----
@@ -83,7 +83,6 @@ class Forces(NamedTuple):
     theta_range: tuple
 
 
-@lru_cache(maxsize=None)
 def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TOL):
     """The resistance D(V, theta, k) = k F_f(V) + P(V, theta) + R(V, theta) at one live-solver attitude.
 
@@ -108,12 +107,21 @@ def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TO
     Raises
     ------
     ValueError
-        If slope_tol is not a finite scalar > 0, the attitude's drift-0 rows are not a complete speed x slope grid, a
-        0 deg row fails the 1 % check, a non-zero slope row fails slope_tol, or the wetted area or length changes
-        with slope.
+        If pos_y, pos_x or slope_tol is not a finite scalar, slope_tol is not > 0, the attitude's drift-0 rows are
+        not a complete speed x slope grid, a 0 deg row fails the 1 % check, a non-zero slope row fails slope_tol, or
+        the wetted area or length changes with slope.
     """
-    if _scalar("slope_tol", slope_tol) <= 0:
+    # Checked before the cache: a bool attitude would match the 0.0 rows in pandas (False == 0.0), and a cache in
+    # front of the check would serve True from a call made with 1 (they hash equal)
+    pos_y, pos_x, slope_tol = _scalar("pos_y", pos_y), _scalar("pos_x", pos_x), _scalar("slope_tol", slope_tol)
+    if slope_tol <= 0:
         raise ValueError("slope_tol must be > 0")
+    return _load_forces(path, pos_y, pos_x, slope_tol)
+
+
+@lru_cache(maxsize=None)
+def _load_forces(path, pos_y, pos_x, slope_tol):
+    """load_forces() after its checks, cached per (path, attitude, tolerance)."""
     data = pd.read_csv(path)
     rows = data[(data.drift_deg == 0) & (data.pos_y == pos_y) & (data.pos_x == pos_x)]
     if rows.duplicated(["speed_ms", "slope_deg"]).any():
@@ -150,7 +158,7 @@ def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TO
             raise ValueError("k must be >= 0")
         if not (v_lo <= V <= v_hi and th_lo <= theta_deg <= th_hi):
             raise OutOfData(f"V {V} m/s, theta {theta_deg} deg is outside {v_lo}-{v_hi} m/s, {th_lo}-{th_hi} deg")
-        return k*float(ff.F_f(V, A, L)) + float(PchipInterpolator(slopes, pr_in_V(V))(theta_deg))
+        return k*float(ff.F_f(V, A, L)) + float(PchipInterpolator(slopes, pr_in_V(V), extrapolate=False)(theta_deg))
 
     return Forces(D, (float(v_lo), float(v_hi)), (float(th_lo), float(th_hi)))
 

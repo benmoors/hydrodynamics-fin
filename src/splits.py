@@ -95,10 +95,13 @@ def group_labels(table: pd.DataFrame, level: str = "family") -> pd.Series:
     Raises
     ------
     ValueError
-        If ``level`` is not one of the two accepted values, or ``board`` is absent.
+        If ``level`` is not one of the two accepted values, or ``board`` is absent or has a missing value.
     """
     if "board" not in table.columns:
         raise ValueError("table has no 'board' column; cannot group")
+    # A missing board would become the string 'nan' (or crash family_of) and form a group of its own
+    if table["board"].isna().any():
+        raise ValueError("table has a missing 'board' value; every row must name its board")
     if level == "board":
         return table["board"].astype(str)
     if level == "family":
@@ -116,7 +119,7 @@ def holdout_split(
 
     Groups are shuffled and assigned to test until the target row fraction is
     reached, so the test fraction is approximate -- groups are indivisible. At least
-    one group always lands in test.
+    one group always lands in test, and at least one always stays in train.
 
     Parameters
     ----------
@@ -157,7 +160,8 @@ def holdout_split(
     target_rows = test_fraction * len(table)
     test_groups: set[str] = set()
     rows = 0
-    for name in groups:
+    # The last group always stays in train: an empty train set would pass every no-leak check vacuously
+    for name in groups[:-1]:
         if rows >= target_rows and test_groups:
             break
         test_groups.add(name)

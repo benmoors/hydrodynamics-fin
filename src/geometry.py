@@ -75,6 +75,13 @@ CALIBRATION: dict[str, float] = {
 }
 
 
+def _all_positive_finite(*values) -> bool:
+    """True when every element is finite and > 0. ``v <= 0`` alone lets a NaN through."""
+    # A bool is refused too: True would pass as 1
+    return all(np.asarray(v).dtype.kind in "iuf" and bool(np.all(np.isfinite(v) & (np.asarray(v) > 0)))
+               for v in values)
+
+
 def aspect_ratio(
     x_min: np.ndarray | float,
     x_max: np.ndarray | float,
@@ -98,21 +105,22 @@ def aspect_ratio(
     Raises
     ------
     ValueError
-        If either span is zero or negative, which would mean a degenerate outline
-        rather than a board.
+        If either span is zero, negative or not finite, which would mean a
+        degenerate outline rather than a board.
 
     Examples
     --------
     >>> float(np.round(aspect_ratio(-0.135, 0.135, -1.0, 0.0), 4))
     3.7037
     """
-    x_span = np.abs(np.asarray(x_max, dtype=float) - np.asarray(x_min, dtype=float))
-    y_span = np.abs(np.asarray(y_max, dtype=float) - np.asarray(y_min, dtype=float))
-    long_axis = np.maximum(x_span, y_span)
-    short_axis = np.minimum(x_span, y_span)
-    if np.any(short_axis <= 0.0) or np.any(long_axis <= 0.0):
-        raise ValueError("degenerate outline: a bounding-box span is zero or negative")
-    return long_axis / short_axis
+    if not all(np.asarray(v).dtype.kind in "iuf" for v in (x_min, x_max, y_min, y_max)):
+        raise ValueError("degenerate outline: the extents must be numbers (a bool is not)")
+    # No abs(): a max below its min is a corrupt outline, not a span to flip
+    x_span = np.asarray(x_max, dtype=float) - np.asarray(x_min, dtype=float)
+    y_span = np.asarray(y_max, dtype=float) - np.asarray(y_min, dtype=float)
+    if not _all_positive_finite(x_span, y_span):
+        raise ValueError("degenerate outline: a bounding-box span is zero, negative or not finite")
+    return np.maximum(x_span, y_span) / np.minimum(x_span, y_span)
 
 
 def calibrate_shape_coefficient(
@@ -142,14 +150,15 @@ def calibrate_shape_coefficient(
     Raises
     ------
     ValueError
-        If any input is non-positive.
+        If any input is non-positive or not finite.
     """
     volume_m3 = np.asarray(volume_l, dtype=float) / 1000.0
     lw = np.asarray(length_over_width, dtype=float)
     tl = np.asarray(thickness_over_length, dtype=float)
     length = np.asarray(true_length_m, dtype=float)
-    if np.any(volume_m3 <= 0) or np.any(lw <= 0) or np.any(tl <= 0) or np.any(length <= 0):
-        raise ValueError("volume, both ratios and length must all be strictly positive")
+    # The raw arguments are checked, so a bool is caught before float() turns it into 1.0
+    if not _all_positive_finite(volume_l, length_over_width, thickness_over_length, true_length_m):
+        raise ValueError("volume, both ratios and length must all be strictly positive and finite")
     # V = k * L * (L/lw) * (tl*L)  =>  k = V*lw / (tl * L^3)
     return volume_m3 * lw / (tl * length**3)
 
@@ -190,7 +199,7 @@ def reconstruct_dimensions(
     Raises
     ------
     ValueError
-        If any input is non-positive. A similarity argument has no meaningful
+        If any input is non-positive or not finite. A similarity argument has no meaningful
         extrapolation through zero, so this refuses rather than returning nan.
 
     Examples
@@ -202,8 +211,9 @@ def reconstruct_dimensions(
     volume_m3 = np.asarray(volume_l, dtype=float) / 1000.0
     lw = np.asarray(length_over_width, dtype=float)
     tl = np.asarray(thickness_over_length, dtype=float)
-    if np.any(volume_m3 <= 0) or np.any(lw <= 0) or np.any(tl <= 0) or k <= 0:
-        raise ValueError("volume, both ratios and k must all be strictly positive")
+    # The raw arguments are checked, so a bool is caught before float() turns it into 1.0
+    if not _all_positive_finite(volume_l, length_over_width, thickness_over_length, k):
+        raise ValueError("volume, both ratios and k must all be strictly positive and finite")
     length = np.cbrt(volume_m3 * lw / (k * tl))
     return length, length / lw, length * tl
 

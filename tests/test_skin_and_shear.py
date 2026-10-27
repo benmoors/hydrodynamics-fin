@@ -89,22 +89,23 @@ def test_accepts_re_at_upper_bound() -> None:
 @pytest.mark.parametrize("function", [ss.C_f, ss.avg_C_f])
 def test_rejects_re_outside_range(function, Re) -> None:
     """Re must be finite and in (0, 1e6]."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"must be finite and in \(0, 1e\+06\]"):
         function(Re)
 
 
-@pytest.mark.parametrize("U_, x, nu, rho, s_star", [
-    (U, 0.0, NU, RHO, None),
-    (U, X, 0.0, RHO, None),
-    (U, X, -NU, RHO, None),
-    (U, X, NU, 0.0, None),
-    (np.nan, X, NU, RHO, None),
-    (U, 1.0, NU, RHO, None),  # U*x/nu = 1.9e6, above RE_MAX
-    (U, X, NU, RHO, 0.0),
-    (U, X, NU, RHO, -0.3),
+# Each match names the input whose own check must fire, so a disabled check cannot hide behind the Re_x one
+@pytest.mark.parametrize("U_, x, nu, rho, s_star, match", [
+    (U, 0.0, NU, RHO, None, "^x must be"),
+    (U, X, 0.0, RHO, None, "^nu must be"),
+    (U, X, -NU, RHO, None, "^nu must be"),
+    (U, X, NU, 0.0, None, "^rho must be"),
+    (np.nan, X, NU, RHO, None, "^U must be"),
+    (U, 1.0, NU, RHO, None, r"^Re_x = U\*x/nu must be"),  # U*x/nu = 1.9e6, above RE_MAX
+    (U, X, NU, RHO, 0.0, "^s_star must be"),
+    (U, X, NU, RHO, -0.3, "^s_star must be"),
 ])
-def test_shear_w_rejects_invalid_inputs(U_, x, nu, rho, s_star) -> None:
-    with pytest.raises(ValueError):
+def test_shear_w_rejects_invalid_inputs(U_, x, nu, rho, s_star, match) -> None:
+    with pytest.raises(ValueError, match=match):
         ss.shear_w(U_, x, nu, rho, s_star=s_star)
 
 
@@ -127,9 +128,14 @@ def test_wall_slope_exact_on_quadratic() -> None:
     assert ss.wall_slope(2*xi - xi**2, h) == pytest.approx(2.0, abs=1e-12)
 
 
-@pytest.mark.parametrize("df, h", [([0.0, 1.0], 0.1), ([0.0, np.nan, 1.0], 0.1), ([[0.0, 0.1, 0.2]], 0.1),
-                                   ([0.0, 0.1, 0.2], 0.0), ([0.0, 0.1, 0.2], -0.1)])
-def test_wall_slope_rejects_invalid_inputs(df, h) -> None:
+DF_MESSAGE = "df must be 1-D, with at least 3 values and the first 3 finite"
+
+
+@pytest.mark.parametrize("df, h, match", [([0.0, 1.0], 0.1, DF_MESSAGE), ([0.0, np.nan, 1.0], 0.1, DF_MESSAGE),
+                                          ([[0.0, 0.1, 0.2]], 0.1, DF_MESSAGE),
+                                          ([0.0, 0.1, 0.2], 0.0, "^h must be finite"),
+                                          ([0.0, 0.1, 0.2], -0.1, "^h must be finite")])
+def test_wall_slope_rejects_invalid_inputs(df, h, match) -> None:
     """Fewer than 3 points, a non-finite one, a 2-D profile, or h <= 0."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=match):
         ss.wall_slope(df, h)

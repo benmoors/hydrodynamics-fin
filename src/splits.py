@@ -95,10 +95,13 @@ def group_labels(table: pd.DataFrame, level: str = "family") -> pd.Series:
     Raises
     ------
     ValueError
-        If ``level`` is not one of the two accepted values, or ``board`` is absent.
+        If ``level`` is not one of the two accepted values, or ``board`` is absent or has a missing value.
     """
     if "board" not in table.columns:
         raise ValueError("table has no 'board' column; cannot group")
+    # A missing board would become the string 'nan' (or crash family_of) and form a group of its own
+    if table["board"].isna().any():
+        raise ValueError("table has a missing 'board' value; every row must name its board")
     if level == "board":
         return table["board"].astype(str)
     if level == "family":

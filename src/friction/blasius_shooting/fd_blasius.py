@@ -82,7 +82,20 @@ def blasius_fd(N=N, h=h, iterations=PICARD_ITERATIONS):
     ddf0 : numpy.ndarray
         f''(0) = g'(0) after each iteration, length ``iterations``, by the second-order
         one-sided difference (-3 g_0 + 4 g_1 - g_2)/(2h).
+
+    Raises
+    ------
+    ValueError
+        If N is not an integer >= 3, h is not a finite positive number, or iterations is not an integer >= 1.
     """
+    # A bool is an int to Python, so it is refused by name
+    if isinstance(N, bool) or not isinstance(N, (int, np.integer)) or N < 3:
+        raise ValueError("N must be an integer >= 3: the f''(0) stencil needs g_0, g_1 and g_2")
+    if (isinstance(h, bool) or not isinstance(h, (int, float, np.integer, np.floating))
+            or not (np.isfinite(h) and h > 0)):
+        raise ValueError("h must be a finite positive number")
+    if isinstance(iterations, bool) or not isinstance(iterations, (int, np.integer)) or iterations < 1:
+        raise ValueError("iterations must be an integer >= 1")
     f = np.zeros(N+1)  # Picard start: f = 0, so the first g is a straight line
     ddf0 = np.zeros(iterations)
     for k in range(iterations):

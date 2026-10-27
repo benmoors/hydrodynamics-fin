@@ -3,10 +3,12 @@
 Scope boundary
 --------------
 ``SWD/`` is data acquisition and is **frozen and extract-only**: ``extract_board.ps1``
-and ``census_board.ps1`` carry a CLEAN SQA verdict and 67 Pester tests, and nothing
-this project computes is ever written back into ``SWD/data/``. So the training table
-is built here, in memory, at load time. Every function in this module reads; none
-writes.
+and ``census_board.ps1`` carry a CLEAN SQA verdict and 67 Pester tests (both kept
+local since 2026-10-28), and nothing this project computes is written over the
+extracted CSVs. Computed views go only into ``computed-data/`` folders beside them,
+from ``src/swd_model/`` and ``src/friction/rerun_live_screen_ff.py``. The training
+table is built here, in memory, at load time. Every function in this module reads;
+none writes.
 
 What is a feature and what is not
 ---------------------------------

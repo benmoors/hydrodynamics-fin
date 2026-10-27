@@ -17,8 +17,8 @@ force here. A positive slope is downhill: drag_total_n = F + P + R - W sin(theta
 Derivation of E15 and E16: Benjamin Moors, the author's own (AI-USE.md section 4, 2026-10-27). In his E16 the ramp
 runs from theta_min to theta_max; it is written here from theta_start to theta_end because his ramp descends.
 
-RK4 is the author's rk4_solve (blasius_shooting/shooting_blasius.py, from MMA3001 notebook 7.4), called one step at a
-time so that a run can stop where V leaves the force data.
+RK4 is the author's rk4_solve (src/friction/blasius_shooting/shooting_blasius.py, from MMA3001 notebook 7.4), called
+one step at a time so that a run can stop where V leaves the force data.
 
 Usage
 -----
@@ -108,10 +108,13 @@ def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TO
     Raises
     ------
     ValueError
-        If slope_tol is not a finite scalar > 0, the attitude's drift-0 rows are not a complete speed x slope grid, a
+        If pos_y, pos_x or slope_tol is not a finite scalar, slope_tol is not > 0, the attitude's drift-0 rows are
+        not a complete speed x slope grid, a
         0 deg row fails the 1 % check, a non-zero slope row fails slope_tol, or the wetted area or length changes
         with slope.
     """
+    # A bool attitude would match the 0.0 rows in pandas (False == 0.0)
+    pos_y, pos_x = _scalar("pos_y", pos_y), _scalar("pos_x", pos_x)
     if _scalar("slope_tol", slope_tol) <= 0:
         raise ValueError("slope_tol must be > 0")
     data = pd.read_csv(path)

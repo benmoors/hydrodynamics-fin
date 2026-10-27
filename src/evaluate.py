@@ -51,6 +51,14 @@ def _metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     }
 
 
+def _require(table: pd.DataFrame, target: str, estimator_name: str | None = None) -> None:
+    """KeyError unless ``estimator_name`` (when given) is known and ``target`` is a column."""
+    if estimator_name is not None and estimator_name not in ESTIMATORS:
+        raise KeyError(f"unknown estimator {estimator_name!r}; have {sorted(ESTIMATORS)}")
+    if target not in table.columns:
+        raise KeyError(f"target {target!r} not in table")
+
+
 def fold_scores(
     table: pd.DataFrame,
     target: str,
@@ -85,10 +93,7 @@ def fold_scores(
     KeyError
         If ``estimator_name`` is unknown or ``target`` is not a column.
     """
-    if estimator_name not in ESTIMATORS:
-        raise KeyError(f"unknown estimator {estimator_name!r}; have {sorted(ESTIMATORS)}")
-    if target not in table.columns:
-        raise KeyError(f"target {target!r} not in table")
+    _require(table, target, estimator_name)
 
     columns = list(features) if features is not None else list(FEATURES)
     rows = []
@@ -142,7 +147,13 @@ def pooled_score(
     -------
     dict
         ``pooled_r2`` in newtons and ``pooled_r2_log`` in signed-log space.
+
+    Raises
+    ------
+    KeyError
+        If ``estimator_name`` is unknown or ``target`` is not a column.
     """
+    _require(table, target, estimator_name)
     columns = list(features) if features is not None else list(FEATURES)
     from src.models import signed_log  # local import: avoids a circular import
 
@@ -269,6 +280,13 @@ def nested_lobo(
         ``gamma``, ``inner_r2`` (the winning inner score) and ``r2`` (the honest
         outer score in newtons).
 
+    Raises
+    ------
+    KeyError
+        If ``target`` is not a column.
+    ValueError
+        If ``grid`` is empty.
+
     Notes
     -----
     Cost is ``outer_folds * len(grid) * inner_folds`` fits. With 13 boards and a
@@ -279,6 +297,9 @@ def nested_lobo(
     from src.models import _wrap
 
     grid = list(grid) if grid is not None else list(SVR_GRID)
+    _require(table, target)
+    if not grid:
+        raise ValueError("grid must hold at least one parameter set")
     rows = []
     for held_out, train, test in leave_one_group_out(table, level=level):
         best_score, best_params = -np.inf, grid[0]

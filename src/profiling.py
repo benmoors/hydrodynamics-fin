@@ -134,8 +134,8 @@ def arithmetic_intensity(
     >>> result["bound"]
     'memory'
     """
-    if n_support_vectors <= 0 or n_features <= 0:
-        raise ValueError("n_support_vectors and n_features must both be positive")
+    if n_support_vectors <= 0 or n_features <= 0 or bytes_per_float <= 0:
+        raise ValueError("n_support_vectors, n_features and bytes_per_float must all be positive")
     flops = 5.0 * n_support_vectors * n_features
     traffic = float(bytes_per_float * n_support_vectors * n_features)
     intensity = flops / traffic
@@ -173,7 +173,14 @@ def predict_latency(
     -------
     dict
         ``batch``, ``seconds_per_call``, ``seconds_per_row``, ``rows_per_second``.
+
+    Raises
+    ------
+    ValueError
+        If ``batch`` or ``repeats`` is below 1, or ``X`` has no rows.
     """
+    if batch < 1 or repeats < 1 or len(X) == 0:
+        raise ValueError("batch and repeats must be >= 1, and X must have at least one row")
     query = X[:batch] if batch <= len(X) else np.repeat(X, batch // len(X) + 1, axis=0)[:batch]
     model.predict(query)  # warm up: first call pays import and allocation costs
     best = min(

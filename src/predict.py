@@ -182,15 +182,20 @@ class SurrogatePredictor:
         KeyError
             If a required column is absent.
         ValueError
-            If the table contains NaN in any feature or target -- fitting through a
-            NaN silently drops rows and changes what the envelope means.
+            If the table is empty or contains NaN or +-inf in any feature or target --
+            fitting through a NaN silently drops rows and changes what the envelope means.
         """
         missing = [c for c in self.features + self.targets if c not in table.columns]
         if missing:
             raise KeyError(f"table is missing columns: {missing}")
         subset = table[self.features + self.targets]
+        if subset.empty:
+            raise ValueError("training table has no rows")
         if subset.isna().to_numpy().any():
             raise ValueError("training table contains NaN in a feature or target column")
+        # isna() does not see +-inf, which would reach the scaler as an opaque sklearn error
+        if not np.isfinite(subset.to_numpy(float)).all():
+            raise ValueError("training table contains an infinite value in a feature or target column")
 
         X = subset[self.features].to_numpy(float)
         for target in self.targets:
@@ -225,8 +230,8 @@ class SurrogatePredictor:
         KeyError
             If a feature column is absent from ``X``.
         ValueError
-            If ``X`` contains NaN, or if any row is out of envelope under
-            ``policy='refuse'``.
+            If ``X`` has no rows or contains NaN or +-inf, or if any row is out of
+            envelope under ``policy='refuse'``.
 
         Warns
         -----
@@ -241,11 +246,16 @@ class SurrogatePredictor:
             raise KeyError(f"query is missing feature columns: {missing}")
 
         query = X[self.features]
+        if query.empty:
+            raise ValueError("query has no rows")
         if query.isna().to_numpy().any():
             raise ValueError(
                 "query contains NaN. There is no defensible imputation for a board "
                 "dimension, so this refuses rather than guessing a hull."
             )
+        # Checked before the envelope, so an inf is refused rather than warned about and then crashed on
+        if not np.isfinite(query.to_numpy(float)).all():
+            raise ValueError("query contains an infinite value; no board dimension is infinite")
 
         flags = self.envelope_.check(query)
         in_envelope = flags.all(axis=1)

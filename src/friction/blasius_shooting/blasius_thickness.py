@@ -76,9 +76,13 @@ def thicknesses(Re_x):
     Raises
     ------
     ValueError
-        If Re_x is empty or more than 1-D, or any value is not finite or not positive.
+        If Re_x is not numeric, empty or more than 1-D, or any value is not finite or not positive.
     """
-    Re_x = np.atleast_1d(np.asarray(Re_x, dtype=float))
+    Re_x = np.atleast_1d(np.asarray(Re_x))
+    # A bool would pass as 1.0
+    if Re_x.dtype.kind not in "iuf":
+        raise ValueError("Re_x must be a number or an array of numbers (a bool is not)")
+    Re_x = Re_x.astype(float)
     if Re_x.ndim != 1 or Re_x.size == 0:
         raise ValueError("Re_x must be one value or a non-empty 1-D array")
     if not np.all(np.isfinite(Re_x) & (Re_x > 0)):

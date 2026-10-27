@@ -264,9 +264,13 @@ def at_samples(df: pd.DataFrame, t: np.ndarray) -> np.ndarray:
         Shape ``(len(t), 3)``: accel x, y, z in m/s^2.
     """
     ts = df.timestamp.to_numpy()
-    # np.interp clamps outside its grid, which would silently hold the last value.
-    if t[0] < ts[0] or t[-1] > ts[-1]:
-        raise ValueError(f"sample times {t[0]}-{t[-1]} s fall outside the run {ts[0]}-{ts[-1]} s")
+    t = np.asarray(t, dtype=float)
+    if t.ndim != 1 or t.size == 0 or not np.all(np.isfinite(t)):
+        raise ValueError("sample times must be a non-empty 1-D array of finite values")
+    # np.interp clamps outside its grid, which would silently hold the last value; min/max, not the ends,
+    # so an unsorted t cannot slip a sample past the check
+    if t.min() < ts[0] or t.max() > ts[-1]:
+        raise ValueError(f"sample times {t.min()}-{t.max()} s fall outside the run {ts[0]}-{ts[-1]} s")
     return np.column_stack([np.interp(t, ts, df[c].to_numpy()) for c in ACCEL])
 
 
@@ -591,7 +595,8 @@ def monte_carlo(
             i = len(fits)
             fits.append(fit(polar, clean + noise[i] * sigma, sigma, t, duration_s, dt, v0_true, joint))
         sd_n, sd_n2 = sd_k(n), sd_k(2 * n)
-        settled = abs(sd_n2 - sd_n) / sd_n < STD_REL_TOL
+        # sd_n = 0 (no spread at all) is not "settled"; the live screen guards it the same way
+        settled = sd_n > 0 and abs(sd_n2 - sd_n) / sd_n < STD_REL_TOL
         if settled or 2 * n >= N_MAX:
             return fits, dict(n=n, n2=2 * n, sd_n=sd_n, sd_n2=sd_n2, settled=settled)
         n *= 2

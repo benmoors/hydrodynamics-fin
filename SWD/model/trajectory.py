@@ -17,6 +17,12 @@ That last point is the honest limit of this module. SWD supplies the force
 *response*; it does not supply the manoeuvre, and it never ran at more than one
 speed, so any ``V`` dependence here is a modelling choice rather than a measurement.
 
+**Superseded (2026-10-27).** The board's speed history is now computed by
+``forward-model/forward_model.py``. That module uses the live solver's forces at
+one attitude, slope-matched, together with the author's friction law F_f. This
+module is kept as it was. Its summed polar (``AI-USE.md`` section 5, E133) is not
+fixed, so its forces, Board-Jerk and Radicality are still inflated.
+
 Run
 ---
     python SWD/model/trajectory.py            # writes computed-data/trajectory.csv, self-checks

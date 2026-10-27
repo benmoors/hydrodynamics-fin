@@ -136,6 +136,7 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-10-27 | Claude Code 2.1.311 (`claude-opus-5-5`), session `b82e80a3`, branch `ForwardModel`: the jerk cost J of the forward model's run, from Charles et al. (2026) Eq 4–7 (cited, p.6). (1) `forward-model/board_jerk.py`: `displacement`, Eq 7 taken literally (D_a, Simpson twice on a); `jerk_cost`, with j from `np.gradient`, C = T⁵/D² and J by composite Simpson; input checks that raise ValueError; a `__main__` that runs `simulate()` at its defaults. (2) Four exploration tables for the author's tolerances: his linear case, his sinusoid, his run subsampled, and the units. (3) `tests/test_board_jerk.py`, 19 tests on his cases, grids and tolerances. `forward_model.py`, `trajectory.py`, the screens and `friction-function/` are untouched | The author asked for the jerk cost from Step 1's a = dV/dt (§ 2 verbatim below). His derivations and every choice are in § 4 | The run gives D = 2.65688 m, C = 34.4242 s⁵/m² and J = 64.5824, complete, as in the planning preview. The linear case is exact to 7.1e-15 (J) and 4.4e-16 m (D). p_obs is 2.0000 on the sinusoid at h, h/2, h/4 and 2.0054 on his run at FD steps 4h, 2h, h. Rescaling changes J by at most 4.9e-15, relative. Full suite: 315 passed, 1 xfail. `pdoc --math` builds clean. The planning preview's p_obs of 1.999 used a different D (§ 5 E160) | Prompt 2026-10-27 (§ 2 verbatim, `b82e80a3`); answers 2026-10-27 (§ 2, `b82e80a3`) |
 | 2026-10-27 | Review round of the jerk cost, review-only, through `sqa_cli_pass.py`. Nothing was reverted, and the guard passed 19/19 before and after each pass. agy (Antigravity CLI, Gemini 4 Argon, Medium): 0 Critical, 0 Warnings, 2 Suggestions (CLEAN). Devin CLI (SWE-1.7): 0, 0, 0 (CLEAN). Claude Code (same session, `b82e80a3`) applied agy's two: (1) `_samples` rejects a t or a that is not numeric, so a bool a is no longer read as 0 and 1 m/s², the same guard as `forward_model.theta`. (2) Negative tests for a 2-D and a 0-D input and for a bool a: 22 tests in all | The author's one review-only round by agy and Devin, with Claude Code applying the fixes (§ 4) | Both reviewers reproduced every number in the `b82e80a3` entries, including E160's 1.999 (1.998770) and 2.0054. After the fixes the author's run is unchanged (J = 64.5824, complete). Full suite: 318 passed, 1 xfail. `pdoc --math` builds clean | Run folder `%LOCALAPPDATA%\sqa-loop\runs\board-jerk-2026-10-27\` |
 | 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`b82e80a3`): the project-wiki ingest for the jerk cost. *Board-Jerk*, *Project Validation Evidence and Limits* and *Virtual Surfer Project* were updated with the jerk cost of Step 1's run, its checks and limits, and the deferred comparison with the paper. *Board-Jerk* gained a Summary, and a note, labelled inference, that Eq 7's double integral from rest leaves out V0·T | The author asked for the ingest after its topics were proposed | The wiki lint passes, with no problems, orphans or unresolved links, and qmd was re-indexed. The design choices are recorded as the author's. The wiki is gitignored, so `log.md` is its record | Answer 2026-10-28, "Commit it, and do the wiki ingest, then push" (§ 6) |
+| 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), same session (`b82e80a3`), branch `resort-repo` cut from main after main was pulled to `e40973d` (PR #7): the repo re-sort. (1) Untracked and gitignored, kept on disk: all 27 `*.ps1`, `memory/`, the Charles et al. PDF and its text extract, `TODO.md`, `surfing-performance-io.md`, `mma3001-project-spec.md` and `fin_sensor_pcb_overview.md`; `.gitattributes` deleted (its one rule was for `memory/MEMORY.md`). (2) `git mv` of the project code into `src/` packages (the path map is in § 4), with every sys.path insert replaced by an absolute `src.` import, the data paths moved up one level, five empty `__init__.py`, and run commands as `python -m src.<pkg>.<module>`. The notebooks stay beside their modules; the import lines in the first cells of `fd_vs_shooting_cc.ipynb` and `vonkarman.ipynb` now put the repo root on sys.path and import from the package; `shooting_for_blasius.ipynb` and `rk4_blasius_checks_cc.ipynb` are unchanged. Living references updated: two `SWD/tools/*.py` messages, the `.gitignore` comment, three `computed-data/**/README.md` run commands, `SWD/docs/column-names.md` and `PROGRESS.md`. (3) `docs/` regenerated with `pdoc --math` for every package; 40 absolute checkout paths that pdoc wrote into default arguments cut back to repo-relative. (4) The README: title, intro and §§ 1–7 rewritten for the project as it stands, from the wiki and § 4; § 8 and the 🤖 AI Acknowledgment given fact updates only (versions, counts, tools), no style pass. `CLAUDE.md` § 7, `AGENTS.md` and `SWD/README.md` updated for the layout | The author asked for the re-sort, the README update and the merge route (§ 2 verbatim below) | Before and after the move: 318 passed and 1 xfail; J = 64.5824 and V(3 s) = 6.09056 m/s from `python -m`. All four notebooks' code cells run from their own folders (jupyter is absent, so as scripts): the Kármán p_obs is 4.0694 and the FD and RK4 checks reproduce. `git log --follow` reaches the pre-move history (17 renames detected). A grep of `docs/` for `C:/`, `C:\`, `dev/HYDRODYNAMICS` and `Users/` finds nothing. Humanizer pass on README §§ 1–7, then a token diff against the old README: every dropped number, path or command is an intended update except the PowerShell 5.1 and Win32/UI Automation facts, which were restored in § 6 | Prompts and answers 2026-10-28 (§ 2, `b82e80a3`) |
  
 ### Answers given to Claude Code's questions, 2026-09-29
 
@@ -1251,6 +1252,62 @@ Plan approval: the approval dialog was dismissed, then "Go".
 Q: Which tolerances, from the four tables (linear; sinusoid; his run subsampled; units)?
 A: 1e-12; E19-style, |p−2| ≤ 0.1; |p−2| ≤ 0.1; 1e-12
 
+### Prompts for the repo re-sort, the README and the SQA rounds, 2026-10-28 (session `b82e80a3`)
+
+Four messages, verbatim and in order: the request, two sent while Claude Code was planning, and one sent after the
+plan was approved.
+
+<details>
+<summary>The prompts, verbatim</summary>
+
+````text
+Great, now I want you to make a new branch, called resort-repo. I want you to move all source code into src, and ipynb into notebooks,  Remove all ps1 from the repo (gitignore), these are not important for the project. Memory and wiki can also be gitignored too, as well as 1-s2.0-... pdf and md, and TODO.md, surfing-per-io.md, requirements.txt, mma3001-project-spec.md, and fin_sensor_pcb_overview.md too. Data can stay in the repo. After this is all done, commit, push, then pull the branch and delete. THEN, carry out SQA-loop on all the python code we have produced, modified though. Carry out agy and devin, then claue code to fix, then the sqa-loop agents, then fix, then agy and devin, then fix.
+
+Fold into this plan, updating the readme with the updated project, you have enough context from here and the wiki for what to change it to.
+
+Ask any questions where needed
+
+Do not stop to ask me anything, get it all done tonight
+````
+
+</details>
+
+### Answers given to Claude Code's questions, 2026-10-28 (session `b82e80a3`)
+
+Same handling as the 2026-09-29 subsection: the question is paraphrased and the answer is word for word.
+
+Q: Which Python moves into `src/`: the project code only (`forward-model/`, `friction-function/`, `SWD/model/`), that plus `tools/`, everything including `SWD/tools/*.py`, or the project code with `SWD/tools/*.py` gitignored?
+A: Project code only (Recommended)
+
+Q: How should the moved code sit inside `src/`: mirrored hyphenated subfolders with the sys.path inserts kept, flat, or proper subpackages with package imports?
+A: Proper subpackages
+
+Q: Moving the notebooks to `notebooks/` breaks their imports. Add a path cell to each, to all but the author's, or move only?
+A: Pair them with their .py actually, makes it easier
+
+Q: The README installs from `requirements.txt`. Gitignore it and move the README to `pyproject.toml`, keep it tracked, or gitignore it with the README unchanged?
+A: Keep requirements.txt tracked
+
+Q: What happens to `resort-repo` after it is pushed, given that merging it into main also brings ForwardModel's commits?
+A: pull main first, then carry out what I said, ask another quetion if still unckear
+
+Q: Which Python goes through the SQA rounds: all project Python, the October work only, or all project Python plus `tools/`?
+A: All project Python
+
+Q: README § 8 and the AI Acknowledgment carry stale facts. Update the facts only, from `AI-USE.md`, or leave them untouched?
+A: Facts only, from AI-USE.md
+
+Q: Regenerate `docs/`, given that pdoc bakes absolute paths into default arguments: regenerate and scrub, regenerate as is, or leave it?
+A: Regenerate, scrub paths
+
+Q: After main is pulled and `resort-repo` pushed: a GitHub PR merged and deleted, or a local fast-forward of main?
+A: GitHub PR, merge, delete
+
+Q: Where do the SQA rounds' fixes go: a new branch by the same route, directly on main, or a new branch left unmerged?
+A: New branch, same route
+
+Plan approval: approved as written.
+
 ---
 
 ## 📂 3. Approximate level of AI contribution `[REVIEW]`
@@ -1279,6 +1336,7 @@ author must adjust to what they know to be true.
 | `friction-function/rerun_live_screen_ff.py`, `tests/test_rerun_live_screen_ff.py` — the Gate B rerun | ~100% of the code | Author chose the screen, holding the attitude and V0, and what the output states; AI chose to replace three module-level names of the unchanged screen rather than edit it |
 | `forward-model/forward_model.py`, `tests/test_forward_model.py` — the forward model, Step 1 | ~100% of the code | **Author derived** E15, E16 and E19 (his own; E19's /m, § 5 E153). **Author chose** the schedule (20° → 0° over 3 s, V0 = 6 m/s); the attitude; slope-matched forces with a gravity-inclusive check and its 25 N tolerance; tensor PCHIP; F_f times k; the stop rule; his `rk4_solve`; h; every test grid and tolerance; c at 20°, hard-coded; and the external check against SWD's `drag_total_n`. **AI ran** the feasibility check and the tables. **AI chose** the V-then-θ order of the PCHIP, the one-step `march` wrapper, the separate `OutOfData` signal, and the 2–10 m/s range on V0 |
 | `forward-model/board_jerk.py`, `tests/test_board_jerk.py` — the jerk cost J | ~100% of the code | **Author derived** D_b, D_a, J_linear and J_sinusoidal (his own; the sinusoid's ωT = nπ is Claude Code's completion, § 5 E159). **Author chose** J alone with no comparison with the paper; D_a; `np.gradient` and Simpson; T and h; `simulate()` at its defaults as the only motion input; D = 0 raising; the exact-case values; the convergence targets; the units check; the extra input checks; every tolerance. **AI offered** the options for the Eq 7 method, the convergence target, the test values, the units check and the extra checks, ran the tables, and chose the code's structure (`displacement`, `jerk_cost`, the `_samples` helper and its order of checks) |
+| Repository layout (2026-10-28): `src/` packages, `.gitignore`, `docs/`, the README rewrite | ~100% of the edits | **Author chose** what moves (project code only), proper subpackages, notebooks beside their modules, what is gitignored and what stays (`requirements.txt`, the data), regenerating `docs/` with paths scrubbed, facts-only updates to README § 8 and the Acknowledgment, and the git route. **AI chose** the package names (`friction`, `blasius_shooting`, `von_karman`, `forward_model`, `swd_model`), editing the notebooks' existing import lines rather than adding a cell, the README's structure and wording, and the `.gitignore` comments |
 | The written report and presentation | to be stated when written | Author |
 
 ---
@@ -1383,6 +1441,9 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-10-27 | **D_a, not D_b:** J uses Eq 7 taken literally, without V0·T. On his run D_a = 2.6569 m gives J = 64.582; D_b = 20.657 m would give 1.068, 60 times smaller. A `# Limit:` comment in the module records it. The options and figures were Claude Code's | Answers 2026-10-27 (§ 2, `b82e80a3`), "D_a only" |
 | 2026-10-27 | **The rest of his choices, from options Claude Code offered:** Eq 7 by Simpson twice on a (`cumulative_simpson` inside, `simpson` outside). D = 0 raises ValueError, where `trajectory.py` set C = 1. The convergence check (E18; the Oberkampf reference is still unconfirmed, `TODO.md` S.8) runs on the sinusoid at h, h/2, h/4 and on his run subsampled to FD steps 4h, 2h, h, so `simulate()` is never re-run. The exact cases are a0 = 1 m/s², β = −0.5 m/s³, A = 1 m/s² and n = 1. Units are checked by a rescaling test (a in mm/s²; t in ms with a in m/ms²) plus the dimension count in the docstring. His six invalid inputs, plus an odd interval count and a t that is not strictly increasing, each raise ValueError and have a negative test. One review-only round by agy and Devin, with Claude Code applying the fixes; `forward_model.py` is not edited | Answers 2026-10-27 (§ 2, `b82e80a3`), "Simpson twice on a", "Raise ValueError", "Sinusoid + subsampled run", "a0=1, β=-0.5, A=1, n=1", "Rescaling test + docstring", "Odd number of intervals, t not strictly increasing", "Yes, that's right" |
 | 2026-10-27 | **The tolerances, chosen from Claude Code's four tables; Claude Code neither picked nor tuned them:** on the linear case, J and D within 1e-12 (7.1e-15 and 4.4e-16 m measured). On the sinusoid, the error at h/4 within the h/2 → h/4 change (5.6e-7 against 1.7e-6), and \|p_obs − 2\| ≤ 0.1 (2.0000 measured). On his run, \|p_obs − 2\| ≤ 0.1 (2.0054 measured). The rescaled J within 1e-12, relative (at most 4.9e-15 measured) | Answer 2026-10-27 (§ 2, `b82e80a3`), "1e-12; E19-style, \|p−2\| ≤ 0.1; \|p−2\| ≤ 0.1; 1e-12" |
+| 2026-10-28 | **The repo re-sort:** the project code moves into `src/` as proper subpackages with package imports; `tools/` and `SWD/tools/*.py` stay where they are. Notebooks are paired with their `.py`, not moved to a `notebooks/` folder (his own change to his first request). Every `*.ps1`, `memory/`, the paper PDF and its `.md`, `TODO.md`, `surfing-performance-io.md`, `mma3001-project-spec.md` and `fin_sensor_pcb_overview.md` are gitignored and kept on disk; `requirements.txt` stays tracked, though his first request listed it; `SWD/data/` stays. `docs/` is regenerated with absolute paths scrubbed. README § 8 and the Acknowledgment get fact updates only. Git: pull main, branch, commit, push, a GitHub PR merged and the branch deleted, then pull main; the SQA rounds' fixes go on a new branch by the same route. The options were Claude Code's | Answers 2026-10-28 (§ 2, `b82e80a3`), "Project code only (Recommended)", "Proper subpackages", "Pair them with their .py actually, makes it easier", "Keep requirements.txt tracked", "Facts only, from AI-USE.md", "Regenerate, scrub paths", "GitHub PR, merge, delete", "New branch, same route" |
+| 2026-10-28 | **Path map for older entries** (this file is append-only, so they keep the old paths): `friction-function/friction_force.py` → `src/friction/friction_force.py`; `friction-function/rerun_live_screen_ff.py` → `src/friction/rerun_live_screen_ff.py`; `friction-function/blasius-shooting/` → `src/friction/blasius_shooting/`; `friction-function/von-karman/` → `src/friction/von_karman/`; `forward-model/` → `src/forward_model/`; `SWD/model/` → `src/swd_model/`. Commands of the form `python <folder>/<module>.py` are now `python -m src.<package>.<module>` from the repo root. The names are Claude Code's | Answers 2026-10-28 (§ 2, `b82e80a3`), "Proper subpackages" |
+| 2026-10-28 | **The SQA rounds, his order:** agy and Devin, then Claude Code fixes; then the `sqa-lead` suite, then Claude Code fixes; then agy and Devin again, then Claude Code fixes. All project Python (`src/**` and `tests/`). No questions mid-run: anything needing his decision is listed, not applied | Prompt 2026-10-28 (§ 2 verbatim, `b82e80a3`); answers "All project Python" and "New branch, same route"; "Do not stop to ask me anything, get it all done tonight" |
 
 **Interview readiness** (`CLAUDE.md` R7 — nothing in the repo I cannot explain unaided). To be
 ticked by the author, not by AI:
@@ -1589,6 +1650,7 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E158 | 2026-10-27 | Benjamin's D_b derivations (prompt 2026-10-27, § 2 verbatim, `b82e80a3`): `Db = V)*T + a)*T**2/2 + beta*T**3/6` and `Db = V)*T + A*T/omega` | ")" is a slip for "0", the same key shifted: V0 and a0. His D_a line types the same term as `a0*T**2/2` | Claude Code, session `b82e80a3`, while planning; stated in the plan the author approved ("Go") | § 4, the 2026-10-27 D_b rows |
 | E159 | 2026-10-27 | Benjamin's sinusoid results (the same prompt): D_b = V0·T + AT/ω, D_a = \|AT/ω\| and J_sinusoidal = A²ω²T⁶/(4D²), stated with no form for a and no condition on ω | For a = A sin(ωt), ∫₀ᵀ∫₀ᵗ a ds dt = AT/ω − A sin(ωT)/ω², and ∫₀ᵀ cos²(ωt) dt = T/2 + sin(2ωT)/(4ω). All three hold only when sin(ωT) = 0, that is ωT = nπ. For a = A cos(ωt), D would not be AT/ω at all | Claude Code, session `b82e80a3`, checking the derivation while planning; confirmed by the author's answer to the test-values question, which stated ω = nπ/T | § 4, the sinusoid rows; the `board_jerk.py` docstring; `tests/test_board_jerk.py` |
 | E160 | 2026-10-27 | Claude Code, session `b82e80a3`, in the convergence question and the plan: "Preview: p_obs = 1.999" on his run subsampled to FD steps 4h, 2h, h | 1.999 came from D = \|∫(V − V0) dt\| on Step 1's V. With Eq 7 as chosen (Simpson twice on a) the same check gives 2.0054 (Table 3), because D now also changes with the step. The question did not say which D the preview used. The author set \|p − 2\| ≤ 0.1 from Table 3 | Claude Code, running Table 3 | this entry; § 4, the 2026-10-27 tolerances row |
+| E161 | 2026-10-28 | Claude Code, session `b82e80a3`, in a question to the author about the merge route: merging `resort-repo` into main "also brings ForwardModel's 12 commits" | It was 10 commits (`origin/main..ForwardModel`, as counted earlier in the same session), and by the time of the question main already held them: the author had merged PR #7 (`e40973d`) | Claude Code, while writing this entry | this entry |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn

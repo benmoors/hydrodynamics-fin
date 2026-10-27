@@ -40,12 +40,24 @@ def _query(**overrides) -> pd.DataFrame:
     return pd.DataFrame([row])
 
 
+# The corpus envelope, hard-coded rather than recomputed from the table under test: build_training_table()'s
+# per-feature min and max, measured 2026-10-28 (README section 4 quotes them rounded)
+CORPUS_ENVELOPE = {
+    "volume_shape_l": (24.0094108581543, 130.691558837891),
+    "length_over_width": (2.907908518448605, 5.560461870005617),
+    "thickness_over_length": (0.0104973688721657, 0.0425174832344055),
+    "drift_deg": (0.0, 20.0),
+    "roll_rad": (-0.200369301738895, 1.36839498792376),
+}
+
+
 class TestEnvelope:
     def test_measures_the_training_range(self, table):
         envelope = Envelope.from_table(table, FEATURES)
         for feature in FEATURES:
-            assert envelope.lower[feature] == pytest.approx(table[feature].min())
-            assert envelope.upper[feature] == pytest.approx(table[feature].max())
+            lower, upper = CORPUS_ENVELOPE[feature]
+            assert envelope.lower[feature] == pytest.approx(lower, rel=1e-12, abs=1e-15)
+            assert envelope.upper[feature] == pytest.approx(upper, rel=1e-12, abs=1e-15)
 
     def test_boundary_values_are_inside(self, table):
         """A query exactly at the training minimum is interpolation, not extrapolation."""

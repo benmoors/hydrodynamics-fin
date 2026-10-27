@@ -368,15 +368,24 @@ class PhysicsFrictionBaseline:
         X : numpy.ndarray, shape (n, 4)
             ``[length_m, width_m, roll_rad, drift_deg]``.
         y : numpy.ndarray, shape (n,)
-            Observed friction drag, N.
+            Observed friction drag, N. Rows whose y is not finite and positive are
+            skipped, not fitted.
 
         Returns
         -------
         PhysicsFrictionBaseline
             self.
+
+        Raises
+        ------
+        ValueError
+            If X is not a finite (n, 4) array, or no row has a usable y.
         """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y, dtype=float)
+        # Refused here, by name, rather than downstream as a message about a wetted area the caller never passed
+        if X.ndim != 2 or X.shape[1] != 4 or not np.all(np.isfinite(X)):
+            raise ValueError("X must be a finite (n, 4) array: [length_m, width_m, roll_rad, drift_deg]")
         unit = self._force(X, k_area=1.0)
         usable = (unit > 0) & np.isfinite(y) & (y > 0)
         # A default k of 1 here would be a silent, unfitted baseline scored as if it were fitted

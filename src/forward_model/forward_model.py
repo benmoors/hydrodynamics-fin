@@ -83,7 +83,6 @@ class Forces(NamedTuple):
     theta_range: tuple
 
 
-@lru_cache(maxsize=None)
 def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TOL):
     """The resistance D(V, theta, k) = k F_f(V) + P(V, theta) + R(V, theta) at one live-solver attitude.
 
@@ -109,14 +108,20 @@ def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TO
     ------
     ValueError
         If pos_y, pos_x or slope_tol is not a finite scalar, slope_tol is not > 0, the attitude's drift-0 rows are
-        not a complete speed x slope grid, a
-        0 deg row fails the 1 % check, a non-zero slope row fails slope_tol, or the wetted area or length changes
-        with slope.
+        not a complete speed x slope grid, a 0 deg row fails the 1 % check, a non-zero slope row fails slope_tol, or
+        the wetted area or length changes with slope.
     """
-    # A bool attitude would match the 0.0 rows in pandas (False == 0.0)
-    pos_y, pos_x = _scalar("pos_y", pos_y), _scalar("pos_x", pos_x)
-    if _scalar("slope_tol", slope_tol) <= 0:
+    # Checked before the cache: a bool attitude would match the 0.0 rows in pandas (False == 0.0), and a cache in
+    # front of the check would serve True from a call made with 1 (they hash equal)
+    pos_y, pos_x, slope_tol = _scalar("pos_y", pos_y), _scalar("pos_x", pos_x), _scalar("slope_tol", slope_tol)
+    if slope_tol <= 0:
         raise ValueError("slope_tol must be > 0")
+    return _load_forces(path, pos_y, pos_x, slope_tol)
+
+
+@lru_cache(maxsize=None)
+def _load_forces(path, pos_y, pos_x, slope_tol):
+    """load_forces() after its checks, cached per (path, attitude, tolerance)."""
     data = pd.read_csv(path)
     rows = data[(data.drift_deg == 0) & (data.pos_y == pos_y) & (data.pos_x == pos_x)]
     if rows.duplicated(["speed_ms", "slope_deg"]).any():
@@ -153,7 +158,7 @@ def load_forces(path=ff.SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_tol=SLOPE_TO
             raise ValueError("k must be >= 0")
         if not (v_lo <= V <= v_hi and th_lo <= theta_deg <= th_hi):
             raise OutOfData(f"V {V} m/s, theta {theta_deg} deg is outside {v_lo}-{v_hi} m/s, {th_lo}-{th_hi} deg")
-        return k*float(ff.F_f(V, A, L)) + float(PchipInterpolator(slopes, pr_in_V(V))(theta_deg))
+        return k*float(ff.F_f(V, A, L)) + float(PchipInterpolator(slopes, pr_in_V(V), extrapolate=False)(theta_deg))
 
     return Forces(D, (float(v_lo), float(v_hi)), (float(th_lo), float(th_hi)))
 

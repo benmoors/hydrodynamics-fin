@@ -127,8 +127,8 @@ _ONEDRIVE_TENANT = re.compile(r"OneDrive(?: - |---)[^\\/\r\n]+?(?=[\\/]|-Documen
 def _home_pattern(home: Path) -> re.Pattern[str]:
     """Match every spelling of the home directory Windows and MSYS produce.
 
-    ``C:\\Users\\moors``, ``C:/Users/moors``, ``/c/Users/moors`` and the
-    ``C--Users-moors`` form Claude Code uses for its project folder.
+    ``C:\\Users\\<user>``, ``C:/Users/<user>``, ``/c/Users/<user>`` and the
+    ``C--Users-<user>`` form Claude Code uses for its project folder.
     """
     parts = [re.escape(p) for p in home.parts[1:]]  # drop the drive
     sep = r"[\\/]+"
@@ -153,6 +153,20 @@ def redact(text: str, home: Path | None = None, root: Path | None = None) -> str
     text = _home_pattern(home).sub("~", text)
     # A path to any other OneDrive folder (e.g. the SWD library) still names the tenant.
     return _ONEDRIVE_TENANT.sub("OneDrive", text)
+
+
+def clean_scope(scope: str, home: Path | None = None) -> str:
+    """A session's Scope cell with the home folder's name and any OneDrive tenant redacted (R9).
+
+    A session opened in the home folder itself reads ``via <username>``, and one opened in a
+    OneDrive root reads ``via OneDrive - <tenant>``; neither passes through :func:`redact`,
+    which sees prompt text, not this cell. Applied at render time, so a row carried forward
+    from an earlier appendix is cleaned too.
+    """
+    home = home or Path.home()
+    if scope.strip() == f"via {home.name}":
+        return "via ~"
+    return _ONEDRIVE_TENANT.sub("OneDrive", scope)
 
 
 def _queued_prompt(record: dict) -> dict | None:
@@ -462,7 +476,7 @@ def render(sessions: list[Session]) -> str:
         first, last = min(s.prompts, key=lambda p: p.when), max(s.prompts, key=lambda p: p.when)
         out.append(
             f"| `{s.id}` | {s.cli} | {', '.join(sorted(s.versions)) or '?'} "
-            f"| {', '.join(sorted(s.models)) or '?'} | {s.scope} "
+            f"| {', '.join(sorted(s.models)) or '?'} | {clean_scope(s.scope)} "
             f"| {first.when.astimezone(LOCAL):{_FMT}} | {last.when.astimezone(LOCAL):{_FMT}} | {len(s.prompts)} |"
         )
     out.append("")

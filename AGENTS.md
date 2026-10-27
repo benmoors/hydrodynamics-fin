@@ -68,7 +68,7 @@ boundary-layer theory, a forward model of the board's speed V(t) down a wave fac
   and Pillow (measured 2026-10-01); only `py -3.14` has `xlsxwriter` and `pywin32`. A script that
   calls bare `python` for numpy work is not a defect.
 - Set `PYTHONIOENCODING=utf-8`; cp1252 crashes on θ, λ and curly quotes.
-- Git: `.git` is a pointer file to `C:/Users/moors/git/hydrodynamics-fin.git`; use `git -C <repo>`.
+- Git: `.git` is a pointer file to `~/git/hydrodynamics-fin.git`; use `git -C <repo>`.
   Read-only git only (`status`, `diff`, `log`, `show`).
 - PowerShell 5.1 `Export-Csv -Encoding UTF8` writes a BOM that breaks Python readers.
 

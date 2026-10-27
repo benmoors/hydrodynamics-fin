@@ -86,11 +86,11 @@ def blasius_fd(N=N, h=h, iterations=PICARD_ITERATIONS):
     Raises
     ------
     ValueError
-        If N is not an integer >= 3, h is not a finite positive number, or iterations is not an integer >= 1.
+        If N is not an integer >= 2, h is not a finite positive number, or iterations is not an integer >= 1.
     """
     # A bool is an int to Python, so it is refused by name
-    if isinstance(N, bool) or not isinstance(N, (int, np.integer)) or N < 3:
-        raise ValueError("N must be an integer >= 3: the f''(0) stencil needs g_0, g_1 and g_2")
+    if isinstance(N, bool) or not isinstance(N, (int, np.integer)) or N < 2:
+        raise ValueError("N must be an integer >= 2: the f''(0) stencil needs g_0, g_1 and g_2")
     if (isinstance(h, bool) or not isinstance(h, (int, float, np.integer, np.floating))
             or not (np.isfinite(h) and h > 0)):
         raise ValueError("h must be a finite positive number")

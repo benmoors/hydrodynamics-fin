@@ -21,7 +21,6 @@ SIGMA = 0.46959999
 # Limit: below Re_L ~ 1000 full Navier-Stokes drag exceeds the boundary-layer value (p.172); not enforced.
 
 
-@lru_cache(maxsize=None)
 def shoot(eta_max=ETA_MAX, h=STEP_SIZE):
     """f''(0) by RK4 shooting on 0 <= eta < eta_max, the secant stopping at |F| < PRECISION.
 
@@ -45,13 +44,19 @@ def shoot(eta_max=ETA_MAX, h=STEP_SIZE):
     ValueError
         If eta_max or h is not a finite positive scalar, or the grid has fewer than 3 points.
     """
+    # Checked before the cache: a cache in front would serve True from a call made with 1 (they hash equal)
     if np.ndim(eta_max) != 0 or np.ndim(h) != 0:
         raise ValueError("eta_max and h must be scalars")
-    eta_max, h = float(_check("eta_max", eta_max)), float(_check("h", h))
-    # Fewer than 3 grid points leaves RK4 nothing to march and the secant nothing to aim at
-    if eta_max - ETA_0 < 2*h:
-        raise ValueError("eta_max must be at least 2 steps past eta = 0")
+    return _shoot(float(_check("eta_max", eta_max)), float(_check("h", h)))
+
+
+@lru_cache(maxsize=None)
+def _shoot(eta_max, h):
+    """shoot() after its checks, cached per (eta_max, h)."""
     eta = np.arange(ETA_0, eta_max, h)
+    # Counted on the grid actually built: with fewer than 3 points the secant lands on a wrong f''(0) with no error
+    if len(eta) < 3:
+        raise ValueError("the grid 0, h, 2h, ... below eta_max must have at least 3 points")
     s_star, _, s_history, f_history = secant_for_shooting(lambda s: F(s, eta, h), GUESS_ddf, GUESS2_ddf,
                                                           precision=PRECISION)
     secant_error = abs(f_history[-1]*(s_history[-1] - s_history[-2])/(f_history[-1] - f_history[-2]))

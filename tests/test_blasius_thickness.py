@@ -56,8 +56,11 @@ def test_coefficients_same_for_array_and_one_at_a_time() -> None:
     assert all(H_single == H for _, H_single in singles)
 
 
-@pytest.mark.parametrize("Re_x", [0.0, -1.0, np.nan, np.inf, [1e5, -1.0], [], [[1e3, 1e4]]])
-def test_rejects_invalid_re_x(Re_x) -> None:
+@pytest.mark.parametrize("Re_x, match", [(0.0, "finite and positive"), (-1.0, "finite and positive"),
+                                         (np.nan, "finite and positive"), (np.inf, "finite and positive"),
+                                         ([1e5, -1.0], "finite and positive"), ([], "non-empty 1-D"),
+                                         ([[1e3, 1e4]], "non-empty 1-D")])
+def test_rejects_invalid_re_x(Re_x, match) -> None:
     """Re_x must be finite and positive, and one value or a non-empty 1-D array."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=match):
         bt.thicknesses(Re_x)

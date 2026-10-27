@@ -137,7 +137,7 @@ true**, which is why neither is assumed.
 
 Planning-time evidence favouring UIPI, none of it conclusive on its own:
 
-- `BENMOORS\moors` is in `BUILTIN\Administrators`, currently *"used for deny only"* — a UAC split
+- `<HOST>\<user>` is in `BUILTIN\Administrators`, currently *"used for deny only"* — a UAC split
   token, so `highestAvailable` **will** elevate.
 - Microsoft: *"UIPI implements restrictions… that prevent lower-privilege applications from sending
   messages or installing hooks in higher-privilege processes."* The documented bypass, `uiAccess`,

@@ -21,7 +21,7 @@ The usual mitigation, *"these are the user's own files"*, does not hold here. Tw
 
 | Evidence | Value |
 |---|---|
-| Distinct `shaper_name` values in the library (measured before the column was dropped) | `AWaterSurfClub`, `Helicier`, `Jef`, `jef`, `jf iglesias`, `SWD_shared`, `WaterMan` |
+| Distinct `shaper_name` values in the library (measured before the column was dropped) | 7 distinct values; the names are not reproduced here (R9, 2026-10-28) |
 | Where the library lives | a cloud-synced OneDrive path |
 
 So the tree holds board files authored by other people and is cloud-synced. A file that merely

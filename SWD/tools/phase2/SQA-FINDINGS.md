@@ -153,7 +153,7 @@ short-circuit.
 | S22 | `[High]` `GetWindowRect` return discarded, so a failed rect reads as `0,0,0,0`; `GetClassName` truncates silently at 256 |
 | S23 | `[High]` `SetLastError=true` declared but never read — discarding `ERROR_ACCESS_DENIED`, the single most useful datum a UIPI-filtered call can report |
 | S24 | `[High]` **no Pester tests exist.** A pure-function suite (`ConvertTo-Kmh`, the split parser, the `Ok` predicate, `Format-Integrity`, the handle predicate) is writable with SWD closed |
-| S25 | `[High]` the diagnostic logs `BENMOORS\moors` when `$elev` and the integrity SID already answer that section |
+| S25 | `[High]` the diagnostic logs `<HOST>\<user>` when `$elev` and the integrity SID already answer that section |
 | S26 | `[High]` the inline C# type was named `W` in the global namespace behind an `if (-not ('W' -as [type]))` guard, so a foreign `W` binds silently |
 | S27 | `[High]` CSV formula injection: a leading `=` is quoted but not neutralised (zero occurrences in the 181 live rows) |
 | S28 | `[High]` UIA `FindAll` with no `CacheRequest`, one cross-process property fetch per element |
@@ -201,7 +201,7 @@ short-circuit.
 - **ACL escalation does NOT fire.** SQA asked for `icacls` on `phase2\`: if any `BUILTIN\Users` or
   `Everyone` write ACE existed, a Medium-integrity replacement of `swd_msg.ps1` before an elevated
   run would be a genuine privilege escalation and C-grade. Measured — only
-  `NT AUTHORITY\SYSTEM`, `BUILTIN\Administrators` and `BENMOORS\moors` hold `(F)`. Finding stays put.
+  `NT AUTHORITY\SYSTEM`, `BUILTIN\Administrators` and `<HOST>\<user>` hold `(F)`. Finding stays put.
 - **S32, corrected.** Re-measured 2026-08-27 after the rewrite: `swd_msg.ps1` **2108 tokens /
   496 lines**, `swd_diagnose.ps1` **1655 / 331**, `swd_ui.ps1` **626 / 102**. InjectionHunter sites
   are `swd_msg.ps1:29`, `swd_diagnose.ps1:192`, `swd_diagnose.ps1:204` (plus `swd_ui.ps1:12`, out of

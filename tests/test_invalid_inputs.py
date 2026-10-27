@@ -104,10 +104,11 @@ def test_physics_baseline_refuses(call, match) -> None:
     (lambda: ss.C_f(True), "a bool is not"),
     (lambda: ss.wall_slope([0.0, 0.1, 0.2], np.array([0.1, 0.2])), "single step"),
     (lambda: ss.shoot(-1.0, 0.1), "eta_max must be finite"),
-    (lambda: ss.shoot(0.1, 0.1), "at least 2 steps"),
+    (lambda: ss.shoot(0.1, 0.1), "at least 3 points"),
+    (lambda: ss.shoot(2*ss.STEP_SIZE, ss.STEP_SIZE), "at least 3 points"),
     (lambda: bt.thicknesses(True), "a bool is not"),
-    (lambda: fd.blasius_fd(N=1), "N must be an integer >= 3"),
-    (lambda: fd.blasius_fd(N=True), "N must be an integer >= 3"),
+    (lambda: fd.blasius_fd(N=1), "N must be an integer >= 2"),
+    (lambda: fd.blasius_fd(N=True), "N must be an integer >= 2"),
     (lambda: fd.blasius_fd(h=-0.1), "h must be a finite positive number"),
     (lambda: fd.blasius_fd(h="0.1"), "h must be a finite positive number"),
     (lambda: fd.blasius_fd(iterations=0), "iterations must be an integer >= 1"),
@@ -135,3 +136,31 @@ def test_friction_and_forward_model_refuse(call, match) -> None:
 def test_tools_refuse(call, error, match) -> None:
     with pytest.raises(error, match=match):
         call()
+
+
+# SQA round 2 (sqa-lead): the checks sat behind lru_cache, which served True from a cached call made with 1
+def test_shoot_checks_run_before_its_cache() -> None:
+    ss.shoot(1, ss.STEP_SIZE)
+    with pytest.raises(ValueError, match="a bool is not"):
+        ss.shoot(True, ss.STEP_SIZE)
+
+
+def test_load_forces_checks_run_before_its_cache() -> None:
+    fm.load_forces(pos_y=0)
+    with pytest.raises(ValueError, match="pos_y must be a finite scalar"):
+        fm.load_forces(pos_y=False)
+    with pytest.raises(ValueError, match="pos_y must be a finite scalar"):
+        fm.load_forces(pos_y=np.array([0.0]))  # was TypeError: unhashable type
+
+
+def test_wetted_geometry_accepts_a_0d_array_like_forward_model() -> None:
+    A, L = ff.wetted_geometry(pos_y=np.array(0.0))
+    assert np.isfinite(A(8.0)) and np.isfinite(L(8.0))
+
+
+def test_holdout_split_keeps_a_train_group() -> None:
+    """Two boards and test_fraction 0.6 used to move both into test, leaving train empty."""
+    two = pd.DataFrame({"board": ["a_1", "a_1", "b_1", "b_1"], "x": [1.0, 2.0, 3.0, 4.0]})
+    train, test = splits.holdout_split(two, test_fraction=0.6, level="board")
+    assert len(train) > 0 and len(test) > 0
+    assert set(train.board).isdisjoint(set(test.board))

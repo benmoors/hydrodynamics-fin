@@ -71,11 +71,18 @@ def wetted_geometry(path=SOLVER_CSV, pos_y=POS_Y, pos_x=POS_X, slope_deg=0.0, dr
         If pos_y, pos_x, slope_deg or drift_deg is not a finite real scalar, the attitude has fewer than two
         converged speeds, or a speed appears twice.
     """
+    selectors = []
     for name, value in (("pos_y", pos_y), ("pos_x", pos_x), ("slope_deg", slope_deg), ("drift_deg", drift_deg)):
-        # A bool would match the 0.0 rows in pandas (False == 0.0), selecting an attitude by accident
-        if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, float, np.integer, np.floating)) \
-                or not np.isfinite(value):
+        # A bool would match the 0.0 rows in pandas (False == 0.0), selecting an attitude by accident. The rule is
+        # forward_model._scalar's, so a 0-d array is accepted here as it is there
+        try:
+            ok = not isinstance(value, (bool, np.bool_)) and np.ndim(value) == 0 and bool(np.isfinite(value))
+        except TypeError:
+            ok = False
+        if not ok:
             raise ValueError(f"{name} must be a finite real scalar")
+        selectors.append(float(value))
+    pos_y, pos_x, slope_deg, drift_deg = selectors
     data = pd.read_csv(path)
     rows = data[(data.slope_deg == slope_deg) & (data.drift_deg == drift_deg) & (data.pos_y == pos_y)
                 & (data.pos_x == pos_x)].sort_values("speed_ms")

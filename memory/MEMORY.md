@@ -5,3 +5,6 @@
 - [pytest --basetemp under the sandbox](pytest-basetemp-in-sandbox.md) — 17 tmp_path ERRORs are the sandbox refusing %TEMP%; re-run with --basetemp in the scratchpad.
 - [Difference from a reference, not error](difference-from-reference-not-error.md) — gap to a rounded book value is a difference; recompute a self-adjusting budget before predicting a failure (E141, E142).
 - [No unrequested web sources](no-unrequested-web-sources.md) — never use Wikipedia/web pages as a source unless asked; report the gap and ask (E130).
+- [A comparison needs a real truncation error](numerical-check-needs-truncation-error.md) — RK4 on a constant RHS is exact, not a check; march the singular ODE from x0 instead.
+- [Author picks grids and tolerances](author-picks-grids-and-tolerances.md) — show an x0/h/p_obs exploration table and wait; never tune to reach the expected order.
+- [Authorship: only what the author derived or chose](authorship-only-what-author-derived.md) — anything Claude wrote out, offered as options or framed is recorded as Claude's, even if confirmed.

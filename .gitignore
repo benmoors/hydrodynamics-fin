@@ -4,6 +4,19 @@ Project/
 # The repo is public, so it stays local (see wiki/CLAUDE.md).
 wiki/
 
+# --- Kept local from 2026-10-28 (the repo re-sort; AI-USE.md section 4) ---
+# The SWD acquisition and UI-automation PowerShell is not part of the project's deliverable.
+*.ps1
+# Claude Code's auto memory for this project (autoMemoryDirectory still points here).
+memory/
+# The paper (cited in the README and AI-USE.md, not redistributed) and its text extract.
+1-s2.0-S2590123025049114-main.pdf*
+# Working notes: the worklist, the I/O sketch, the AI-compiled spec sheet, the downstream PCB note.
+/TODO.md
+/surfing-performance-io.md
+/mma3001-project-spec.md
+/fin_sensor_pcb_overview.md
+
 # --- SWD acquisition ---
 # Backups live OUTSIDE this repo (see SWD/README.md). These entries are a
 # second line of defence in case one is ever copied in by mistake.

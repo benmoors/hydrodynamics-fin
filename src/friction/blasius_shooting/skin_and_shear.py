@@ -76,7 +76,11 @@ def _check(name, value, upper=np.inf):
 
 
 def _s_star(s_star):
-    return shoot()[0] if s_star is None else _check("s_star", s_star)
+    if s_star is None:
+        return shoot()[0]
+    if np.ndim(s_star) != 0:
+        raise ValueError("s_star must be a single number")
+    return float(_check("s_star", s_star))
 
 
 def C_f(Re_x, s_star=None):

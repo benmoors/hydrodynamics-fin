@@ -72,3 +72,9 @@ def test_sigma_x_is_the_first_screens():
     """
     sigma = live.sigma_x(live.load_mmc1())
     assert sigma == {"upper": 0.5087893035225471, "lower": 0.028319030703751146}
+
+
+def test_equilibria_finds_a_crossing_on_a_grid_knot():
+    """Devin, 2026-10-28: a crossing exactly on one of the 801 knots has sign 0 and was skipped ([] for both)."""
+    assert live.equilibria(lambda v: v - 5.0, 0.0, 10.0, 0.0) == [5.0]
+    assert live.equilibria(lambda v: 2.0 - v, 0.0, 5.0, 0.0) == [2.0]

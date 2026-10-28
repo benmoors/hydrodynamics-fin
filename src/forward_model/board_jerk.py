@@ -88,7 +88,7 @@ def displacement(t, a):
     ----------
     t : array_like
         Time, s, finite and strictly increasing, with at least 3 samples and an even number of intervals.
-        T = t[-1] - t[0] > 0. It need not start at 0.
+        T = t[-1] - t[0] > 0. It need not start at 0: both integrals start at t[0], the start of the run.
     a : array_like
         Acceleration along the face at each t, m/s^2, finite, the same length as t.
 
@@ -146,7 +146,7 @@ def jerk_cost(t, a, complete):
         raise ValueError("complete must be True: J needs the whole run, and this one stopped before T")
     t, a = _samples(t, a)
     T, D = t[-1] - t[0], displacement(t, a)
-    # trajectory.py set C = 1 here; the author's choice is to refuse, below his floor rather than only at an exact 0:
+    # The first trajectory model (Part A, removed) set C = 1 here; the author's choice is to refuse, below his floor rather than only at an exact 0:
     # quadrature leaves an analytically zero D at about 1e-16 m, which would make C, and J, astronomically large
     if D < D_MIN:
         raise ValueError(f"D = {D:.3g} m is below the {D_MIN:g} m floor, so C = T^5/D^2 is undefined or meaningless")

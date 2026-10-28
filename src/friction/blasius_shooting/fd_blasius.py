@@ -22,7 +22,7 @@ def thomas(a, b, c, d):
     b : numpy.ndarray
         Main diagonal, length n.
     c : numpy.ndarray
-        Super-diagonal, length n. ``c[-1]`` is read but does not affect the solution, so it must be finite.
+        Super-diagonal, length n. ``c[-1]`` is read but never reaches the solution.
     d : numpy.ndarray
         Right-hand side, length n.
 

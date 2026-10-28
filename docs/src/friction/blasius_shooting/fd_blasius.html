@@ -115,7 +115,7 @@
 </span><span id="L-22"><a href="#L-22"><span class="linenos"> 22</span></a><span class="sd">    b : numpy.ndarray</span>
 </span><span id="L-23"><a href="#L-23"><span class="linenos"> 23</span></a><span class="sd">        Main diagonal, length n.</span>
 </span><span id="L-24"><a href="#L-24"><span class="linenos"> 24</span></a><span class="sd">    c : numpy.ndarray</span>
-</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">        Super-diagonal, length n. ``c[-1]`` is read but does not affect the solution, so it must be finite.</span>
+</span><span id="L-25"><a href="#L-25"><span class="linenos"> 25</span></a><span class="sd">        Super-diagonal, length n. ``c[-1]`` is read but never reaches the solution.</span>
 </span><span id="L-26"><a href="#L-26"><span class="linenos"> 26</span></a><span class="sd">    d : numpy.ndarray</span>
 </span><span id="L-27"><a href="#L-27"><span class="linenos"> 27</span></a><span class="sd">        Right-hand side, length n.</span>
 </span><span id="L-28"><a href="#L-28"><span class="linenos"> 28</span></a>
@@ -298,7 +298,7 @@
 </span><span id="thomas-23"><a href="#thomas-23"><span class="linenos">23</span></a><span class="sd">    b : numpy.ndarray</span>
 </span><span id="thomas-24"><a href="#thomas-24"><span class="linenos">24</span></a><span class="sd">        Main diagonal, length n.</span>
 </span><span id="thomas-25"><a href="#thomas-25"><span class="linenos">25</span></a><span class="sd">    c : numpy.ndarray</span>
-</span><span id="thomas-26"><a href="#thomas-26"><span class="linenos">26</span></a><span class="sd">        Super-diagonal, length n. ``c[-1]`` is read but does not affect the solution, so it must be finite.</span>
+</span><span id="thomas-26"><a href="#thomas-26"><span class="linenos">26</span></a><span class="sd">        Super-diagonal, length n. ``c[-1]`` is read but never reaches the solution.</span>
 </span><span id="thomas-27"><a href="#thomas-27"><span class="linenos">27</span></a><span class="sd">    d : numpy.ndarray</span>
 </span><span id="thomas-28"><a href="#thomas-28"><span class="linenos">28</span></a><span class="sd">        Right-hand side, length n.</span>
 </span><span id="thomas-29"><a href="#thomas-29"><span class="linenos">29</span></a>
@@ -338,7 +338,7 @@ Sub-diagonal, length n. <code>a[0]</code> is never read.</li>
 <li><strong>b</strong> (numpy.ndarray):
 Main diagonal, length n.</li>
 <li><strong>c</strong> (numpy.ndarray):
-Super-diagonal, length n. <code>c[-1]</code> is read but does not affect the solution, so it must be finite.</li>
+Super-diagonal, length n. <code>c[-1]</code> is read but never reaches the solution.</li>
 <li><strong>d</strong> (numpy.ndarray):
 Right-hand side, length n.</li>
 </ul>

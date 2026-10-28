@@ -102,3 +102,31 @@ def test_F_f_checks_a_passed_fluid_but_not_the_defaults(monkeypatch) -> None:
     assert calls == []
     ff.F_f(6.0, ONES, ONES, rho=1025.0)
     assert calls == [(1025.0, ff.MU)]
+
+
+# agy and Devin, 2026-10-28, on remove-part-a: the helpers screen 2 took from the first screen, and s_star
+from src.swd_model import identifiability_screen_live as live  # noqa: E402
+
+
+@pytest.mark.parametrize("call, match", [
+    (lambda: live.quiet_window(live.load_mmc1(), 2), "an integer from 3 to 148"),
+    (lambda: live.quiet_window(live.load_mmc1(), 149), "an integer from 3 to 148"),
+    (lambda: live.quiet_window(live.load_mmc1(), True), "an integer from 3 to 148"),
+    (lambda: live.majority_sign_fraction(np.array([])), "non-empty curve of finite values"),
+    (lambda: live.majority_sign_fraction(np.array([NAN, 1.0])), "non-empty curve of finite values"),
+    (lambda: live.standard_error("corr", 2.0, 10), "outside"),
+    (lambda: live.standard_error("sd", -1.0, 10), "outside"),
+    (lambda: live.standard_error("fraction", 1.5, 10), "outside"),
+    (lambda: live.standard_error("mean", 1.0, True), "a bool is not"),
+    (lambda: live.standard_error("median", 1.0, 10), "kind must be"),
+    (lambda: live.continuous_range(np.array([])), "speeds is empty"),
+    (lambda: ss.C_f(1e4, s_star=[0.3, 0.4]), "s_star must be a single number"),
+])
+def test_part_b_review_refusals(call, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        call()
+
+
+def test_standard_error_still_passes_nan_through() -> None:
+    """A NaN statistic (no converged fits, or set a's V0) gives a NaN SE, as mc_stats relies on."""
+    assert np.isnan(live.standard_error("corr", NAN, 10))

@@ -91,6 +91,8 @@ out of a SWD report file. The parent directory holds the extracted data.
 | `field_census.csv` | Statistics over the extracted fields, plus the status label this project assigned each one |
 | `elements_derived.csv` | The computed columns of `elements.csv`, with their keys |
 | `sub_elements_derived.csv` | The computed columns of `sub_elements.csv`, with their keys |
+| `identifiability_screen_live/` | 100% model output, from `python -m src.swd_model.identifiability_screen_live`. Whether a least-squares fit recovers a friction multiplier from acceleration at mmc1's sample times; its own README |
+| `identifiability_screen_live_ff/` | The same screen with F_f as the friction (Gate B), from `python -m src.friction.rerun_live_screen_ff`; its own README |
 
 ## Three things to know
 

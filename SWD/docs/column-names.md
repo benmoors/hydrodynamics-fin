@@ -120,7 +120,7 @@ reading, not a known one.
 | `epaisseur_ames_bois_mm`, `…plaquage…`, `…sections…` | `wood_spine_…`, `wood_skin_…`, `wood_rib_…` | The dictionaries say core, veneer and section. In surfing "core" means the foam, and hollow-wood builders use exactly this spine, skin and rib triad. All three are 4 mm on two boards and 0 on the other eleven |
 | `chanfrein_nose` | `nose_chamfer` | Every dictionary gives chamfer first. Shapers say bevel, mostly for rails |
 | `rayon_planning_m` | `turn_radius_m` | "Planning" is French for a schedule. SWD spells planing that way, and its English page says "radius of the turn" |
-| `epaisseur_relative_au_wide_point` | `relative_thickness_at_wide_point` | Ambiguous in French. The data settles it: 0.0105 to 0.0425 across the 13 boards. Read as thickness ÷ width, `default_longboard` (0.021) would be 1.2 cm thick, so it is thickness ÷ length, which `src/data.py` already assumed |
+| `epaisseur_relative_au_wide_point` | `relative_thickness_at_wide_point` | Ambiguous in French. The data settles it: 0.0105 to 0.0425 across the 13 boards. Read as thickness ÷ width, `default_longboard` (0.021) would be 1.2 cm thick, so it is thickness ÷ length, which the removed `src/data.py` (Part A) already assumed |
 | `Cz_effectif` | `cl_effective` | French writes the lift coefficient Cz, English CL |
 
 ---

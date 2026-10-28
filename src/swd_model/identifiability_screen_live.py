@@ -185,7 +185,15 @@ def quiet_window(mmc1: pd.DataFrame, length: int = QUIET_LENGTH) -> dict:
     dict
         ``start`` index, ``t0``/``t1`` in s, per-axis ``sigma`` (m/s^2, ddof = 2 for the two
         fitted line parameters) and per-axis lag-1 autocorrelation ``lag1`` of the residual.
+
+    Raises
+    ------
+    ValueError
+        If ``length`` is not an integer from 3 to the number of samples.
     """
+    # 3 or more leaves a residual after the two line parameters; more than len(mmc1) leaves no window at all
+    if isinstance(length, (bool, np.bool_)) or not isinstance(length, (int, np.integer)) or not 3 <= length <= len(mmc1):
+        raise ValueError(f"length must be an integer from 3 to {len(mmc1)}, got {length!r}")
     t = mmc1.t_s.to_numpy()
     acc = mmc1[["ax_g", "ay_g", "az_g"]].to_numpy() * G  # g, gravity included -> m/s^2
     best = None
@@ -217,7 +225,15 @@ def majority_sign_fraction(d: np.ndarray) -> float:
     -------
     float
         ``max(n_pos, n_neg) / n``.
+
+    Raises
+    ------
+    ValueError
+        If ``d`` is empty or not finite.
     """
+    d = np.asarray(d, dtype=float)
+    if d.size == 0 or not np.all(np.isfinite(d)):
+        raise ValueError("d must be a non-empty curve of finite values")
     return max(int((d > 0).sum()), int((d < 0).sum())) / d.size
 
 
@@ -264,17 +280,24 @@ def standard_error(kind: str, value: float, n: int) -> float:
     Raises
     ------
     ValueError
-        If kind is not one of the four.
+        If kind is not one of the four, n is a bool, or value is neither NaN nor inside its kind's range
+        (>= 0 for a mean's sd and for an sd, [0, 1] for a fraction, [-1, 1] for a correlation).
     """
+    ranges = {"mean": (0.0, np.inf), "sd": (0.0, np.inf), "fraction": (0.0, 1.0), "corr": (-1.0, 1.0)}
+    if kind not in ranges:
+        raise ValueError(f"kind must be 'mean', 'sd', 'fraction' or 'corr', got {kind!r}")
+    if isinstance(n, (bool, np.bool_)):
+        raise ValueError("n must be a count of draws (a bool is not)")
+    lo, hi = ranges[kind]
+    if not (np.isnan(value) or lo <= value <= hi):
+        raise ValueError(f"a {kind} statistic of {value!r} is outside [{lo:g}, {hi:g}]")
     if kind == "mean":
         return float(value / np.sqrt(n)) if n > 0 else float("nan")
     if kind == "sd":
         return float(value / np.sqrt(2 * (n - 1))) if n > 1 else float("nan")
     if kind == "fraction":
         return float(np.sqrt(value * (1 - value) / n)) if n > 0 else float("nan")
-    if kind == "corr":
-        return float((1 - value**2) / np.sqrt(n - 1)) if n > 1 else float("nan")
-    raise ValueError(f"kind must be 'mean', 'sd', 'fraction' or 'corr', got {kind!r}")
+    return float((1 - value**2) / np.sqrt(n - 1)) if n > 1 else float("nan")  # corr
 
 
 RC = {
@@ -341,6 +364,8 @@ def continuous_range(speeds: np.ndarray) -> tuple[float, float]:
         ``(v_lo, v_hi)`` of that run, m/s.
     """
     v = np.sort(np.unique(speeds))
+    if v.size == 0:
+        raise ValueError("speeds is empty")
     best, start = (v[0], v[0]), v[0]
     for i in range(1, v.size + 1):
         if i == v.size or not np.isclose(v[i] - v[i - 1], 1.0):
@@ -370,8 +395,10 @@ def equilibria(drag, lo: float, hi: float, drive: float) -> list[float]:
     """
     v = np.linspace(lo, hi, 801)
     x = np.asarray(drag(v), dtype=float) - drive
-    return [float(brentq(lambda s: float(drag(s)) - drive, v[i], v[i + 1]))
-            for i in np.where(np.sign(x[:-1]) * np.sign(x[1:]) < 0)[0]]
+    on_knot = [float(v[i]) for i in np.where(x == 0)[0]]
+    between = [float(brentq(lambda s: float(drag(s)) - drive, v[i], v[i + 1]))
+               for i in np.where(np.sign(x[:-1]) * np.sign(x[1:]) < 0)[0]]
+    return sorted(on_knot + between)
 
 
 @dataclass(frozen=True)

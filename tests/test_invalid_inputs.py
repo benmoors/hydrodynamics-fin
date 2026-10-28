@@ -89,7 +89,7 @@ def test_secant_names_its_failure() -> None:
     with pytest.raises(ValueError, match="would divide by zero"):
         sb.secant_for_shooting(lambda s: 1.0, 0.5, 0.6)  # a flat F
     with pytest.raises(ValueError, match="did not reach"):
-        sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, max_iter=0)
+        sb.secant_for_shooting(lambda s: s**3 - 0.33, 0.1, 0.2, max_iter=1)
     with pytest.raises(ValueError, match="second guess s = 5.0 is not finite"):
         sb.secant_for_shooting(lambda s: float("nan") if s > 1 else s, 0.0, 5.0)
 
@@ -130,3 +130,22 @@ def test_part_b_review_refusals(call, match) -> None:
 def test_standard_error_still_passes_nan_through() -> None:
     """A NaN statistic (no converged fits, or set a's V0) gives a NaN SE, as mc_stats relies on."""
     assert np.isnan(live.standard_error("corr", NAN, 10))
+
+
+# The author's decision, 2026-10-28: input checks in his shooting code, and precision <= 0, max_iter < 1 in the secant
+@pytest.mark.parametrize("call, match", [
+    (lambda: sb.exact_blasius(False), "eta must be a single finite number"),
+    (lambda: sb.exact_blasius(NAN), "eta must be a single finite number"),  # returned row 0
+    (lambda: sb.exact_blasius([0.1, 0.2]), "eta must be a single finite number"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, False, True), "s_old must be a single finite number"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, NAN), "s_init must be a single finite number"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, precision=0.0), "precision must be > 0"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, precision=-1.0), "precision must be > 0"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, precision=NAN), "precision must be a single"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, max_iter=0), "max_iter must be an integer >= 1"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, max_iter=True), "max_iter must be an integer >= 1"),
+    (lambda: sb.secant_for_shooting(lambda s: s - 0.33, 0.1, 0.2, max_iter=2.5), "max_iter must be an integer >= 1"),
+])
+def test_shooting_refuses(call, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        call()

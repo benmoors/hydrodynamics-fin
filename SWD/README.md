@@ -25,7 +25,7 @@ the trajectory simulation are separate work and are not part of this directory.
 
 > **Point of note (2026-10-28):** the surrogate and the trajectory simulation (Part A) have since been
 > removed from the repository. The project now uses SWD's live-solver tables, in `SWD/data/live_solver/`,
-> for a friction drag, a forward model and a jerk cost; see the root `README.md`.
+> for a friction drag and a forward model; see the root `README.md`.
 
 ---
 

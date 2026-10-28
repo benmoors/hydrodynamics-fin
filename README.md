@@ -1,16 +1,14 @@
-# 📘 Virtual Surfer — a surfboard's speed and jerk cost from SWD's forces
+# 📘 Virtual Surfer — a surfboard's speed from SWD's forces
 
 MMA3001 Numerical Methods and Machine Learning — individual project.
 
 A physics-based hydrodynamic solver (ShaperWaveDynamics, "SWD") gives the forces on a surfboard at a
-fixed attitude, but no trajectory. It never says how fast a board travels down a wave face, or how
-smoothly. This repository supplies that missing step. It:
+fixed attitude, but no trajectory. It never says how fast a board travels down a wave face. This
+repository supplies that missing step. It:
 
 - builds the friction drag on the board's bottom from boundary-layer theory;
 - adds SWD's own planing and rail drag from its live solver;
-- integrates the board's speed along the face with RK4;
-- scores the run with the jerk cost of Charles et al. (2026), a smoothness measure from their
-  surfing-performance study.
+- integrates the board's speed along the face with RK4.
 
 The equations the code implements are the author's derivations. Each is recorded, with the choices
 behind it, in [`AI-USE.md`](AI-USE.md) § 4.
@@ -21,11 +19,11 @@ where it goes next.
 ### 🔹 Where it began
 
 The project set out to build a "Virtual Surfer": a machine-learning surrogate trained on SWD's
-hydrodynamic output, queried along a synthetic trajectory on the wave, feeding the two performance
-indicators of Charles et al., Board-Jerk and Radicality. That first stage, Part A, had three pieces:
+hydrodynamic output, queried along a synthetic trajectory on the wave, feeding two performance
+indicators of Charles et al. That first stage, Part A, had three pieces:
 - the surrogate, an SVR compared with a decision tree, a 5-nearest-neighbour model and a physics
   baseline, trained on 13 boards and scored leave-one-board-out;
-- the first trajectory model, `trajectory.py`, with its Board-Jerk and Radicality;
+- the first trajectory model, `trajectory.py`, with its two indicators;
 - a first identifiability screen built on that model.
 
 Claude Code produced Part A from very high-level instructions, and the author did not oversee it
@@ -85,11 +83,11 @@ inside the data, or it accepts the 3 s start dependence of the screen's set (b) 
     │   │   ├── friction_force.py     F_f(V) on the live solver's wetted area and length
     │   │   └── rerun_live_screen_ff.py   Gate B: the second screen re-run with F_f
     │   ├── forward_model/
-    │   │   ├── forward_model.py      V(t) down the face: the author's E15 and E16, by RK4
-    │   │   └── board_jerk.py         the jerk cost J, Charles et al. Eq 4–7
+    │   │   └── forward_model.py      V(t) down the face: the author's E15 and E16, by RK4
     │   └── swd_model/                the live-solver identifiability screen, for the inverse PINN
-    ├── tests/                        pytest: 273 pass
+    ├── tests/                        pytest: 261 pass
     ├── docs/                         pdoc HTML, generated
+    ├── figures/                      the README's figures
     ├── SWD/                          the data acquired from SWD, and its documentation (section 6)
     ├── tools/                        regenerates the prompt appendix in AI-USE.md
     ├── AI-USE.md                     the AI-use record (section 8)
@@ -172,18 +170,16 @@ Every number quoted in section 5 comes from these commands.
 python -m pytest tests/ -q
 ```
 
-### 🔹 The forward model and the jerk cost
+### 🔹 The forward model
 
 ```bash
 python -m src.forward_model.forward_model    # the author's run: t, theta, V and a every 0.5 s
-python -m src.forward_model.board_jerk       # T, D, C and J for the same run
 ```
 
 ```python
-from src.forward_model import forward_model as fm, board_jerk as bj
+from src.forward_model import forward_model as fm
 
 t, V, a, complete = fm.simulate()            # 20 -> 0 deg over 3 s from 6 m/s, h = 0.001 s
-bj.jerk_cost(t, a, complete)                 # J, dimensionless
 fm.simulate(V0=6.5, k=1.1)                   # another start speed, friction scaled by 1.1
 ```
 
@@ -228,6 +224,11 @@ $m\,dV/dt = m g \sin\theta(t) - D(V, \theta)$, with $D = k F_f(V) + P(V, \theta)
 SWD's planing and rail drag at the slope θ, from the live solver at pos_y 0, pos_x 0.45, drift 0.
 m = 802.21 N / 9.81 m/s².
 
+![Forces on the board along the wave face](figures/forces_along_the_face.png)
+
+*Forces along the face on the board. D opposes the motion; gravity drives it through the slope θ(t).
+Drawn by a Claude chat (`AI-USE.md` § 2).*
+
 | Input | Type | Unit | Range (default) | Domain |
 |---|---|---|---|---|
 | `V0` | float | m/s | 2–10 (6) | inside the force data |
@@ -246,22 +247,6 @@ m = 802.21 N / 9.81 m/s².
 **Invalid input handling.** A non-finite, non-scalar or out-of-range input raises `ValueError`
 naming the input, as does a step that does not divide T. Nothing is extrapolated: a run whose
 speed leaves the force data stops at the last node inside it and returns `complete = False`.
-
-### 🔹 The jerk cost, `jerk_cost(t, a, complete)`
-
-$j = da/dt$, $J = \int_0^T C\,j^2/2\,dt$, $C = T^5/D^2$, with D the double integral of a (Charles et al.
-2026, Eq 4–7, p.6). Along one axis, $D = |\int_0^T\!\int_0^t a\,ds\,dt|$, taken literally, with no
-starting speed.
-
-| | Type | Unit | Range | Domain |
-|---|---|---|---|---|
-| `t` (input) | float array | s | T = t[−1] − t[0] > 0 | strictly increasing, ≥ 3 samples, an even number of intervals |
-| `a` (input) | float array | m/s² | finite | numeric, the same length as t |
-| `complete` (input) | bool | — | must be True | the whole run, from `simulate()` |
-| `J` (output) | float | dimensionless | ≥ 0 | |
-| `D`, from `displacement` (output) | float | m | ≥ 0 | `jerk_cost` raises below 1e-5 m: C is undefined at 0 and meaningless near it |
-
-Each of those conditions, broken, raises `ValueError` with its own message.
 
 ### 🔹 The friction force, `F_f(V, A, L)`
 
@@ -320,22 +305,6 @@ and both are measured in the table above.
   within 0.5–2.6 s for every starting speed from 4 to 10 m/s, so the ramp was changed to 20° → 0°
   over 3 s.
 
-### 🔹 The jerk cost
-
-On the author's run, D = 2.657 m, C = 34.42 s⁵/m² and **J = 64.58**.
-
-| Check | Result |
-|---|---|
-| The author's linear case, a = 1 − 0.5t: D = 2.25 m, J = 18 | exact to round-off (7.1×10⁻¹⁵) |
-| The author's sinusoid, a = sin(πt/3): J = π⁴/4 | p_obs = 2.0000 on h = 0.001, 0.0005, 0.00025 s |
-| The author's run, subsampled to steps of 4h, 2h and h | p_obs = 2.0054 |
-| J in other units (a in mm/s²; t in ms) | the same to 4.9×10⁻¹⁵, relative: J is dimensionless |
-
-> ### 🧩 Point of note — D is taken literally
-> Eq 7's double integral of acceleration leaves out the board's starting speed. On this run that
-> makes D = 2.657 m. The distance actually travelled is 20.657 m, which would give J = 1.068, sixty
-> times smaller. The author chose the literal form (`AI-USE.md` § 4).
-
 ### 🔹 The screen and Gate B
 
 The live-solver identifiability screen (2026-10-24) measured how well a fit recovers a friction
@@ -351,8 +320,6 @@ the author decides. A first screen, built on the removed trajectory model, left 
 - SWD's rows do not decompose exactly. At that attitude, `drag_total_n` minus
   (friction + planing + rail − W sin θ) is within 4.3 N up to 15°. It reaches −10.2 N at 20° and
   −22.1 N at (2 m/s, −10°).
-- The jerk cost is not compared with the paper; that comparison is future work. J here is for a
-  3 s straight glide with no turns, not a surfed wave, and Radicality is not computed.
 - The screen's set (b), which fits k and V0 together, is taken at 3 s to match the forward model's
   3 s run. At 3 s its fits depend on the optimiser's starting point and on the V0 ≤ 10 m/s bound:
   about 22 % of them stop on the bound, so its V0 spread is not what the data alone give. At
@@ -386,9 +353,9 @@ views) stay in the repository.
 
 ## 📂 7. Licence and attribution
 
-See `LICENSE`. The paper this project's performance metrics follow is Charles et al. (2026),
-*Results in Engineering* 29:108868, DOI 10.1016/j.rineng.2025.108868. Its supplementary
-data is redistributed here under CC BY 4.0 with attribution recorded in
+See `LICENSE`. This project uses the supplementary data of Charles et al. (2026),
+*Results in Engineering* 29:108868, DOI 10.1016/j.rineng.2025.108868. That data is
+redistributed here under CC BY 4.0 with attribution recorded in
 `SWD/data/paper-supplementary/SOURCE.md`; the paper itself is cited, not redistributed.
 
 The boundary-layer reference values come from White and Majdalani, *Viscous Fluid Flow* (2022),
@@ -426,6 +393,7 @@ says where each answer is and how the checking worked.
 | SQA-loop agents, run inside Claude Code | as installed Aug 2026; rebuilt 27 Sep 2026 | `claude-opus-5`, then `claude-opus-5-5` | reviewing and fixing that code — 15 review dispatches and 6 fix rounds in Aug–Sep 2026; read-only `sqa-numerical` and `sqa-functional` reviews in Oct 2026 |
 | humanizer plugin | 2.11.2 | the session's model | five prose passes over this README, the latest on 28 Oct 2026, each followed by a fact diff |
 | graphify | 0.9.52 | none for code | a navigation graph of the repo; gitignored, not a deliverable; retired 14 Sep 2026 |
+| Claude (claude.ai chat) | not recorded | not recorded | drew the forces diagram in section 4 (Figure F1 of the report's appendices) |
 | Google Antigravity CLI (agy) | 2026-09 onwards | Gemini (3.8 Flash, 3.1 Pro, 4 Argon, as selected) | auditing and fixing the SWD extraction code (24–25 Sep 2026); since 27 Sep, the first stage of the SQA pass; from Oct 2026, review-only checks of the friction, forward-model and jerk-cost code |
 | Devin CLI (Cognition) | 3000.11.3 | `swe-1-7` | drafting the second-source auditor config (24 Sep 2026); since 27 Sep, the second stage of the SQA pass; from Oct 2026, the second review-only check |
 

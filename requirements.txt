@@ -1,4 +1,4 @@
-# MMA3001 Virtual Surfer: friction drag, forward model and jerk cost.
+# MMA3001 Virtual Surfer: friction drag and forward model.
 # Pinned to what is installed and verified on Python 3.14.6 (cp314 wheels).
 numpy>=2.5
 pandas>=3.0

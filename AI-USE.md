@@ -145,6 +145,7 @@ and the transcripts in § 6; the "why" column is the author's to confirm. From h
 | 2026-10-28 | Claude Code, same session (`b82e80a3`): re-ran screen 2 (`python -m src.swd_model.identifiability_screen_live`, 4 min 53 s) and the Gate B rerun (`python -m src.friction.rerun_live_screen_ff`, 3 min 51 s) so their `monte_carlo_summary.csv` carry the standard errors (item 12). Screen 1 writes no summary and was not re-run | The author's item 12 (b) | Only the two `monte_carlo_summary.csv` changed; every other output, PNGs included, is byte-identical. In both, all 16 rows and every existing column are identical to the committed file, and 9 `SE ...` columns were added. Set (b) at the lower σ, Gate A → B: within ±band 0.185 (SE 0.019) at 3 s, and 0.7475 → 0.7275 (SE 0.022) at 10.055 s; sd of fitted V0 0.491 → 0.518 m/s (SE 0.017–0.018) at 10.055 s. At the upper σ, 10.055 s set (b) still puts 33.5 % and 31.5 % of fits on a bound | Prompt 2026-10-28 (§ 2 verbatim, `b82e80a3`), the author's decisions, "12.b" |
 | 2026-10-28 | Claude Code, same session (`b82e80a3`): the project-wiki ingest. 23 references to the old code folders now point at `src/`, on *Blasius Boundary Layer*, *Von Karman Momentum Integral*, *SWD Operating Points Dataset*, *SWD Column Names*, *Board Equation of Motion and SWD Forces* and *Board-Jerk*. The round-2 findings and these decisions are recorded: the second guess's stability limit, set (b)'s start dependence and the 10.055 s choice, the p_obs cause (E163), the D floor and the regression tests | The author asked for the ingest | The wiki lint passes, with no problems, orphans or unresolved links; qmd re-indexed 7 documents. The wiki is gitignored, so `log.md` is its record | Prompt 2026-10-28 (§ 2 verbatim, `b82e80a3`), the author's decisions, "Then wiki ingest" |
 | 2026-10-28 | Claude Code, same session (`b82e80a3`): recorded the revised item 2. A limitation bullet in README § 5 (humanizer pass, every fact checked unchanged); a line in screen 2's `ASSUMPTIONS`, which are printed with its results and written to no file; the two screen READMEs now keep the 3 s rows as the evidence, with the limitation; the wiki's *Board Equation of Motion and SWD Forces* and *Project Validation Evidence and Limits* updated, with `log.md` | The author's revised decision (§ 4) | The full suite passes; no output was regenerated, since nothing computed changed; the wiki lint passes | Prompts 2026-10-28 (§ 2 verbatim, `b82e80a3`), "Would 6 s be better than 10.055?" and "Lets leave it all as 3s and have it as a limitation" |
+| 2026-10-28 | Claude Code 2.1.311 (`claude-opus-5-5`), session `8a6402d4`, in a separate git worktree (`C:\dev\HYDRODYNAMICS-FIN-part-b`, so session `b82e80a3`'s working tree was not touched), branch `remove-part-a` from `author-decisions` at `718c0e0`, with three read-only subagents (two Explore, one `wiki-query`): removed Part A. **Removed:** `src/{geometry,data,splits,models,physics_baseline,evaluate,predict,profiling}.py`, `src/swd_model/trajectory.py` and `src/swd_model/identifiability_screen.py` (screen 1); their five test files; the surrogate and screen-1 tests in `test_invalid_inputs.py`; the F_f-vs-`physics_baseline` test and its strict xfail in `test_friction_force.py`; `computed-data/trajectory.csv` and `computed-data/identifiability_screen/`; scikit-learn from `requirements.txt` and `pyproject.toml`. All 24 files were first copied to `~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\Part-A\` (SHA-256 equal, listed in its `MANIFEST.txt`). **Changed:** screen 2 carries screen 1's mmc1 parser, sample times, quiet window, resolution σ, metrics, standard errors and palette, copied unchanged, and computes σ from mmc1 (`sigma_x`) instead of reading screen 1's `summary.csv`; its summary no longer appends the first screen's rows; `make_computed_view.py` no longer moves `trajectory.csv`. The README was rewritten for Part B only: where the project began, where it goes (the inverse PINN, from the § 4 rows of 2026-10-22 to 10-28), and the alternatives compared. The humanizer pass covered the new prose only, with a fact check. README § 8 and the AI Acknowledgment got facts-only changes and a `REVIEW`-marked Part A note. Pointer fixes in `CLAUDE.md` §§ 1 and 7, `AGENTS.md`, `GEMINI.md`, the audit skill, `SWD/README.md`, `SWD/docs/column-names.md` and the three `computed-data` READMEs; `docs/` regenerated (pdoc 16.0.0, paths scrubbed) | The author's decision to remove Part A (§ 4) | Before any edit, screen 2 and Gate B were re-run on `718c0e0` and reproduced all 24 committed files byte for byte. After: pytest 412 passed + 1 xfailed → 273 passed; the forward model's and the jerk cost's printed output byte-identical (J = 64.58244063939037, V(3 s) = 6.090559208497497 m/s); screen 2 and Gate B byte-identical except the lower-σ Monte Carlo rows (§ 5 E169): fitted k within 6×10⁻⁶ (screen 2) and 3×10⁻⁵ (Gate B) relative, summary statistics within 4×10⁻⁷, N, fractions and flags unchanged, upper-σ rows bit-identical; the first-screen rows gone from both `monte_carlo_summary.csv`. No absolute path left in `docs/` | Prompt 2026-10-28 (§ 2 verbatim, `8a6402d4`); answers below |
  
 ### Answers given to Claude Code's questions, 2026-09-29
 
@@ -1350,6 +1351,42 @@ Would 6 s be better than 10.055?
 Lets leave it all as 3s and have it as a limitation
 ````
 
+### Prompt for removing Part A, 2026-10-28 (session `8a6402d4`)
+
+Three messages, verbatim and in order: the prompt (pasted from the terminal, its display line-wraps joined), a note
+sent with it, and a clarification sent while Claude Code was planning.
+
+````text
+I have made a decision to remove the SVR from the repo. THis is due to the lack of oversight I carried out while they were being produced, with very high-level instructions. I want you to make a new branch, remove these from the repo, commit then push. You can keep the prompts related to it in, and mark this as a decision and as a part of learning how to use AI, mark it as the original goal, that has since changed. And update the README according to these changes. Check the code implicated by these changes for Part B, to ensure the outputs are the same. I want the readme updated to purely contain project we have ended on, but to discuss where it began and where it is to go in future, within the summary, being specific about how we had planned on integrating an inverse-PINN, and why Part A was dropped (tests could not be attested by me due to high-level instructions given). Produce HTML documenation of the code. After this is done, run an agy and devin overlook at the code, for CC to fix. then push again, I will PR.
+
+Keep in mind that there is another session running currently
+
+SVR refers to all Part A work, BJ and traj
+````
+
+### Answers given to Claude Code's questions, 2026-10-28 (session `8a6402d4`)
+
+Same handling as the 2026-09-29 subsection: the question is paraphrased and the answer is word for word.
+
+Q: Screen 1 runs on `trajectory.py`'s polar, and screen 2 and Gate B borrow its helpers and read its outputs for σ
+and for comparison rows. Remove it fully, remove its code but keep its outputs as frozen input, or keep screen 1 and
+`trajectory.py`?
+A: Remove it fully (Recommended)
+
+Q: The other session's uncommitted edits touch the same files. Start the branch stacked on `author-decisions` once
+that session has committed and pushed, or from main now?
+A: Stack on author-decisions (Recommended)
+
+Q: `test_friction_force.py` checks F_f against `physics_baseline.friction_force`. Hard-code its 10 values as the
+reference, or drop the comparison test?
+A: Drop the comparison test
+
+Q: Removing screen 1 changed the screens' lower-σ Monte Carlo outputs at round-off level (§ 5 E169). Accept the exact
+σ and commit the regenerated outputs, reproduce the old outputs bit for bit, or keep the committed outputs?
+A: Accept exact σ (Recommended)
+
+Plan approval: approved as written.
+
 ---
 
 ## 📂 3. Approximate level of AI contribution `[REVIEW]`
@@ -1380,6 +1417,11 @@ author must adjust to what they know to be true.
 | `forward-model/board_jerk.py`, `tests/test_board_jerk.py` — the jerk cost J | ~100% of the code | **Author derived** D_b, D_a, J_linear and J_sinusoidal (his own; the sinusoid's ωT = nπ is Claude Code's completion, § 5 E159). **Author chose** J alone with no comparison with the paper; D_a; `np.gradient` and Simpson; T and h; `simulate()` at its defaults as the only motion input; D = 0 raising; the exact-case values; the convergence targets; the units check; the extra input checks; every tolerance. **AI offered** the options for the Eq 7 method, the convergence target, the test values, the units check and the extra checks, ran the tables, and chose the code's structure (`displacement`, `jerk_cost`, the `_samples` helper and its order of checks) |
 | Repository layout (2026-10-28): `src/` packages, `.gitignore`, `docs/`, the README rewrite | ~100% of the edits | **Author chose** what moves (project code only), proper subpackages, notebooks beside their modules, what is gitignored and what stays (`requirements.txt`, the data), regenerating `docs/` with paths scrubbed, facts-only updates to README § 8 and the Acknowledgment, and the git route. **AI chose** the package names (`friction`, `blasius_shooting`, `von_karman`, `forward_model`, `swd_model`), editing the notebooks' existing import lines rather than adding a cell, the README's structure and wording, and the `.gitignore` comments |
 | The written report and presentation | to be stated when written | Author |
+
+**2026-10-28.** The `src/*.py` surrogate row above, and `trajectory.py` and screen 1, describe code that left the
+repository with Part A (§ 4). The edits that removed it, screen 2's copied helpers and `sigma_x`, the README rewrite
+and the pointer fixes are about 100 % Claude Code's typing. The author chose to remove Part A, what Part A covers, and
+the four answers in § 2 (2026-10-28, `8a6402d4`).
 
 ---
 
@@ -1507,6 +1549,11 @@ Recorded with the prompt that made them (dates as in § 6), so each is traceable
 | 2026-10-28 | **SQA item 19, the wiki ingest:** Yes: the old-path links fixed and the round-2 findings and these outcomes recorded (§ 2). The options and their implications were Claude Code's; the choice is the author's | Answer 2026-10-28 (§ 2, `b82e80a3`), "Then wiki ingest" |
 | 2026-10-28 | **SQA item 20, pushing:** Yes: the branch `author-decisions` is pushed for his pull request. The options and their implications were Claude Code's; the choice is the author's | Answer 2026-10-28 (§ 2, `b82e80a3`), "and push" |
 | 2026-10-28 | **SQA item 2, revised: set (b) stays at 3 s, its sensitivity stated as a limitation.** This replaces the 2.d row above (10.055 s). Asked whether 6 s would be better than 10.055 s, Claude Code answered that 6 s was never measured; that the longer window behaved better at the lower σ (3 % of set (b) fits on the V0 bound, against 22.5 % at 3 s) but worse at the upper σ (33.5 %, against 28.25 %); and that the forward model, held at 0° after its ramp, leaves the force data at 5.07 s, so it reaches neither 6 s nor 10.055 s. The author kept 3 s, the window that matches the forward model's run, and states the limitation: the 3 s set (b) fits depend on the optimiser's start point and on the V0 ≤ 10 m/s bound (22.5 % → 22.75 % end on it, Gate A → B), so their V0 spread is not the data's alone (§ 5 E166). The V0 bracket's upper edge is the 3 s figures again: sd of fitted V0 1.15 → 1.17 m/s, within ±band 18.5 % → 18.5 %. Recorded in README § 5, screen 2's `ASSUMPTIONS`, the two screen READMEs and the wiki. The screens still compute both windows: reading "leave it all as 3s" as the window relied on, not as removing 10.055 s from the screens, is Claude Code's. The options and their implications were Claude Code's; the choice is the author's | Prompts 2026-10-28 (§ 2 verbatim, `b82e80a3`), "Would 6 s be better than 10.055?" and "Lets leave it all as 3s and have it as a limitation" |
+| 2026-10-28 | **Part A is removed from the repository, and the original goal has changed.** Part A is the ML surrogate (`src/geometry.py`, `data.py`, `splits.py`, `models.py`, `physics_baseline.py`, `evaluate.py`, `predict.py`, `profiling.py`), the first trajectory model `src/swd_model/trajectory.py` with its Board-Jerk and Radicality, and screen 1, which ran on it. It was the project's original goal (the 2026-08-25 row: a surrogate trained on SWD's output, with Board-Jerk and Radicality as the indicators). The project now ends at Part B: the friction drag F_f, the forward model, the jerk cost J, and the live-solver screen and Gate B as groundwork for the inverse PINN. **His reason, recorded as part of learning to use AI:** Part A was produced "with very high-level instructions", with "the lack of oversight I carried out while they were being produced", so its "tests could not be attested by me". It is R7's second route: removed, not learned. The prompts that built Part A stay in § 6. The files are archived, hash-checked, in `~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\Part-A\` (Claude Code's plan, approved, following his 2026-10-27 move of `PINNs/`) and remain in git history at `718c0e0` | Prompt 2026-10-28 (§ 2 verbatim, `8a6402d4`), "I have made a decision to remove the SVR from the repo…" and "SVR refers to all Part A work, BJ and traj" |
+| 2026-10-28 | **Screen 1 is removed fully**: code, test and outputs. Screen 2 takes the helpers it used from screen 1, copied unchanged, and computes the σ bounds itself; the first screen's rows leave both `monte_carlo_summary.csv`. The options (remove fully; remove the code but keep its outputs as frozen input; keep screen 1 and `trajectory.py`) and their implications were Claude Code's; the choice is the author's | Answer 2026-10-28 (§ 2, `8a6402d4`), "Remove it fully (Recommended)" |
+| 2026-10-28 | **The branch is stacked on `author-decisions`**, started after session `b82e80a3` had committed and pushed it. He opens the pull request for `author-decisions` first, then for `remove-part-a`. The options and their implications were Claude Code's; the choice is the author's | Answer 2026-10-28 (§ 2, `8a6402d4`), "Stack on author-decisions (Recommended)" |
+| 2026-10-28 | **The F_f comparison with `physics_baseline.friction_force` is dropped**, not replaced by values hard-coded from it, so nothing from Part A stays in Part B's tests. The strict xfail on `physics_baseline`'s own round-off (§ 5 E147) goes with it. F_f keeps its fully laminar test against White's σ, the continuity test, the Kármán run, and the geometry and invalid-input tests; no test now pins the mixed laminar–turbulent value exactly. The options and their implications were Claude Code's; the choice is the author's | Answer 2026-10-28 (§ 2, `8a6402d4`), "Drop the comparison test" |
+| 2026-10-28 | **The screens use the exact lower σ**, `RESOLUTION_SIGMA` = 0.0981/√12 = 0.028319030703751146 m/s² (his E20), and their regenerated outputs are committed. The lower-σ fits move by at most 3×10⁻⁵ relative, and no quoted figure changes (§ 5 E169). The options (accept the exact σ; reproduce the old outputs bit for bit; keep the committed outputs) and their implications were Claude Code's; the choice is the author's | Answer 2026-10-28 (§ 2, `8a6402d4`), "Accept exact σ (Recommended)" |
 
 **Interview readiness** (`CLAUDE.md` R7 — nothing in the repo I cannot explain unaided). To be
 ticked by the author, not by AI:
@@ -1542,6 +1589,10 @@ ticked by the author, not by AI:
 | `tests/test_forward_model.py` | ☐ | ☐ | ☐ |
 | `forward-model/board_jerk.py` (`displacement`, `jerk_cost`) | ☐ | ☐ | ☐ |
 | `tests/test_board_jerk.py` | ☐ | ☐ | ☐ |
+
+**2026-10-28.** The eight `src/*.py` rows above left the repository with Part A (§ 4): removed, not learned (R7).
+Screen 2 (`src/swd_model/identifiability_screen_live.py`, now with the helpers copied from screen 1 and `sigma_x`)
+and its test have no row yet.
 
 ---
 
@@ -1720,6 +1771,8 @@ in the session that created this file. Per `CLAUDE.md` R3, nothing here is ever 
 | E165 | 2026-10-28 | Docstrings by Claude Code in earlier sessions: `PhysicsFrictionBaseline` "fits ... by least squares in log space", with "a ratio of medians"; `src/data.py` "nothing this project computes is ever written back into SWD/data/"; `geometry.aspect_ratio` raises "if either span is zero or negative" | The fit is the median of the per-row ratios; the screens and the Gate B rerun write `computed-data/` folders under `SWD/data/` (never the extracted CSVs); `aspect_ratio` took `abs()` of both spans first, so a reversed span passed | agy and Devin, SQA round 1 (2026-10-28) | the three docstrings; `aspect_ratio` (abs removed) |
 | E166 | 2026-10-28 | `AI-USE.md` § 4, the 2026-10-27 V0 row (written by Claude Code, framed in a claude.ai chat): set (b)'s spread of fitted V0 is "what the data alone give" | At 3 s it also reflects the optimiser's start point and the V0 ≤ 10 m/s bound: 22.5 % (Gate A) and 22.75 % (Gate B) of set (b) fits end on a bound, and 7 of 60 refitted draws reach different minima from two starts. At 10.055 s there is no start dependence (0 of 30 draws). The author now takes set (b) evidence from 10.055 s (§ 4, item 2) | `sqa-numerical`, SQA round 2 (2026-10-28) | this entry (the 2026-10-27 row left as written, R1); the two screen READMEs |
 | E167 | 2026-10-28 | Claude Code, session `b82e80a3`, in the implications given for item 9 (c), "it changes your `rk4_solve` signature, which every caller uses", and item 13 (b), "calling `F_f` directly would no longer check them" | 9 (c) was built as an optional last parameter, so no other caller changes. 13 (b) was built so the defaults are checked once at import and a passed value is checked when passed, so a direct call with a bad value is still refused. Both stated implications were stricter than what was built | Claude Code, while planning the change | § 4, items 9 and 13 |
+| E168 | 2026-10-28 | `README.md` § 1, the layout written by Claude Code (session `b82e80a3`): "tests/ pytest: 318 pass, 1 expected failure" | The suite had grown past it in the same day's SQA rounds and the author's decisions: 403 passed + 1 xfail at `fd53694` (§ 2), 412 + 1 at `718c0e0` | An Explore subagent's collection count, session `8a6402d4` | README § 1, now 273 pass after Part A's removal |
+| E169 | 2026-10-28 | `src/swd_model/identifiability_screen_live.py` (Claude Code, session `d85b9dcc`, 2026-10-24): `first_screen_sigma_x()` takes screen 1's σ bounds from its `summary.csv`, so screen 2 ran at screen 1's σ; the 2026-10-27 § 4 noise row, "the value Gates A and B ran with"; and Claude Code's approved plan (session `8a6402d4`) that with screen 1 removed every other Part B output would come out identical | pandas' default CSV float parser read the lower bound as 0.0283190307037511, not the 0.028319030703751146 screen 1 wrote (`RESOLUTION_SIGMA`; 1.6×10⁻¹⁵ relative), so screen 2 and Gate B ran at the parsed value. With σ computed from mmc1 their lower-σ fits moved by up to 6×10⁻⁶ (screen 2) and 3×10⁻⁵ (Gate B) relative, and the summary statistics by up to 4×10⁻⁷. N, the fractions, the flags and every quoted figure are unchanged; the upper bound parsed exactly | Claude Code's hash comparison of the reruns, session `8a6402d4` | `sigma_x` computes σ from mmc1; both screens' outputs regenerated (the author's choice, § 4); `test_sigma_x_is_the_first_screens` pins the exact values; the 2026-10-27 row left as written (R1) |
 
 **Corrected claims still standing in the source documents** (the ledger records; it does not
 fix — each needs its own change, in which R3 applies): `SWD/README.md:178-179` (withdrawn
@@ -1738,7 +1791,7 @@ transcripts Claude Code keeps outside the repo. Regenerate with `python tools/ex
 the home directory is redacted to `~`. Nothing between the markers is edited by hand.
 
 <!-- prompts:begin -->
-470 prompts across 63 sessions (Claude Code 444, Devin 2, agy 24), 2026-08-26 to 2026-10-28. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
+479 prompts across 64 sessions (Claude Code 453, Devin 2, agy 24), 2026-08-26 to 2026-10-28. Timestamps are Melbourne local time (AEST = UTC+10; AEDT = UTC+11 during daylight saving), converted from the UTC each CLI records. A session opened outside the repo contributes only the turns whose prompt or tool calls touched HYDRODYNAMICS-FIN. A session whose transcript the CLI has since deleted is carried forward from the previous appendix. Excluded as not about this repo: `64368e17` (Career commits and SQA; only listed the repo's git status); `3ec3aba3` (global CLAUDE.md wiki rule; only read the repo's wiki schema); `9bdca7c3` (resume-profile rule; edited only the gitignored wiki/ schema); `b95c1da1` (resume profile; read AI-USE.md, edited only the gitignored wiki/ schema); `34012d20` (ENG1090 wiki ingest; read the repo's wiki/ read-only); `7012645c` (ENG1012 wiki ingest; a subagent brief named the repo only to prune it); `8ea56016` (MMA2003/MMA2004 wiki ingests and per-unit wiki split; read the repo's wiki/ read-only); `dc20c342` (MMA2003/MMA2004 week 11 wiki ingest; named the repo only to prune it); `d475ebcf` (MMA2003/MMA2004 week 10 ingest and test rule sets; named the repo only to prune it). Generated by `tools/extract_prompts.py`; do not edit by hand.
 
 | Session | CLI | Version | Model | Scope | First | Last | Prompts |
 |---|---|---|---|---|---|---|---:|
@@ -1801,10 +1854,11 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 | `ca208153` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 19:49 AEDT | 2026-10-27 19:49 AEDT | 1 |
 | `8ef10473` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 20:13 AEDT | 2026-10-27 20:13 AEDT | 1 |
 | `008e894d` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 21:04 AEDT | 2026-10-27 21:04 AEDT | 1 |
-| `b82e80a3` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 22:58 AEDT | 2026-10-28 00:24 AEDT | 8 |
+| `b82e80a3` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-27 22:58 AEDT | 2026-10-28 10:45 AEDT | 15 |
 | `21be5f2c` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-27 23:43 AEDT | 2026-10-27 23:43 AEDT | 1 |
 | `302ecf3c` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-28 00:56 AEDT | 2026-10-28 00:56 AEDT | 1 |
 | `7f2334de` | agy | ? | Gemini 4 Argon (Medium) | via ? | 2026-10-28 02:23 AEDT | 2026-10-28 02:23 AEDT | 1 |
+| `8a6402d4` | Claude Code | 2.1.311 | claude-opus-5-5 | repo | 2026-10-28 10:22 AEDT | 2026-10-28 10:24 AEDT | 2 |
 
 ### 2026-08-26 22:38 AEST · Claude Code 2.1.246 · claude-opus-5 · `c253c200` · `main`
 
@@ -4912,6 +4966,50 @@ the home directory is redacted to `~`. Nothing between the markers is edited by 
 > REVIEW ONLY: report findings with file:line and a repro; edit no file at all. Claude Code applies the fixes.
 > Guard (must stay exit 0; now 383 passed, 1 xfailed): .venv\Scripts\python.exe -m pytest -q -p no:cacheprovider --basetemp ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\pt-guard
 > Repro scripts only in ~\AppData\Local\Temp\claude\C--dev-HYDRODYNAMICS-FIN\b82e80a3-d362-41e9-aea4-9df2d0d00db9\scratchpad\hfin-audit\. Keep the report short: VERDICT line, then findings ranked by severity.
+
+### 2026-10-28 09:39 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `main`
+
+> What are the things to be changed, and what are the options for each
+
+### 2026-10-28 09:40 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `main`
+
+> i.e., decisions to be made
+
+### 2026-10-28 09:41 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `main`
+
+> Add the implications of each choice to them
+
+### 2026-10-28 09:55 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `main`
+
+> Mark all these decisions in AI-USE.md. A1.a. 2. (also edit the ValueError message from what I originally wrote them as to what error they correspond to), 2.d. (check how this implicates any other files related to T = 3s before carrying out. 3.c. 0.00001. 4. c. 5.a. 6.b.  7. b. 8.b. 9.c. 10.b. 11.b. 12.b. 13.b. 14.b. 15.a,a.  16.(are these computed outputs used for the outputs we have for the project?). 17. Ive done pr. 18. a. Then wiki ingest, and push.
+
+### 2026-10-28 10:22 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `8a6402d4` · `author-decisions`
+
+> <pasted_content id="fbbc">
+> ❯ I have made a decision to remove the SVR from the repo. THis is due to the lack of oversight I carried out while they were being produced, with very high-level instructions. I want you to make a new branch, remove these from
+>   the repo, commit then push. You can keep the prompts related to it in, and mark this as a decision and as a part of learning how to use AI, mark it as the original goal, that has since changed. And update the README
+>   according to these changes. Check the code implicated by these changes for Part B, to ensure the outputs are the same. I want the readme updated to purely contain project we have ended on, but to discuss where it began and
+>   where it is to go in future, within the summary, being specific about how we had planned on integrating an inverse-PINN, and why Part A was dropped (tests could not be attested by me due to high-level instructions given).
+>   Produce HTML documenation of the code. After this is done, run an agy and devin overlook at the code, for CC to fix. then push again, I will PR.
+> </pasted_content id="fbbc">
+>
+>  Keep in mind that there is another session running currently
+
+### 2026-10-28 10:24 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `8a6402d4` · `author-decisions`
+
+> SVR refers to all Part A work, BJ and traj
+
+### 2026-10-28 10:32 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `author-decisions`
+
+> Would 6 s be better than 10.055?
+
+### 2026-10-28 10:39 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `author-decisions`
+
+> Lets leave it all as 3s and have it as a limitation
+
+### 2026-10-28 10:45 AEDT · Claude Code 2.1.311 · claude-opus-5-5 · `b82e80a3` · `author-decisions`
+
+> After this is done push
 
 <!-- prompts:end -->
 

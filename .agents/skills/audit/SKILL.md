@@ -33,7 +33,7 @@ finished and written down before § 5 edits anything.
 **ML / numerics (`src/`, `tests/`)**
 - Training rows come from `operating_points.csv` (720 rows, 29 boards), never `elements.csv`
   (mesh points, pseudo-replication).
-- Every split / CV is **grouped by board** (`src/splits.py`); look for any leakage path.
+- Any split / CV must be **grouped by board**; look for any leakage path.
 - `scan_speed_ms` is the physics; `board_speed_setting_ms` is GUI metadata and must never be a feature.
 - BJ normalisation: `D` is **net displacement** (double integral of acceleration, Eq 7), not arc
   length; `C = T^5 / D^2`. Ra = θz² / (t1 − t0) (Eq 11).

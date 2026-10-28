@@ -6,13 +6,21 @@ Read this before doing anything in this repository.
 
 MMA3001 (Numerical Methods and Machine Learning) **individual project — 25% of the unit mark**.
 
-The project is a **"Virtual Surfer" performance simulator**: an ML surrogate trained on hydrodynamic
-grids from ShaperWaveDynamics (SWD), queried at 100 Hz along a synthetic on-wave trajectory, feeding
-two performance indicators — **Board-Jerk (BJ)** and **Radicality (Ra)**.
+The project is a **"Virtual Surfer"**: a surfboard's friction drag F_f from boundary-layer theory
+(Blasius by RK4 shooting, von Kármán), a forward model of its speed V(t) down a wave face from
+ShaperWaveDynamics (SWD) live-solver forces, integrated by RK4, and the jerk cost **J** (Charles et
+al. Eq 4–7). The live-solver identifiability screen and Gate B are groundwork for a deferred inverse
+PINN.
+
+**The original goal changed (2026-10-28).** It was an ML surrogate trained on SWD's hydrodynamic
+grids, queried along a synthetic trajectory, feeding **Board-Jerk (BJ)** and **Radicality (Ra)**:
+"Part A". The author removed Part A (the surrogate modules, `trajectory.py` and screen 1) from the
+repository because he could not attest its tests (`AI-USE.md` § 4); it is archived in
+`~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\Part-A\` and in git history at `718c0e0`.
+Do not recreate it unless asked.
 
 Downstream, the modelling informs firmware for a surfboard-fin sensor PCB (ICM-20948 IMU +
-MS5837-30BA + STM32). See [fin_sensor_pcb_overview.md](fin_sensor_pcb_overview.md). That is **later work** — the current focus is
-the machine learning.
+MS5837-30BA + STM32). See [fin_sensor_pcb_overview.md](fin_sensor_pcb_overview.md). That is **later work**.
 
 **Knowledge base:** the Obsidian wiki in `wiki/` is built for this project. Unit, brief/rubric, paper
 and data questions go through it first; see "Second brain" at the end of this file.
@@ -154,7 +162,7 @@ the 4-entry density table, the one-speed-two-temperatures finding, and the Blasi
     |- AI-USE.md                    the AI-use record -- section 3
     |- memory/                      Claude Code auto memory (local, gitignored since 2026-10-28)
     |- src/                         all project code, as packages: friction/ (blasius_shooting/, von_karman/),
-    |                               forward_model/, swd_model/, plus the earlier surrogate modules; notebooks
+    |                               forward_model/, swd_model/ (the live-solver screen); notebooks
     |                               sit beside their modules; run with `python -m src.<pkg>.<module>`
     |- tests/                       pytest
     |- docs/                        pdoc HTML (absolute paths scrubbed before commit)

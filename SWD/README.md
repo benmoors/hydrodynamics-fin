@@ -23,6 +23,10 @@ API. This component reads its binary project files directly and produces the tab
 **Scope boundary.** This component stops at the CSVs. The surrogate model, Board-Jerk, Radicality and
 the trajectory simulation are separate work and are not part of this directory.
 
+> **Point of note (2026-10-28):** the surrogate and the trajectory simulation (Part A) have since been
+> removed from the repository. The project now uses SWD's live-solver tables, in `SWD/data/live_solver/`,
+> for a friction drag, a forward model and a jerk cost; see the root `README.md`.
+
 ---
 
 ## 📂 1. The engineering problem

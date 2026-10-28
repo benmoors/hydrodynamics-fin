@@ -47,8 +47,7 @@ This is 25% of a unit mark, and the student answers for every line in an intervi
 
 MMA3001 individual project (25% of the unit): the **"Virtual Surfer"**. The friction force F_f from
 boundary-layer theory, a forward model of the board's speed V(t) down a wave face from ShaperWaveDynamics
-(SWD) forces, and the jerk cost J (Charles et al. Eq 4–7). The earlier ML surrogate (Part A) was removed
-on 2026-10-28.
+(SWD) forces. The earlier ML surrogate (Part A) and the jerk cost J were removed on 2026-10-28.
 `SWD/` holds the acquired data (its PowerShell is local only, gitignored). `src/` (packages `friction`,
 `forward_model`, `swd_model`) and `tests/` are the Python.
 
@@ -57,9 +56,9 @@ on 2026-10-28.
 | What | Command |
 |---|---|
 | Python tests (guard) | `py -3.14 -m pytest tests -q` (config in `pyproject.toml`) |
-| One test file | `py -3.14 -m pytest tests/test_board_jerk.py -q` |
+| One test file | `py -3.14 -m pytest tests/test_forward_model.py -q` |
 | HTML docs build | `py -3.14 -m pdoc --math --output-directory %TEMP%\hfin-docs --docformat numpy src` |
-| Run a module | `py -3.14 -m src.forward_model.board_jerk` (a package: never by file path) |
+| Run a module | `py -3.14 -m src.forward_model.forward_model` (a package: never by file path) |
 | PowerShell/shell static lint (parses, never runs) | `py -3.14 %USERPROFILE%\.claude\tools\lint_probe.py --files <paths>` |
 | Pester | `Invoke-Pester <file>.Tests.ps1` (pwsh 7; Pester 6 syntax) |
 

@@ -57,8 +57,22 @@ white_df = white_blasius[:, 3]*CONSTANT_K/CONSTANT_C
 white_ddf = white_blasius[:, 4]*CONSTANT_K/CONSTANT_C**2
 white_dddf = white_blasius[:, 5]*CONSTANT_K/CONSTANT_C**3
 
+# Input checks: the author's decision (AI-USE.md section 4, 2026-10-28), after the agy review
+def _real_scalar(name, value):
+    '''value as a float, or ValueError unless it is one finite real number (a bool would pass as 0 or 1)'''
+    if isinstance(value, (bool, np.bool_)) or np.ndim(value) != 0 or np.asarray(value).dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a single finite number (a bool is not)")
+    value = float(value)
+    if not np.isfinite(value):
+        raise ValueError(f"{name} must be a single finite number (a bool is not)")
+    return value
+
+
 def exact_blasius(eta):
-    '''Exact Blasius solution extracted from White & Majdalani Table 4-3.'''
+    '''Exact Blasius solution extracted from White & Majdalani Table 4-3.
+    Raises ValueError if eta is not one finite number, or is not in the table'''
+    # A NaN eta made every distance NaN, so the check below passed and argmin returned row 0
+    eta = _real_scalar("eta", eta)
 
     # Finding value within table through conversion
     distances = np.abs(white_eta - eta)
@@ -112,16 +126,24 @@ def secant_for_shooting(f, s_old, s_init, max_iter=MAX_ITERATIONS, precision=TOL
         f: Shooting function to be reiterated
         s_init: Initial guess for the root
         s_old: Previous initial guess
-        precision: Stopping criteria determined by the user
+        max_iter: Most secant steps taken, an integer >= 1
+        precision: Stopping criteria determined by the user, > 0
 
     Returns:
         s_new: Root of the function f(x)
         num_iter: Number of iterations taken to find the root
 
     Raises:
-        ValueError: if F is not finite at a guess (RK4 diverged), the secant step would divide by zero or gives a
+        ValueError: if a guess or precision is not one finite number, precision <= 0, max_iter is not an integer
+            >= 1, F is not finite at a guess (RK4 diverged), the secant step would divide by zero or gives a
             non-positive f''(0), or max_iter iterations end without |F| < precision
     """
+    s_old, s_init = _real_scalar("s_old", s_old), _real_scalar("s_init", s_init)
+    # precision <= 0 could never be met, and max_iter < 1 would raise "did not reach" without a single step
+    if _real_scalar("precision", precision) <= 0:
+        raise ValueError(f"precision must be > 0, got {precision!r}")
+    if isinstance(max_iter, (bool, np.bool_)) or not isinstance(max_iter, (int, np.integer)) or max_iter < 1:
+        raise ValueError(f"max_iter must be an integer >= 1, got {max_iter!r}")
     f_old = f(s_old)
     if not np.isfinite(f_old):
         raise ValueError(f"F at the first guess s = {s_old} is not finite: RK4 diverged on this grid")

@@ -9,7 +9,7 @@ Antigravity-specific, so nothing is paid for twice.
   target is a file, folder or diff, and a single pass is cheaper and easier to reproduce.
 - **Headless run** (from the repo root; Claude's `sqa-loop` launches it this way through
   `~/.claude/tools/sqa_cli_pass.py`):
-  `agy -p "Use the audit skill on src/forward_model/board_jerk.py. Audit, then fix." --dangerously-skip-permissions --print-timeout 1740s`
+  `agy -p "Use the audit skill on src/forward_model/forward_model.py. Audit, then fix." --dangerously-skip-permissions --print-timeout 1740s`
 - **Permissions:** approve reads, file edits **in `src/`, `tests/`, `SWD/tools/` and `tools/`**,
   appends to `AI-USE.md`, `py -3.14 -m pytest`, `lint_probe.py`, `Invoke-Pester`,
   `extract_prompts.py --dry-run` and read-only `git`. Refuse edits anywhere else, running SWD or a

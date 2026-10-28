@@ -8,9 +8,13 @@ MMA3001 (Numerical Methods and Machine Learning) **individual project — 25% of
 
 The project is a **"Virtual Surfer"**: a surfboard's friction drag F_f from boundary-layer theory
 (Blasius by RK4 shooting, von Kármán), a forward model of its speed V(t) down a wave face from
-ShaperWaveDynamics (SWD) live-solver forces, integrated by RK4, and the jerk cost **J** (Charles et
-al. Eq 4–7). The live-solver identifiability screen and Gate B are groundwork for a deferred inverse
-PINN.
+ShaperWaveDynamics (SWD) live-solver forces, integrated by RK4. The live-solver identifiability
+screen and Gate B are groundwork for a deferred inverse PINN.
+
+**The jerk cost J (Charles et al. Eq 4–7) was removed on 2026-10-28** (`AI-USE.md` § 4): its module
+`board_jerk.py` and its tests are archived in
+`~\UNIVERSITY\Mechanical Engineering\Year 2\MMA3001\Project\Jerk-cost\` and in git history at
+`04d5aca`. The README carries no jerk cost. Do not recreate it unless asked.
 
 **The original goal changed (2026-10-28).** It was an ML surrogate trained on SWD's hydrodynamic
 grids, queried along a synthetic trajectory, feeding **Board-Jerk (BJ)** and **Radicality (Ra)**:

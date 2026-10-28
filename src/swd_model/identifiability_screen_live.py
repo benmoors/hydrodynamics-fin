@@ -5,9 +5,11 @@ reused or described as one. It asks one question of the data already in hand: co
 fit recover a friction multiplier ``k`` from ~15 Hz along-path acceleration, using forces from a
 single board attitude whose lift SWD's live solver held at the weight?
 
-It re-runs the first screen (``identifiability_screen.py``) because that one took its forces from
-``trajectory.load_polar()``, which sums 7-12 scan positions per roll case (AI-USE.md section 5,
-E133). Here the forces are one attitude's own: SWD's live solver, slope 0, drift 0, converged
+It re-runs the first screen, because that one took its forces from the first trajectory model's
+``load_polar()``, which sums 7-12 scan positions per roll case (AI-USE.md section 5, E133). Both
+left the repository with Part A on 2026-10-28; the helpers this screen took from the first one
+(the mmc1 parser, sample times, noise bounds, metrics and palette) are copied here unchanged.
+Here the forces are one attitude's own: SWD's live solver, slope 0, drift 0, converged
 reads only. The model is a straight run at that one attitude::
 
     D(V)      = k * friction(V) + planing(V) + rail(V)        (PCHIP in speed, never extrapolated)
@@ -28,6 +30,7 @@ from __future__ import annotations
 
 import sys
 import time
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -37,22 +40,31 @@ from scipy.integrate import solve_ivp
 from scipy.interpolate import PchipInterpolator, PPoly
 from scipy.optimize import brentq, least_squares
 
-from src.swd_model import identifiability_screen as ids  # mmc1 parser, sample times, metrics, palette
-
 # The author's settings. Do not change them without asking.
 PLANTED = 1.10
 FRICTION_SHIFT = 0.10
 V0_SHIFT = 0.20
 SLOPE_DEG = 10.0
 
-G = ids.tr.G  # the constant only (9.81, as in the first screen); trajectory's model is not used
+G = 9.81  # as in the first screen
 WEIGHT_N = 802.21  # the live solver's weight plateau, SWD/data/live_solver/README.md
 MASS_KG = WEIGHT_N / G
 
 SOLVER_CSV = (Path(__file__).resolve().parents[2] / "SWD" / "data" / "live_solver" / "default_shortboard" / "converged"
               / "solver_points.csv")
-FIRST_DIR = ids.OUT_DIR  # the first screen's outputs: read for sigma and for comparison, never written
-OUT_DIR = ids.tr.BOARD_DIR / "computed-data" / "identifiability_screen_live"
+BOARD_DIR = Path(__file__).resolve().parents[2] / "SWD" / "data" / "default_shortboard"
+OUT_DIR = BOARD_DIR / "computed-data" / "identifiability_screen_live"
+MMC1 = Path(__file__).resolve().parents[2] / "SWD" / "data" / "paper-supplementary" / "mmc1.zip"
+MMC1_COLUMNS = ["t_ms", "sg1", "sg2", "sg3", "sg4", "sg5",
+                "ax_g", "ay_g", "az_g", "rx", "ry", "rz"]
+
+# Quiet window confirmed by the author on 2026-10-24: 20 samples from index 22
+# (t = 1.498-2.795 s). It includes real motion, so its sigma is an UPPER bound on noise.
+QUIET_LENGTH = 20
+QUIET_START = 22
+# The LOWER bound: mmc1 prints acceleration to 0.01 g, and uniform quantisation of a
+# step q has standard deviation q / sqrt(12).
+RESOLUTION_SIGMA = 0.01 * G / np.sqrt(12.0)
 
 DECOMP_TOL = 0.01  # step 1: components must sum to the total within 1 %
 V0_STEP = 0.1
@@ -60,7 +72,7 @@ RTOL, RTOL_CHECK, ATOL = 1e-10, 1e-11, 1e-12
 EDGE_TOL = 1e-9  # m/s: how far round-off may put V outside the range at a cut
 GUARD_RESIDUAL = 1e3  # residual, in sigma units, for samples a trial run never reached
 DIFF_STEP = 1e-6  # finite-difference step, kept well above the ODE's rtol noise
-SEED = ids.SEED
+SEED = 20261024  # the first screen's seed
 N0 = 200
 STD_REL_TOL = 0.05
 FITS_TIMED = 5
@@ -71,11 +83,16 @@ SHIFTED = ("k+", "k-", "v0+", "v0-")
 FRICTION_RUNS, V0_RUNS = ("k+", "k-"), ("v0+", "v0-")
 SIGMA_CASES = ("upper", "lower")
 
+# Plot palette: the dataviz reference light slots 1-2 (validated: CVD dE 24.7, contrast >= 3:1).
+SURFACE, INK, INK_2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e4e3df"
+SERIES_1, SERIES_2 = "#2a78d6", "#eb6834"
+BAND_UPPER, BAND_LOWER = "#ebeae6", "#cfcec8"
+
 ASSUMPTIONS = (
     "One attitude for the whole run; the live solver's trim and attitude are not varied with speed.",
     "A path-frame model compared against board-frame IMU noise.",
     "mmc1's board, surfer and wave differ from default_shortboard with an 80 kg surfer.",
-    "The noise sigma bounds are carried over from the first screen.",
+    "The noise sigma bounds are the first screen's: the author's quiet window and the 0.01 g resolution floor.",
     "Set (b) at 3 s, the window kept to match the forward model's 3 s run, depends on the optimiser's start point "
     "and on the V0 <= 10 m/s bound (about 22 % of its fits end on it), so its V0 spread is not the data's alone "
     "(the author's stated limitation, AI-USE.md section 4, 2026-10-28).",
@@ -94,8 +111,179 @@ READINGS = (
     "The 60-min Monte Carlo cap includes the timing fits; combinations run cheapest first, each allowed an equal share "
     "of the budget left, and a doubling that would overrun its share is not started ('capped').",
     f"least_squares uses diff_step = {DIFF_STEP:g} so the finite-difference Jacobian stays above the ODE's rtol noise.",
-    "The first screen's Monte Carlo fitted all three channels; this one fits a_x only.",
 )
+
+
+def load_mmc1(path: Path = MMC1) -> pd.DataFrame:
+    """Parse the paper's board sample (mmc1) as ``SOURCE.md`` describes it.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        The archive as downloaded; it is read in place, never extracted.
+
+    Returns
+    -------
+    pandas.DataFrame
+        148 rows in ascending time: ``t_s`` from 0, ``sg1..sg5``, ``ax_g, ay_g, az_g``
+        (g, gravity included) and the gyroscope ``rx, ry, rz``.
+
+    Raises
+    ------
+    ValueError
+        If any data row does not have the 12 fields.
+    """
+    with zipfile.ZipFile(path) as z:
+        text = z.read("Board_Sample.txt").decode("ascii")
+    # Every other line is a ';'-prefixed hex echo of the line above it - no new information.
+    rows = [ln.split(";") for ln in text.splitlines() if ln.strip() and not ln.startswith(";")]
+    bad = [i for i, r in enumerate(rows) if len(r) != len(MMC1_COLUMNS)]
+    if bad:
+        raise ValueError(f"mmc1 rows {bad[:5]} do not have {len(MMC1_COLUMNS)} fields")
+    df = pd.DataFrame([[float(x) for x in r] for r in rows], columns=MMC1_COLUMNS)
+    # The board counter (ms) runs backwards: reverse it and start the clock at zero.
+    df = df.iloc[::-1].reset_index(drop=True)
+    df.insert(0, "t_s", (df.t_ms - df.t_ms.iloc[0]) / 1000.0)
+    return df.drop(columns="t_ms")
+
+
+def sample_times(mmc1: pd.DataFrame, duration_s: float) -> np.ndarray:
+    """mmc1's own (uneven) sample times that fall within ``duration_s``.
+
+    Parameters
+    ----------
+    mmc1 : pandas.DataFrame
+        Output of :func:`load_mmc1`.
+    duration_s : float
+        Run length, s.
+
+    Returns
+    -------
+    numpy.ndarray
+        Sample times, s, ascending.
+    """
+    t = mmc1.t_s.to_numpy()
+    return t[t <= duration_s + 1e-9]
+
+
+def quiet_window(mmc1: pd.DataFrame, length: int = QUIET_LENGTH) -> dict:
+    """The quietest stretch of mmc1's accelerometer, as a noise upper bound (step 5).
+
+    Each window of ``length`` consecutive samples has a least-squares line in time removed
+    from every axis; the window with the lowest summed residual variance wins. One window
+    serves all three axes.
+
+    Parameters
+    ----------
+    mmc1 : pandas.DataFrame
+        Output of :func:`load_mmc1`.
+    length : int
+        Window length in samples.
+
+    Returns
+    -------
+    dict
+        ``start`` index, ``t0``/``t1`` in s, per-axis ``sigma`` (m/s^2, ddof = 2 for the two
+        fitted line parameters) and per-axis lag-1 autocorrelation ``lag1`` of the residual.
+    """
+    t = mmc1.t_s.to_numpy()
+    acc = mmc1[["ax_g", "ay_g", "az_g"]].to_numpy() * G  # g, gravity included -> m/s^2
+    best = None
+    for i in range(len(t) - length + 1):
+        tt, aa = t[i : i + length], acc[i : i + length]
+        resid = np.column_stack([aa[:, c] - np.polyval(np.polyfit(tt, aa[:, c], 1), tt) for c in range(3)])
+        score = float((resid**2).sum())
+        if best is None or score < best[0]:
+            best = (score, i, resid)
+    _, i, resid = best
+    return dict(
+        start=i,
+        t0=float(t[i]),
+        t1=float(t[i + length - 1]),
+        sigma=np.sqrt((resid**2).sum(axis=0) / (length - 2)),
+        lag1=(resid[:-1] * resid[1:]).sum(axis=0) / (resid**2).sum(axis=0),
+    )
+
+
+def majority_sign_fraction(d: np.ndarray) -> float:
+    """Fraction of samples sharing the curve's majority sign; exact zeros count as neither.
+
+    Parameters
+    ----------
+    d : numpy.ndarray
+        One delta-a curve.
+
+    Returns
+    -------
+    float
+        ``max(n_pos, n_neg) / n``.
+    """
+    return max(int((d > 0).sum()), int((d < 0).sum())) / d.size
+
+
+def correlation(a: np.ndarray, b: np.ndarray) -> float:
+    """Pearson correlation of two curves; NaN when either is constant.
+
+    Parameters
+    ----------
+    a, b : numpy.ndarray
+        Curves of equal length.
+
+    Returns
+    -------
+    float
+        Correlation coefficient in [-1, 1], or NaN.
+    """
+    if np.ptp(a) == 0 or np.ptp(b) == 0:
+        return float("nan")
+    return float(np.corrcoef(a, b)[0, 1])
+
+
+def standard_error(kind: str, value: float, n: int) -> float:
+    """Standard error of a Monte Carlo statistic over n draws, by the usual normal-theory approximations.
+
+    Printed beside each statistic (the author's choice, AI-USE.md section 4, 2026-10-28), because "settled < 5 %"
+    is a stopping rule, not a statement of precision.
+
+    Parameters
+    ----------
+    kind : {'mean', 'sd', 'fraction', 'corr'}
+        Which statistic: a mean (pass the draws' sd as value), a standard deviation (pass the sd), a fraction (pass
+        p) or a correlation (pass r).
+    value : float
+        As above. NaN gives NaN.
+    n : int
+        Draws behind the statistic: the converged fits for k and V0, every fit for a fraction.
+
+    Returns
+    -------
+    float
+        sd/sqrt(n) for a mean; sd/sqrt(2(n - 1)) for an sd; sqrt(p(1 - p)/n) for a fraction;
+        (1 - r^2)/sqrt(n - 1) for a correlation. NaN when n is too small.
+
+    Raises
+    ------
+    ValueError
+        If kind is not one of the four.
+    """
+    if kind == "mean":
+        return float(value / np.sqrt(n)) if n > 0 else float("nan")
+    if kind == "sd":
+        return float(value / np.sqrt(2 * (n - 1))) if n > 1 else float("nan")
+    if kind == "fraction":
+        return float(np.sqrt(value * (1 - value) / n)) if n > 0 else float("nan")
+    if kind == "corr":
+        return float((1 - value**2) / np.sqrt(n - 1)) if n > 1 else float("nan")
+    raise ValueError(f"kind must be 'mean', 'sd', 'fraction' or 'corr', got {kind!r}")
+
+
+RC = {
+    "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
+    "axes.edgecolor": INK_2, "axes.labelcolor": INK, "text.color": INK,
+    "xtick.color": INK_2, "ytick.color": INK_2, "axes.grid": True, "grid.color": GRID,
+    "grid.linewidth": 0.6, "axes.axisbelow": True, "legend.frameon": False,
+    "axes.spines.top": False, "axes.spines.right": False,
+}
 
 
 def drop_inconsistent(df: pd.DataFrame, tol: float = DECOMP_TOL) -> tuple[pd.DataFrame, int]:
@@ -635,7 +823,7 @@ def mc_stats(f: pd.DataFrame, joint: bool) -> dict:
     dict
         N, mean and sd of k, sd / (FRICTION_SHIFT x PLANTED), within-band fraction, converged
         and at-bound fractions, and for set b the V0 mean, sd and corr(k, V0). Each statistic is
-        followed by its standard error, "SE ..." (identifiability_screen.standard_error).
+        followed by its standard error, "SE ..." (:func:`standard_error`).
     """
     ok = f[f.converged]
     band = FRICTION_SHIFT * PLANTED
@@ -643,8 +831,8 @@ def mc_stats(f: pd.DataFrame, joint: bool) -> dict:
     within = (((f.k_fit - PLANTED).abs() <= band) & f.converged).mean() if len(f) else np.nan
     at_bound = f.at_bound.mean() if "at_bound" in f else np.nan
     sd_v0 = ok.v0_fit.std(ddof=1) if joint else np.nan
-    corr = ids.correlation(ok.k_fit.to_numpy(), ok.v0_fit.to_numpy()) if joint else np.nan
-    se = ids.standard_error
+    corr = correlation(ok.k_fit.to_numpy(), ok.v0_fit.to_numpy()) if joint else np.nan
+    se = standard_error
     # Each statistic with its standard error beside it (the author's choice, AI-USE.md section 4, 2026-10-28):
     # "settled" is a stopping rule, not a precision
     return {
@@ -658,22 +846,6 @@ def mc_stats(f: pd.DataFrame, joint: bool) -> dict:
         "sd V0": sd_v0, "SE sd V0": se("sd", sd_v0, len(ok)),
         "corr(k, V0)": corr, "SE corr(k, V0)": se("corr", corr, len(ok)),
     }
-
-
-def first_screen_stats() -> pd.DataFrame:
-    """The first screen's Monte Carlo, summarised with this screen's conventions.
-
-    Returns
-    -------
-    pandas.DataFrame
-        One row per duration, sigma case and set, labelled as the first screen.
-    """
-    f = pd.read_csv(FIRST_DIR / "monte_carlo_fits.csv")
-    rows = []
-    for (dur, case, s), g in f.groupby(["duration_s", "sigma_case", "set"]):
-        rows.append({"screen": "first screen: summed attitudes, untrimmed lift (3-channel fits)",
-                     "duration_s": dur, "sigma": case, "set": s, **mc_stats(g, s == "b")})
-    return pd.DataFrame(rows)
 
 
 def plot_speed(runs: dict, forces: Forces, path: Path) -> None:
@@ -699,9 +871,9 @@ def plot_speed(runs: dict, forces: Forces, path: Path) -> None:
             tt = np.linspace(0.0, t_reached, 400)
             ax.plot(tt, sol.sol(tt)[0], **LINE[name], label=RUN_LABEL[name])
         for v in (lo, hi):
-            ax.axhline(v, color=ids.INK_2, lw=0.8, ls=":")
+            ax.axhline(v, color=INK_2, lw=0.8, ls=":")
         for v in eq:
-            ax.axhline(v, color=ids.INK_2, lw=0.8, ls="-.")
+            ax.axhline(v, color=INK_2, lw=0.8, ls="-.")
         ax.set_title(f"{dur:g} s run (dotted: converged range; dash-dot: D = m g sin 10° at k = {PLANTED})", fontsize=9)
         ax.set_xlabel("time (s)")
         ax.set_ylabel("V (m/s)")
@@ -732,11 +904,11 @@ def plot_delta(curves: dict, sigma: dict, path: Path) -> None:
             ax = axes[row, col]
             peak = max(np.abs(d[n]).max() for n in pair)
             lim = 1.15 * max(peak, sigma["lower"])
-            for case, colour in (("upper", ids.BAND_UPPER), ("lower", ids.BAND_LOWER)):
+            for case, colour in (("upper", BAND_UPPER), ("lower", BAND_LOWER)):
                 ax.axhspan(-sigma[case], sigma[case], color=colour, lw=0, label=f"±σ {case} bound ({sigma[case]:.3g} m/s²)")
             if sigma["upper"] > lim:
                 ax.text(0.99, 0.04, "upper-bound band extends past this axis", ha="right", transform=ax.transAxes,
-                        fontsize=8, color=ids.INK_2)
+                        fontsize=8, color=INK_2)
             for name in pair:
                 ax.plot(t, d[name], **LINE[name], marker="o" if name.endswith("+") else "s", ms=4, label=RUN_LABEL[name])
             ax.set_ylim(-lim, lim)
@@ -767,8 +939,8 @@ def plot_overlay(curves: dict, path: Path) -> None:
             peak = np.abs(d[name]).max()
             ax.plot(t, d[name] / peak if peak > 0 else d[name], **LINE[name],
                     marker="o" if name == "k+" else "s", ms=4, label=f"{RUN_LABEL[name]}  (max |Δa_x| = {peak:.3g} m/s²)")
-        ax.axhline(0.0, color=ids.INK_2, lw=0.8)
-        ax.set_title(f"{dur:g} s run: corr(k+, V0+) = {ids.correlation(d['k+'], d['v0+']):+.3f}", fontsize=10)
+        ax.axhline(0.0, color=INK_2, lw=0.8)
+        ax.set_title(f"{dur:g} s run: corr(k+, V0+) = {correlation(d['k+'], d['v0+']):+.3f}", fontsize=10)
         ax.set_ylabel("Δa_x / max|Δa_x|")
         ax.set_xlabel("time from first sample (s)")
         ax.legend(fontsize=8, loc="best")
@@ -798,13 +970,13 @@ def plot_fitted_k(fits: pd.DataFrame, stops: dict, path: Path) -> None:
         for j, case in enumerate(SIGMA_CASES):
             ax = axes[i, j]
             sub = fits[(fits.duration_s == dur) & (fits.sigma_case == case) & fits.converged]
-            ax.axvspan(PLANTED - band, PLANTED + band, color=ids.BAND_UPPER, lw=0,
+            ax.axvspan(PLANTED - band, PLANTED + band, color=BAND_UPPER, lw=0,
                        label=f"PLANTED ± FRICTION_SHIFT × PLANTED (±{band:.2f})")
-            ax.axvline(PLANTED, color=ids.INK, lw=1.5, label=f"planted k = {PLANTED}")
+            ax.axvline(PLANTED, color=INK, lw=1.5, label=f"planted k = {PLANTED}")
             top = 0
             if len(sub):
                 edges = np.linspace(sub.k_fit.min(), sub.k_fit.max(), 41) if sub.k_fit.max() > sub.k_fit.min() else 40
-                for s, colour, ls in (("a", ids.SERIES_1, "-"), ("b", ids.SERIES_2, "--")):
+                for s, colour, ls in (("a", SERIES_1, "-"), ("b", SERIES_2, "--")):
                     k = sub[sub.set == s].k_fit
                     capped = " [capped]" if stops[(dur, case, s)]["capped"] else ""
                     counts, _, _ = ax.hist(k, bins=edges, histtype="step", lw=1.5, ls=ls, color=colour,
@@ -829,36 +1001,37 @@ RUN_LABEL = {
 }
 # Colour says which parameter moved, line style says which way (validated pair: dataviz light slots 1-2).
 LINE = {
-    "base": dict(color=ids.INK, lw=1.5),
-    "k+": dict(color=ids.SERIES_1, lw=1.5, ls="-"),
-    "k-": dict(color=ids.SERIES_1, lw=1.5, ls="--"),
-    "v0+": dict(color=ids.SERIES_2, lw=1.5, ls="-"),
-    "v0-": dict(color=ids.SERIES_2, lw=1.5, ls="--"),
+    "base": dict(color=INK, lw=1.5),
+    "k+": dict(color=SERIES_1, lw=1.5, ls="-"),
+    "k-": dict(color=SERIES_1, lw=1.5, ls="--"),
+    "v0+": dict(color=SERIES_2, lw=1.5, ls="-"),
+    "v0-": dict(color=SERIES_2, lw=1.5, ls="--"),
 }
 
 
-def first_screen_sigma_x() -> dict:
-    """The confirmed x-axis sigmas from the first screen's ``summary.csv``.
+def sigma_x(mmc1: pd.DataFrame) -> dict:
+    """The x-axis noise sigmas of the first screen, computed from mmc1.
+
+    Parameters
+    ----------
+    mmc1 : pandas.DataFrame
+        Output of :func:`load_mmc1`.
 
     Returns
     -------
     dict
-        ``"upper"`` and ``"lower"`` -> sigma_x, m/s^2.
+        ``"upper"`` -> the author's quiet window's sigma_x, ``"lower"`` -> ``RESOLUTION_SIGMA``, m/s^2.
 
     Raises
     ------
-    ValueError
-        If a case has more than one value across durations.
+    RuntimeError
+        If the quiet-window search no longer lands on the author's confirmed start.
     """
-    s = pd.read_csv(FIRST_DIR / "summary.csv")
-    s = s[(s.metric == "sigma_ms2") & (s.channel == "x")]
-    out = {}
-    for case in SIGMA_CASES:
-        v = s[s.sigma_case == case].value.unique()
-        if v.size != 1:
-            raise ValueError(f"sigma_x {case}: expected one value, found {v}")
-        out[case] = float(v[0])
-    return out
+    qw = quiet_window(mmc1)
+    if qw["start"] != QUIET_START:
+        raise RuntimeError(f"quiet-window search now lands on index {qw['start']}, not the "
+                           f"confirmed {QUIET_START}; re-confirm the window with the author")
+    return {"upper": float(qw["sigma"][0]), "lower": float(RESOLUTION_SIGMA)}
 
 
 def main() -> None:
@@ -867,7 +1040,7 @@ def main() -> None:
     import matplotlib
 
     matplotlib.use("Agg")
-    matplotlib.rcParams.update(ids.RC)
+    matplotlib.rcParams.update(RC)
     pd.set_option("display.width", 220)
     pd.set_option("display.max_columns", 40)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -878,11 +1051,11 @@ def main() -> None:
     print(f"PLANTED = {PLANTED}, FRICTION_SHIFT = {FRICTION_SHIFT}, V0_SHIFT = {V0_SHIFT}, SLOPE_DEG = {SLOPE_DEG}; "
           f"m = {WEIGHT_N} N / {G} = {MASS_KG:.4f} kg; m g sin(slope) = {WEIGHT_N * np.sin(np.radians(SLOPE_DEG)):.3f} N")
 
-    sigma = first_screen_sigma_x()
-    print(f"sigma_x from the first screen: upper {sigma['upper']:.5f} m/s² (20-sample window, t = 1.498-2.795 s), "
+    mmc1 = load_mmc1()
+    sigma = sigma_x(mmc1)
+    print(f"sigma_x, the first screen's bounds: upper {sigma['upper']:.5f} m/s² (20-sample window, t = 1.498-2.795 s), "
           f"lower {sigma['lower']:.5f} m/s² (0.01 g resolution floor)")
 
-    mmc1 = ids.load_mmc1()
     durations = (3.0, float(mmc1.t_s.iloc[-1]))
 
     # Steps 1-3: forces, attitude, V0.
@@ -925,7 +1098,7 @@ def main() -> None:
              "v0+": (PLANTED, v0 * (1 + V0_SHIFT)), "v0-": (PLANTED, v0 * (1 - V0_SHIFT))}
     runs, curves, rows_delta = {}, {}, []
     for dur in durations:
-        t = ids.sample_times(mmc1, dur)
+        t = sample_times(mmc1, dur)
         runs[dur] = {n: run_accel(forces, k, v, dur, t) for n, (k, v) in specs.items()}
         print(f"\nStep 5 - {dur:g} s run, {t.size} sample times:")
         for n, (a, t_reached, _) in runs[dur].items():
@@ -953,7 +1126,7 @@ def main() -> None:
         for n in SHIFTED:
             peak = float(np.abs(d[n]).max())
             t_peak = float(tc[np.argmax(np.abs(d[n]))])
-            frac = ids.majority_sign_fraction(d[n])
+            frac = majority_sign_fraction(d[n])
             table.append({"run": n, "max|Δa_x| (m/s²)": peak, "at t (s)": t_peak,
                           "max/σ upper bound": peak / sigma["upper"], "max/σ lower bound": peak / sigma["lower"],
                           "majority-sign fraction": frac})
@@ -965,7 +1138,7 @@ def main() -> None:
         corr = []
         for fr in FRICTION_RUNS:
             for vr in V0_RUNS:
-                c = ids.correlation(d[fr], d[vr])
+                c = correlation(d[fr], d[vr])
                 corr.append({"pair": f"{fr} vs {vr}", "corr a_x": c})
                 summary.append(dict(duration_s=dur, run=fr, partner=vr, metric="correlation", value=c))
         print(f"\nStep 7 - {dur:g} s run, x channel, {tc.size} samples:")
@@ -988,7 +1161,7 @@ def main() -> None:
     # Step 8: Monte Carlo, x only, under a 60-min cap that includes the timing fits.
     mc_start = time.perf_counter()
     clean = {dur: runs[dur]["base"][0] for dur in durations}
-    tt = {dur: ids.sample_times(mmc1, dur)[: clean[dur].size] for dur in durations}
+    tt = {dur: sample_times(mmc1, dur)[: clean[dur].size] for dur in durations}
     noise = {dur: NoiseDraws(SEED, clean[dur].size) for dur in durations}
     combos = [(dur, case, s) for dur in durations for case in SIGMA_CASES for s in ("a", "b")]
     timing = {}
@@ -1023,15 +1196,10 @@ def main() -> None:
     plot_fitted_k(fits_df, stops, OUT_DIR / "fitted_k_hist.png")
 
     this = pd.DataFrame(stats).sort_values(["duration_s", "sigma", "set"])
-    both = pd.concat([this, first_screen_stats()], ignore_index=True)
-    both.to_csv(OUT_DIR / "monte_carlo_summary.csv", index=False, encoding="utf-8")
+    this.to_csv(OUT_DIR / "monte_carlo_summary.csv", index=False, encoding="utf-8")
     print(f"\nStep 8 - Monte Carlo, a_x only (seed {SEED}; true k = {PLANTED}, V0 = {v0:g} m/s; starts k = "
           f"{PLANTED * (1 + FRICTION_SHIFT):.3f}, V0 = {v0 * (1 + V0_SHIFT):.3f} m/s in set b):")
     print(this.drop(columns="screen").to_string(index=False, float_format=fmt))
-    print("\nBeside the first screen (its fits used all three channels; summed attitudes, untrimmed lift):")
-    cols = ["screen", "duration_s", "sigma", "set", "N", "mean k", "sd k", "sd k / (shift x PLANTED)", "within ±band",
-            "converged", "mean V0", "sd V0", "corr(k, V0)"]
-    print(both[cols].sort_values(["duration_s", "sigma", "set", "screen"]).to_string(index=False, float_format=fmt))
     print(f"\nwrote {OUT_DIR}")
 
 

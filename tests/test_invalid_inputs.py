@@ -6,98 +6,16 @@ agy and Devin found each of these inputs passing silently, or failing with an un
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
-from src import evaluate, geometry, physics_baseline as pb, profiling, splits
-from src.data import build_training_table
 from src.forward_model import forward_model as fm
 from src.friction import friction_force as ff
 from src.friction.blasius_shooting import blasius_thickness as bt
 from src.friction.blasius_shooting import fd_blasius as fd
 from src.friction.blasius_shooting import skin_and_shear as ss
 from src.friction.von_karman import von_karman as vk
-from src.predict import SurrogatePredictor
-from src.swd_model import identifiability_screen as ids
 
-NAN, INF = float("nan"), float("inf")
-
-
-# geometry: a reversed span was flipped by abs(), and a NaN passed every `<= 0` check
-@pytest.mark.parametrize("call, match", [
-    (lambda: geometry.aspect_ratio(1.0, 0.0, 0.0, 0.5), "degenerate outline"),
-    (lambda: geometry.aspect_ratio(0.0, 1.0, 0.5, 0.0), "degenerate outline"),
-    (lambda: geometry.aspect_ratio(0.0, NAN, 0.0, 0.5), "degenerate outline"),
-    (lambda: geometry.aspect_ratio(0.0, INF, 0.0, 0.5), "degenerate outline"),
-    (lambda: geometry.calibrate_shape_coefficient(NAN, 3.7, 0.026, 1.8), "strictly positive and finite"),
-    (lambda: geometry.reconstruct_dimensions(24.0, INF, 0.026), "strictly positive and finite"),
-    (lambda: geometry.reconstruct_dimensions(24.0, 3.7, 0.026, k=NAN), "strictly positive and finite"),
-])
-def test_geometry_refuses(call, match) -> None:
-    with pytest.raises(ValueError, match=match):
-        call()
-
-
-# the first screen: an unsorted t slipped past the end-point check, and an empty t raised IndexError
-@pytest.mark.parametrize("t, match", [
-    ([], "non-empty 1-D array of finite values"),
-    ([0.0, NAN], "non-empty 1-D array of finite values"),
-    ([[0.0, 0.5]], "non-empty 1-D array of finite values"),
-    ([0.0, 99.0, 1.0], "fall outside the run"),
-])
-def test_at_samples_refuses(t, match) -> None:
-    run = pd.DataFrame({"timestamp": [0.0, 1.0, 2.0], **{c: [0.0, 1.0, 2.0] for c in ids.ACCEL}})
-    with pytest.raises(ValueError, match=match):
-        ids.at_samples(run, t)
-
-
-# the surrogate: +-inf reached sklearn's scaler, and an empty frame was not refused
-@pytest.fixture(scope="module")
-def table():
-    return build_training_table()
-
-
-def test_predict_refuses_inf_and_empty(table) -> None:
-    model = SurrogatePredictor().fit(table)
-    query = table[model.features].iloc[:1].copy()
-    query.iloc[0, 0] = INF
-    with pytest.raises(ValueError, match="infinite value"):
-        model.predict(query)
-    with pytest.raises(ValueError, match="query has no rows"):
-        model.predict(table[model.features].iloc[:0])
-
-
-def test_fit_refuses_inf_and_empty(table) -> None:
-    bad = table.copy()
-    bad.loc[bad.index[0], "drag_friction_n"] = INF
-    with pytest.raises(ValueError, match="infinite value"):
-        SurrogatePredictor().fit(bad)
-    with pytest.raises(ValueError, match="training table has no rows"):
-        SurrogatePredictor().fit(table.iloc[:0])
-
-
-# physics_baseline: 1024.6 was read as 1025, a NaN passed the `<= 0` checks, a negative k_area was floored
-@pytest.mark.parametrize("rho", [1024.6, NAN, INF])
-def test_viscosity_needs_an_exact_table_density(rho) -> None:
-    with pytest.raises(KeyError, match="not one of SWD's salt-water densities"):
-        pb.viscosity_for_density(rho)
-
-
-@pytest.mark.parametrize("call, match", [
-    (lambda: pb.reynolds_number(-5.0, 1.0, 1025, 0.00107), "finite and strictly positive"),
-    (lambda: pb.reynolds_number(5.0, NAN, 1025, 0.00107), "finite and strictly positive"),
-    (lambda: pb.friction_coefficient(NAN), "Reynolds number must be finite"),
-    (lambda: pb.friction_coefficient(1e6, length_m=-1.0, roughness_micron=60.0), "fully-rough branch"),
-    (lambda: pb.friction_force(NAN, 1.0), "wetted_length_m must be finite"),
-    (lambda: pb.friction_force(1.5, NAN), "wetted_area_m2 must be finite"),
-    (lambda: pb.friction_force(1.5, 1.0, velocity_ms=0.0), "velocity_ms must be finite"),
-    (lambda: pb.wetted_area_estimate(1.8, 0.5, 0.1, 5.0, k_area=-0.5), "k_area must be finite"),
-    (lambda: pb.PhysicsFrictionBaseline().fit(np.array([[1.8, 0.5, 0.1, 5.0]]), np.array([-1.0])),
-     "no training row has a positive finite force"),
-])
-def test_physics_baseline_refuses(call, match) -> None:
-    with pytest.raises(ValueError, match=match):
-        call()
+NAN = float("nan")
 
 
 # the friction modules: a bool passed as 1.0, an array h gave one slope per element, bad grids hit IndexError
@@ -123,22 +41,6 @@ def test_friction_and_forward_model_refuse(call, match) -> None:
         call()
 
 
-# profiling, splits and evaluate
-@pytest.mark.parametrize("call, error, match", [
-    (lambda: profiling.arithmetic_intensity(300, 5, bytes_per_float=0), ValueError, "must all be positive"),
-    (lambda: profiling.predict_latency(None, np.zeros((3, 5)), batch=0), ValueError, "batch and repeats"),
-    (lambda: profiling.predict_latency(None, np.zeros((3, 5)), repeats=0), ValueError, "batch and repeats"),
-    (lambda: splits.group_labels(pd.DataFrame({"board": ["a_1", None]})), ValueError, "missing 'board' value"),
-    (lambda: evaluate.pooled_score(pd.DataFrame({"x": [1.0]}), "x", "no_such_model"), KeyError,
-     "unknown estimator"),
-    (lambda: evaluate.nested_lobo(pd.DataFrame({"x": [1.0]}), "missing_target"), KeyError, "not in table"),
-    (lambda: evaluate.nested_lobo(pd.DataFrame({"x": [1.0]}), "x", grid=[]), ValueError, "at least one"),
-])
-def test_tools_refuse(call, error, match) -> None:
-    with pytest.raises(error, match=match):
-        call()
-
-
 # SQA round 2 (sqa-lead): the checks sat behind lru_cache, which served True from a cached call made with 1
 def test_shoot_checks_run_before_its_cache() -> None:
     ss.shoot(1, ss.STEP_SIZE)
@@ -159,61 +61,19 @@ def test_wetted_geometry_accepts_a_0d_array_like_forward_model() -> None:
     assert np.isfinite(A(8.0)) and np.isfinite(L(8.0))
 
 
-def test_holdout_split_keeps_a_train_group() -> None:
-    """Two boards and test_fraction 0.6 used to move both into test, leaving train empty."""
-    two = pd.DataFrame({"board": ["a_1", "a_1", "b_1", "b_1"], "x": [1.0, 2.0, 3.0, 4.0]})
-    train, test = splits.holdout_split(two, test_fraction=0.6, level="board")
-    assert len(train) > 0 and len(test) > 0
-    assert set(train.board).isdisjoint(set(test.board))
-
-
-# SQA round 3 (agy, Devin): booleans read as 0 or 1, the baseline's predict, roughness, and nested_lobo's groups
+# SQA round 3 (agy, Devin): booleans read as 0 or 1
 ONES = lambda v: np.ones_like(np.asarray(v, dtype=float))  # noqa: E731  a stand-in A(V) and L(V)
 
 
 @pytest.mark.parametrize("call, match", [
-    (lambda: pb.reynolds_number(1.0, 1.0, True, 0.00107), "a bool is not"),
-    (lambda: pb.friction_force(1.5, 1.0, velocity_ms=True), "a bool is not"),
-    (lambda: pb.friction_coefficient(1e6, roughness_micron=NAN), "roughness_micron must be"),
-    (lambda: pb.friction_coefficient(1e6, roughness_micron=-100.0), "roughness_micron must be"),
-    (lambda: pb.friction_coefficient(1e6, length_m=1e-6, roughness_micron=60.0), "longer than the roughness"),
-    (lambda: pb.wetted_area_estimate(-1.8, -0.5, 0.0, 0.0, 0.5), "length_m and width_m must be"),
-    (lambda: pb.wetted_area_estimate(1.8, 0.5, NAN, 0.0, 0.5), "roll_rad and drift_deg must be finite"),
-    (lambda: pb.wetted_area_estimate(1.8, 0.5, 0.0, 0.0, True), "a bool is not"),
-    (lambda: pb.PhysicsFrictionBaseline().fit(np.array([[1.8, 0.5, 0.1, 5.0]]), np.array([10.0, 20.0])),
-     "one value per row"),
     (lambda: ff.F_f(6.0, ONES, ONES, rho=True), "rho and mu must be"),
     (lambda: ff.F_f(6.0, ONES, ONES, mu="0.00107"), "rho and mu must be"),
     (lambda: vk.profile(True), "a bool is not"),
     (lambda: ss.wall_slope([False, True, True], 0.1), "a bool is not"),
-    (lambda: geometry.reconstruct_dimensions(True, 3.7, 0.026), "strictly positive and finite"),
-    (lambda: build_training_table(max_drift_deg=True), "max_drift_deg must be"),
-    (lambda: evaluate.nested_lobo(pd.DataFrame({"board": ["a_1", "b_1"], "x": [1.0, 2.0]}), "x", level="board"),
-     "at least 3 groups"),
 ])
 def test_round_3_refusals(call, match) -> None:
     with pytest.raises(ValueError, match=match):
         call()
-
-
-def test_baseline_predict_refuses_a_fifth_column() -> None:
-    model = pb.PhysicsFrictionBaseline().fit(np.array([[1.8, 0.5, 0.1, 5.0]]), np.array([10.0]))
-    with pytest.raises(ValueError, match=r"finite \(n, 4\) array"):
-        model.predict(np.array([[1.8, 0.5, 0.0, 0.0, 999.0]]))  # was silently sliced to 4 columns
-
-
-def test_at_samples_refuses_bool_times() -> None:
-    run = pd.DataFrame({"timestamp": [0.0, 1.0, 2.0], **{c: [0.0, 1.0, 2.0] for c in ids.ACCEL}})
-    with pytest.raises(ValueError, match="a bool is not"):
-        ids.at_samples(run, [False, True])
-
-
-def test_predict_refuses_a_bool_column(table) -> None:
-    model = SurrogatePredictor().fit(table)
-    query = table[model.features].iloc[:1].copy().astype(object)
-    query.iloc[0, 0] = True
-    with pytest.raises(ValueError, match="query columns must be numeric"):
-        model.predict(query)
 
 
 # The author's decisions of 2026-10-28 (AI-USE.md section 4)

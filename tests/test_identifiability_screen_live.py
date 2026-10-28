@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.swd_model import identifiability_screen as ids
 from src.swd_model import identifiability_screen_live as live
 
 
@@ -57,9 +56,19 @@ def test_power_law_drag_matches_the_closed_form(n):
 def test_noise_free_fit_recovers_planted_k(chosen, joint):
     """With no noise the least-squares minimum is the planted value, from a shifted start."""
     _, forces, v0 = chosen
-    t = ids.sample_times(ids.load_mmc1(), 3.0)
+    t = live.sample_times(live.load_mmc1(), 3.0)
     data, t_reached, _ = live.run_accel(forces, live.PLANTED, v0, 3.0, t)
     assert t_reached == 3.0 and data.size == t.size
     f = live.fit(forces, data, 0.0283, t, 3.0, v0, joint)
     assert f["converged"]
     assert abs(f["k_fit"] - live.PLANTED) / live.PLANTED < 1e-6
+
+
+def test_sigma_x_is_the_first_screens():
+    """The noise bounds, now computed here, are the values the first screen wrote before it left with Part A.
+
+    Provenance: SWD/data/default_shortboard/computed-data/identifiability_screen/summary.csv, metric sigma_ms2,
+    channel x, at commit 718c0e0 (the author's window, 20 samples from index 22, and the 0.01 g floor).
+    """
+    sigma = live.sigma_x(live.load_mmc1())
+    assert sigma == {"upper": 0.5087893035225471, "lower": 0.028319030703751146}

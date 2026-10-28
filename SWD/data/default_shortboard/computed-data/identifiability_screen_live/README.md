@@ -17,8 +17,9 @@ This is a feasibility screen only. It asks whether an inverse fit could recover 
 ~15 Hz along-path acceleration when the forces come from one board attitude whose lift SWD's live solver held at the
 weight. **It is not the project's forward model.** Don't reuse it as one or describe it as one.
 
-It repeats the first screen (`../identifiability_screen/`) with forces at their physical scale. That screen took its
-forces from `trajectory.py`'s `load_polar()`, which sums 7–12 scan positions per roll case (`AI-USE.md` § 5, E133).
+It repeats the first screen with forces at their physical scale. That screen took its forces from `trajectory.py`'s
+`load_polar()`, which sums 7–12 scan positions per roll case (`AI-USE.md` § 5, E133). Both left the repository with
+Part A on 2026-10-28.
 This one uses a single attitude from `SWD/data/live_solver/default_shortboard/converged/`, at slope 0 and drift 0.
 Before choosing, it drops the 11 of 169 reads whose friction, planing and rail drag do not add up to the total within
 1 %.
@@ -29,8 +30,9 @@ The run is straight, at that one attitude, with no roll schedule:
     m dV/dt = m g sin 10° − D(V)                           (m = 802.21 N / g)
 
 Only the along-path acceleration is compared. Lift is held at the weight, so the vertical acceleration is zero, and
-the sideways one, g·tan φ, does not depend on friction. The noise bounds are the first screen's x-axis values: 0.509
-m/s² (upper) and 0.0283 m/s² (lower).
+the sideways one, g·tan φ, does not depend on friction. The noise bounds are the first screen's x-axis values, now
+computed here from mmc1: 0.509 m/s² (upper, the author's 20-sample window) and 0.0283 m/s² (lower, the 0.01 g
+resolution floor).
 
 ---
 
@@ -44,7 +46,7 @@ m/s² (upper) and 0.0283 m/s² (lower).
 | `delta_a.csv` | Shifted run minus baseline, along-path acceleration, at mmc1's sample times |
 | `summary.csv` | Rows dropped, the choices, σ, how far each run got, the rtol check, and the step 7 comparison |
 | `monte_carlo_fits.csv` | Every fit: draw, set, fitted k and V0, converged, at a bound, guard hits |
-| `monte_carlo_summary.csv` | The Monte Carlo statistics, beside the first screen's. Since 2026-10-28 every statistic is followed by its standard error (`SE ...`, normal-theory approximations), and the 3 s rows stay the evidence, matching the forward model's 3 s run. **Limitation:** the 3 s set (b) fits depend on the optimiser's start point and on the V0 ≤ 10 m/s bound (about 22 % end on it), so their V0 spread is not the data's alone (`AI-USE.md` § 4 and § 5 E166) |
+| `monte_carlo_summary.csv` | The Monte Carlo statistics. The first screen's rows left with Part A on 2026-10-28. Since 2026-10-28 every statistic is followed by its standard error (`SE ...`, normal-theory approximations), and the 3 s rows stay the evidence, matching the forward model's 3 s run. **Limitation:** the 3 s set (b) fits depend on the optimiser's start point and on the V0 ≤ 10 m/s bound (about 22 % end on it), so their V0 spread is not the data's alone (`AI-USE.md` § 4 and § 5 E166) |
 | `speed_runs.png`, `delta_a_x.png`, `overlay_x.png`, `fitted_k_hist.png` | The plots |
 
 ---
@@ -64,7 +66,7 @@ This README is written by hand and is not regenerated.
 - One attitude for the whole run. The live solver's trim and attitude are not varied with speed.
 - A path-frame model compared against board-frame IMU noise.
 - mmc1's board, surfer and wave differ from `default_shortboard` with an 80 kg surfer.
-- The noise σ bounds are carried over from the first screen.
+- The noise σ bounds are the first screen's: the author's quiet window and the 0.01 g resolution floor.
 
 ---
 

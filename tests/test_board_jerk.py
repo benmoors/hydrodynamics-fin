@@ -50,12 +50,6 @@ def sinusoid(t):
     return SIN_A*np.sin(SIN_OMEGA*t)
 
 
-@lru_cache(maxsize=None)
-def authors_run():
-    """simulate() at its defaults, the only motion input."""
-    return fm.simulate()
-
-
 def p_obs(J_h, J_h2, J_h4):
     """The author's E18 on J: log2(|J_h - J_h/2| / |J_h/2 - J_h/4|).
 
@@ -92,9 +86,9 @@ def test_sinusoid_observed_order() -> None:
 
 
 # (c) The author's run
-def test_authors_run_observed_order() -> None:
+def test_authors_run_observed_order(authors_run) -> None:
     """J at FD steps 4h, 2h and h, every 4th, 2nd and 1st node of the one run; simulate() itself is not re-run."""
-    t, _, a, complete = authors_run()
+    t, _, a, complete = authors_run
     assert complete
     J_4h, J_2h, J_h = (bj.jerk_cost(t[::s], a[::s], complete) for s in (4, 2, 1))
     assert np.isfinite(J_h) and J_h > 0
@@ -104,10 +98,10 @@ def test_authors_run_observed_order() -> None:
 
 # (d) Units
 @pytest.mark.parametrize("case", ["linear", "sinusoid", "author's run"])
-def test_J_is_dimensionless(case) -> None:
+def test_J_is_dimensionless(case, authors_run) -> None:
     """a in mm/s^2 (x 1e3), and t in ms (x 1e3) with a in m/ms^2 (x 1e-6), leave J unchanged."""
     if case == "author's run":
-        t, _, a, _ = authors_run()
+        t, _, a, _ = authors_run
     else:
         t = grid(H)
         a = linear(t) if case == "linear" else sinusoid(t)
@@ -125,7 +119,7 @@ A5 = linear(T5)
 @pytest.mark.parametrize("t, a, complete, match", [
     ([3.0, 2.0, 1.0], [1.0, 1.0, 1.0], True, r"T = t\[-1\] - t\[0\] must be > 0"),
     ([0.0, 0.0, 0.0], [1.0, 1.0, 1.0], True, r"T = t\[-1\] - t\[0\] must be > 0"),
-    (T5, np.zeros(5), True, "D = 0"),
+    (T5, np.zeros(5), True, "below the 1e-05 m floor"),
     ([0.0, 1.0, np.nan], [1.0, 1.0, 1.0], True, "t and a must be finite"),
     (T5, [1.0, np.inf, 1.0, 1.0, 1.0], True, "t and a must be finite"),
     (T5, A5[:4], True, "t and a must be 1-D arrays of the same length"),
@@ -147,3 +141,30 @@ def test_displacement_rejects_invalid_inputs() -> None:
     """displacement has the same sample checks; one of them stands for all."""
     with pytest.raises(ValueError, match="t and a must be finite"):
         bj.displacement(T5, [1.0, np.nan, 1.0, 1.0, 1.0])
+
+# The author's decisions of 2026-10-28 (AI-USE.md section 4): a regression value for J at his tolerance, and his
+# 1e-5 m floor on D
+J_AUTHORS_RUN = 64.58244063939037  # simulate() at its defaults, measured 2026-10-27 (Table 3) and again 2026-10-28
+REGRESSION_RTOL = 1e-6
+
+
+def test_authors_run_J_regression(authors_run) -> None:
+    t, _, a, complete = authors_run
+    assert bj.jerk_cost(t, a, complete) == pytest.approx(J_AUTHORS_RUN, rel=REGRESSION_RTOL, abs=0)
+
+
+@pytest.mark.parametrize("a_of_t", [
+    lambda t: 1.0 - t,  # a0 = -beta T/3 over 3 s: D_a is 0, and quadrature leaves about 1e-15 m
+    lambda t: np.full_like(t, 1e-6),  # D = 4.5e-6 m
+])
+def test_D_below_the_floor_is_refused(a_of_t) -> None:
+    t = grid(H)
+    with pytest.raises(ValueError, match="below the 1e-05 m floor"):
+        bj.jerk_cost(t, a_of_t(t), True)
+
+
+def test_D_above_the_floor_is_accepted() -> None:
+    """A constant a = 1e-5 m/s^2 gives D = 4.5e-5 m, above the floor, so J is returned (round-off, not an error)."""
+    t = grid(H)
+    J = bj.jerk_cost(t, np.full_like(t, 1e-5), True)
+    assert np.isfinite(J) and J >= 0

@@ -1,7 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
-from scipy.integrate import solve_ivp
 from pathlib import Path
 
 # Conditions for Blasius
@@ -12,6 +10,9 @@ ETA_0 = 0.0
 ETA_MAX = 10.0
 GUESS_ddf = 0.0
 GUESS2_ddf = 5.0
+# Limit: at s = GUESS2_ddf = 5, f grows as about 6.1 eta, and RK4's real stability bound h f/2 <= 2.785 is crossed
+#        once eta_max >~ 22 or h >~ 0.17; F is then not finite and the secant stops. The runs use eta_max 10 and 20
+#        at h = 0.1/sqrt(2) (SQA round 2, 2026-10-28; the author kept the guess, AI-USE.md section 4)
 
 # Constants
 CONSTANT_K = np.sqrt(2)
@@ -68,16 +69,18 @@ def exact_blasius(eta):
     return white_f[index], white_df[index], white_ddf[index], white_dddf[index]
 
 #RK4 from MMA3001 notebook 7.4
-def rk4_solve(rhs, initial, eta_array, step_size):
+def rk4_solve(rhs, initial, eta_array, step_size, first_k1=None):
     '''Fixed-step RK4 for y' = rhs(eta, y) from initial over eta_array.
-    Returns the state at every point of eta_array, shape (len(eta_array), len(initial))'''
+    Returns the state at every point of eta_array, shape (len(eta_array), len(initial))
+    first_k1, if given, is rhs(eta_array[0], initial), already worked out by the caller; it is used as the first
+    step's k1 instead of calling rhs again, which gives the same result'''
     BLASIUS_RK4 = np.zeros((len(eta_array), len(initial)))
     BLASIUS_RK4[0] = np.array(initial)
 
     # RK4 loop
     for i in range(len(eta_array)-1):
         eta = eta_array[i]
-        k1 = rhs(eta, BLASIUS_RK4[i])
+        k1 = first_k1 if i == 0 and first_k1 is not None else rhs(eta, BLASIUS_RK4[i])
         BLASIUS_trial_2 = BLASIUS_RK4[i] + 0.5*step_size*k1
         k2 = rhs(eta+0.5*step_size, BLASIUS_trial_2)
         BLASIUS_trial_3 = BLASIUS_RK4[i] + 0.5*step_size*k2
@@ -114,13 +117,18 @@ def secant_for_shooting(f, s_old, s_init, max_iter=MAX_ITERATIONS, precision=TOL
     Returns:
         s_new: Root of the function f(x)
         num_iter: Number of iterations taken to find the root
+
+    Raises:
+        ValueError: if F is not finite at a guess (RK4 diverged), the secant step would divide by zero or gives a
+            non-positive f''(0), or max_iter iterations end without |F| < precision
     """
     f_old = f(s_old)
     if not np.isfinite(f_old):
-        raise ValueError("Secant method failed to converge")
+        raise ValueError(f"F at the first guess s = {s_old} is not finite: RK4 diverged on this grid")
     f_init = f(s_init)
     if not np.isfinite(f_init):
-        raise ValueError("Secant method failed to converge")
+        raise ValueError(f"F at the second guess s = {s_init} is not finite: RK4 diverged, past its stability limit "
+                         "for this eta_max and h (see the GUESS2_ddf limit)")
 
     f_array = np.array([f_old, f_init])
     s_array = np.array([s_old, s_init])
@@ -129,25 +137,27 @@ def secant_for_shooting(f, s_old, s_init, max_iter=MAX_ITERATIONS, precision=TOL
         f_old, f_init = f_array[k], f_array[k+1]
         s_old, s_init = s_array[k], s_array[k+1]
         if np.abs(f_init-f_old) < np.finfo(float).eps:
-            raise ValueError("Secant method failed to converge")
+            raise ValueError(f"F is the same at s = {s_old} and s = {s_init}, so the secant step would divide by "
+                             "zero (equal guesses, or a flat F)")
 
         s_new = s_init - f_init*(s_init - s_old) / (f_init - f_old)  # estimate first guess of s_new
 
         if not np.isfinite(s_new) or s_new <= 0:
-            raise ValueError("Secant method failed to converge")
+            raise ValueError(f"the secant step gave f''(0) = {s_new}, which is not finite and positive")
 
         f_new = f(s_new)
         s_array = np.append(s_array, s_new)
         f_array = np.append(f_array, f_new)
 
         if not np.isfinite(f_new):
-            raise ValueError("Secant method failed to converge")
+            raise ValueError(f"F at the secant's guess s = {s_new} is not finite: RK4 diverged on this grid")
 
         if np.abs(f_new) < precision:
             return s_new, k+1, s_array, f_array
 
-    # return s_new as the root and iteration counter
-    return s_new, k+1, s_array, f_array
+    # The author's choice (AI-USE.md section 4, 2026-10-28): an unconverged secant raises instead of returning
+    raise ValueError(f"the secant did not reach |F| < {precision} in {max_iter} iterations "
+                     f"(last |F| = {abs(f_array[-1])})")
 
 # Adding the secant method to help find the next guess
 if __name__ == "__main__":

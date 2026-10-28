@@ -6,6 +6,7 @@ import pandas as pd
 from src.friction.blasius_shooting.shooting_blasius import (ETA_ARRAY, GUESS2_ddf, GUESS_ddf, INITIAL_df, INITIAL_f,
                                                             STEP_SIZE, F, blasius_rhs, rk4_solve, secant_for_shooting,
                                                             white_df, white_eta)
+from src.friction.blasius_shooting.skin_and_shear import RE_MAX
 
 # The 99 % edge: u/U = f' = 0.99
 EDGE = 0.99
@@ -62,8 +63,8 @@ def thicknesses(Re_x):
     ----------
     Re_x : float or array_like
         Local Reynolds number U*x/nu, dimensionless: one value or a non-empty 1-D array. Every value
-        must be finite and > 0. The Blasius layer is laminar, so the results only describe a real flow
-        below transition.
+        must be finite and in (0, RE_MAX], RE_MAX = 1e6. The Blasius layer is laminar, so the results only
+        describe a real flow below transition.
 
     Returns
     -------
@@ -76,7 +77,7 @@ def thicknesses(Re_x):
     Raises
     ------
     ValueError
-        If Re_x is not numeric, empty or more than 1-D, or any value is not finite or not positive.
+        If Re_x is not numeric, empty or more than 1-D, or any value is not finite, not positive or above RE_MAX.
     """
     Re_x = np.atleast_1d(np.asarray(Re_x))
     # A bool would pass as 1.0
@@ -85,8 +86,9 @@ def thicknesses(Re_x):
     Re_x = Re_x.astype(float)
     if Re_x.ndim != 1 or Re_x.size == 0:
         raise ValueError("Re_x must be one value or a non-empty 1-D array")
-    if not np.all(np.isfinite(Re_x) & (Re_x > 0)):
-        raise ValueError("Re_x must be finite and positive")
+    # The author's choice (AI-USE.md section 4, 2026-10-28): the same laminar range as skin_and_shear and von_karman
+    if not np.all(np.isfinite(Re_x) & (Re_x > 0) & (Re_x <= RE_MAX)):
+        raise ValueError(f"Re_x must be finite and positive, and at most {RE_MAX:g} (the laminar range)")
     a, c, d, H = blasius_coefficients()
     return np.array([a, c, d])/np.sqrt(Re_x)[:, None], H
 

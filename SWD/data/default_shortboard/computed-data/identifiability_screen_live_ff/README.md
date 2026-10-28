@@ -63,7 +63,7 @@ These are the same files as the original. Three of them put F_f beside quantitie
 | `forces_used.csv` | The held attitude's rows, 2–10 m/s. `friction_n` is F_f, 0.07 N (2 m/s) to 1.07 N (10 m/s) below SWD's own. `drag_total_n` is still SWD's, so the components miss it by 0.002–1.4 N (SWD's own components missed it by 0.9–1.4 N). The runs never use `drag_total_n` |
 | `attitude_candidates.csv` | The held attitude only. Its friction columns are F_f; `v_eq_swd_total_k1` still comes from SWD's total drag |
 | `v0_search.csv` | The screen's V0 rule under F_f. It would pick 4.4 m/s; V0 is held at 8.3 m/s |
-| `delta_a.csv`, `summary.csv`, `monte_carlo_fits.csv`, `monte_carlo_summary.csv` | As in the original, with F_f as the friction. `monte_carlo_summary.csv` also carries the first screen's rows |
+| `delta_a.csv`, `summary.csv`, `monte_carlo_fits.csv`, `monte_carlo_summary.csv` | As in the original, with F_f as the friction. Since 2026-10-28 every statistic is followed by its standard error (`SE ...`, normal-theory approximations), and the 3 s rows stay the evidence, matching the forward model's 3 s run. **Limitation:** the 3 s set (b) fits depend on the optimiser's start point and on the V0 ≤ 10 m/s bound (about 22 % end on it), so their V0 spread is not the data's alone (`AI-USE.md` § 4 and § 5 E166) |
 | `speed_runs.png`, `delta_a_x.png`, `overlay_x.png`, `fitted_k_hist.png` | The plots |
 
 ---

@@ -6,8 +6,8 @@ solution" separately, so the split has to be visible on disk.
 
 It is a VIEW, not a relocation. ``extract_board.ps1`` and ``census_board.ps1``
 write into the board directory's root and would recreate anything moved out of
-it, so everything they own is copied rather than moved. Only trajectory.csv,
-whose producer this project controls, actually moves.
+it, so everything they own is copied rather than moved. (trajectory.csv, the one
+file this script moved, left the repository with Part A on 2026-10-28.)
 
 Nothing here recomputes a value. The derived tables are column selections, so
 there is no second implementation of the density decomposition to drift against
@@ -52,16 +52,6 @@ def build(board_dir: Path) -> Path:
     view = board_dir / VIEW
     view.mkdir(parents=True, exist_ok=True)
 
-    # Move, idempotently: already-moved is success, not a missing source.
-    src, dst = board_dir / "trajectory.csv", view / "trajectory.csv"
-    if src.exists():
-        shutil.move(str(src), str(dst))
-        print(f"  moved   trajectory.csv")
-    elif dst.exists():
-        print(f"  moved   trajectory.csv (already in place)")
-    else:
-        print("  WARNING trajectory.csv not found - run python -m src.swd_model.trajectory")
-
     for name in COPIES:
         s = board_dir / name
         if not s.exists():
@@ -97,19 +87,19 @@ out of a SWD report file. The parent directory holds the extracted data.
 
 | File | What it is |
 |---|---|
-| `trajectory.csv` | 100% model output. SWD has no time axis; this is a prescribed 3 s carve integrated at 100 Hz |
 | `operating_points.csv` | Per-(drift, roll) aggregates of the extracted element rows |
 | `field_census.csv` | Statistics over the extracted fields, plus the status label this project assigned each one |
 | `elements_derived.csv` | The computed columns of `elements.csv`, with their keys |
 | `sub_elements_derived.csv` | The computed columns of `sub_elements.csv`, with their keys |
+| `identifiability_screen_live/` | 100% model output, from `python -m src.swd_model.identifiability_screen_live`. Whether a least-squares fit recovers a friction multiplier from acceleration at mmc1's sample times; its own README |
+| `identifiability_screen_live_ff/` | The same screen with F_f as the friction (Gate B), from `python -m src.friction.rerun_live_screen_ff`; its own README |
 
 ## Three things to know
 
 **This is a view, not the only home.** `extract_board.ps1` and `census_board.ps1`
 write into the parent directory and would recreate anything moved out of it, so
-`operating_points.csv` and `field_census.csv` are copies. `trajectory.csv` is the
-one genuine move — this project owns its producer. Regenerate the whole folder
-with `python SWD/tools/make_computed_view.py`.
+`operating_points.csv` and `field_census.csv` are copies. Regenerate them, and the
+two derived tables, with `python SWD/tools/make_computed_view.py`.
 
 **The computed columns also remain inside `elements.csv` and `sub_elements.csv`.**
 The extractor writes each table atomically, and splitting the columns out at
@@ -136,9 +126,6 @@ density and every recovered speed in this folder.
 `incidence_deg_derived` inverts `S = L·sin α·w`. It is **not** the same quantity as
 the extracted `incidence_deg_stored`: median difference −0.58°, σ 3.71°, only 36.6%
 agree within 0.5°. Do not use them interchangeably as a feature.
-
-`trajectory.csv` takes SWD's force response and drives it through a manoeuvre this
-project prescribed. SWD supplies the physics; the manoeuvre is an assumption.
 """
 
 

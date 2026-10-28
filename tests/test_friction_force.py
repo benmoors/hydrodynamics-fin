@@ -1,11 +1,11 @@
 """Tests for the friction drag F_f(V).
 
-(a) With SWD's laminar law 1.328/sqrt(Re) and the same turbulent closure, F_f equals physics_baseline's
-    friction_force to round-off for the same inputs.
-(b) Fully laminar (x_tr capped at L): F_f = 1/2 rho V^2 A 4 f''(0)/sqrt(Re_L) with White's f''(0), to the error
+(a) Fully laminar (x_tr capped at L): F_f = 1/2 rho V^2 A 4 f''(0)/sqrt(Re_L) with White's f''(0), to the error
     budget of test_skin_and_shear.
-(c) F_f is continuous either side of the all-laminar speed V* = RE_CRIT nu/L.
-(d) The Kármán laminar law runs; the PCHIP geometry returns the live-solver values; invalid inputs are refused.
+(b) F_f is continuous either side of the all-laminar speed V* = RE_CRIT nu/L.
+(c) The Kármán laminar law runs; the PCHIP geometry returns the live-solver values; invalid inputs are refused.
+
+The comparison with physics_baseline's friction_force left with Part A on 2026-10-28 (AI-USE.md section 4).
 """
 
 from __future__ import annotations
@@ -17,10 +17,9 @@ import pytest
 
 from src.friction import friction_force as ff
 from src.friction.von_karman import von_karman as vk
-from src.physics_baseline import friction_force as baseline_friction_force
 from tests.test_skin_and_shear import WHITE, error_budget
 
-RHO, MU = 1025.0, 0.00107  # SWD salt water, 20 degC: physics_baseline looks mu up from rho = 1025
+RHO, MU = 1025.0, 0.00107  # SWD salt water, 20 degC
 NU = MU/RHO
 AREA, LENGTH = 0.5, 0.1  # m^2, m: all laminar below V* = 5e5 nu/0.1 = 5.22 m/s
 
@@ -28,14 +27,6 @@ AREA, LENGTH = 0.5, 0.1  # m^2, m: all laminar below V* = 5e5 nu/0.1 = 5.22 m/s
 def constant(value):
     """A geometry callable that returns value at every speed."""
     return lambda V: np.full_like(np.asarray(V, dtype=float), value)
-
-
-def test_matches_physics_baseline_with_swd_laminar_law() -> None:
-    """Same inputs, SWD's 1.328/sqrt(Re): the two implementations agree to round-off, laminar and mixed."""
-    V = np.array([0.5, 2.0, 5.0, 8.3, 10.0])
-    for length in (LENGTH, 1.53026416):
-        ours = ff.F_f(V, constant(AREA), constant(length), RHO, MU, laminar_avg_C_f=lambda Re: 1.328/np.sqrt(Re))
-        np.testing.assert_allclose(ours, baseline_friction_force(length, AREA, V, rho_kgm3=1025), rtol=1e-13, atol=0)
 
 
 def test_laminar_law_never_sees_re_above_re_crit() -> None:
@@ -48,18 +39,6 @@ def test_laminar_law_never_sees_re_above_re_crit() -> None:
 
     ff.F_f(np.linspace(1.0, 20.0, 10001), constant(AREA), constant(1.53026416), RHO, MU, laminar_avg_C_f=strict_law)
     assert max(seen) <= ff.RE_CRIT
-
-
-@pytest.mark.xfail(strict=True, reason="physics_baseline.friction_force: rho*V*x_tr/mu rounds one ulp above RE_CRIT at "
-                                       "this speed, so its laminar run takes the turbulent law (found 2026-10-27, "
-                                       "not fixed: the author's decision)")
-def test_physics_baseline_round_off_at_transition() -> None:
-    """At 2.3 m/s, L = 1.53 m, physics_baseline is 12.7 % above F_f with the same laws (5.136 N against 4.558 N): its
-    laminar run takes the larger turbulent coefficient. At the corpus speed of 20 m/s the rounding does not happen
-    for any of SWD's salt-water densities, so no baseline result in the repository is affected."""
-    V, length = 2.3, 1.53026416
-    ours = ff.F_f(V, constant(AREA), constant(length), RHO, MU, laminar_avg_C_f=lambda Re: 1.328/np.sqrt(Re))
-    np.testing.assert_allclose(ours, baseline_friction_force(length, AREA, V, rho_kgm3=1025), rtol=1e-13, atol=0)
 
 
 def test_fully_laminar_is_blasius_drag_with_white_sigma() -> None:

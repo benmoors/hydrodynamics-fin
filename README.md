@@ -12,11 +12,65 @@ smoothly. This repository supplies that missing step. It:
 - scores the run with the jerk cost of Charles et al. (2026), a smoothness measure from their
   surfing-performance study.
 
-An earlier stage of the project, a machine-learning surrogate trained on SWD's output, is kept and
-reported too, including where it fails.
-
 The equations the code implements are the author's derivations. Each is recorded, with the choices
 behind it, in [`AI-USE.md`](AI-USE.md) § 4.
+
+This README describes the project as it ended. The two subsections below say where it began and
+where it goes next.
+
+### 🔹 Where it began
+
+The project set out to build a "Virtual Surfer": a machine-learning surrogate trained on SWD's
+hydrodynamic output, queried along a synthetic trajectory on the wave, feeding the two performance
+indicators of Charles et al., Board-Jerk and Radicality. That first stage, Part A, had three pieces:
+- the surrogate, an SVR compared with a decision tree, a 5-nearest-neighbour model and a physics
+  baseline, trained on 13 boards and scored leave-one-board-out;
+- the first trajectory model, `trajectory.py`, with its Board-Jerk and Radicality;
+- a first identifiability screen built on that model.
+
+Claude Code produced Part A from very high-level instructions, and the author did not oversee it
+closely while it was being produced. As a result he could not attest its tests, and on
+28 October 2026 he removed it from the repository (`AI-USE.md` § 4). The trajectory model also
+carried a known error: it summed 7–12 scan positions per roll case, which inflated its forces
+(`AI-USE.md` § 5 E133). The removed files are archived outside the repository and remain in its
+git history up to commit `718c0e0`. The prompts that built them stay in `AI-USE.md` § 6.
+
+What remains, Part B, was built the other way round. The author derived the equations, and every
+grid and tolerance in its tests is his (section 5).
+
+### 🔹 Where it goes next: the inverse PINN
+
+The forward model answers one question: given the forces, how does the board move? The planned next
+stage asks the inverse one: given the board's measured acceleration, how large is its friction? A
+physics-informed neural network (PINN) adds something only in that inverse mode. Run forward, the
+equation of motion is an initial value problem that RK4 already solves (`AI-USE.md` § 2,
+2026-10-23). What has been decided so far, all recorded in `AI-USE.md` § 4:
+
+- Synthetic data comes first, then the inverse PINN, then a least-squares model-mismatch study.
+  All three were deferred on 27 October 2026, to leave time to make each decision without skipping
+  important choices to meet a due date.
+- The PINN's physics is the Blasius equation and the von Kármán momentum integral (22 October).
+  Falkner–Skan, a third candidate, was dropped because SWD has no pressure gradient for it to
+  describe. Blasius needs an initial condition, f″(0), which comes from RK4 shooting first
+  (23 October). `src/friction/blasius_shooting/` computes it, and F_f is built on it.
+- The unknown is a friction multiplier k on F_f, recovered from the along-path acceleration
+  sampled at about 15 Hz, the rate of the paper's own board sample (mmc1).
+- The starting speed V0 is to be treated as measured with an uncertainty, neither known exactly
+  nor fitted freely (27 October). Its source is not chosen yet: the MS5837's dynamic pressure, or
+  GPS.
+- The noise is, for now, the 0.01 g resolution floor, σ = 0.0981/√12 = 0.0283 m/s², from the
+  author's own derivation (27 October). The ICM-20948's own noise is to be added later.
+- Step 1's spec suggested generating the synthetic data with `solve_ivp` and fitting it with RK4,
+  so the fit is never tested on data its own integrator made. The author kept RK4 for Step 1 and
+  left `solve_ivp` for later (27 October, E17).
+- The feasibility evidence is the live-solver identifiability screen and its Gate B rerun
+  (section 5). They ask whether a least-squares fit can recover a planted k = 1.10 from that
+  acceleration above the noise. Neither has a verdict yet; the author decides.
+
+Not yet decided: the network, its loss terms and their weights, and the training data. One
+constraint is already known. The inverse fit would use the forward model's 3 s run, and at this
+attitude the forward model leaves the force data at 5.07 s. So the inverse work needs a longer run
+inside the data, or it accepts the 3 s start dependence of the screen's set (b) (28 October).
 
 ---
 
@@ -33,10 +87,8 @@ behind it, in [`AI-USE.md`](AI-USE.md) § 4.
     │   ├── forward_model/
     │   │   ├── forward_model.py      V(t) down the face: the author's E15 and E16, by RK4
     │   │   └── board_jerk.py         the jerk cost J, Charles et al. Eq 4–7
-    │   ├── swd_model/                two identifiability screens, and the superseded trajectory model
-    │   └── geometry.py, data.py, splits.py, models.py, physics_baseline.py,
-    │       evaluate.py, predict.py, profiling.py      the earlier surrogate
-    ├── tests/                        pytest: 318 pass, 1 expected failure
+    │   └── swd_model/                the live-solver identifiability screen, for the inverse PINN
+    ├── tests/                        pytest: 273 pass
     ├── docs/                         pdoc HTML, generated
     ├── SWD/                          the data acquired from SWD, and its documentation (section 6)
     ├── tools/                        regenerates the prompt appendix in AI-USE.md
@@ -66,15 +118,9 @@ pip install -r requirements.txt
 |---|---|
 | numpy, pandas | array and table handling |
 | scipy | PCHIP interpolation, Simpson's rule, root-finding, least squares |
-| scikit-learn ≥ 1.9 | SVR, decision tree, k-NN, pipelines, metrics (the surrogate) |
-| matplotlib | the screens' figures and the notebooks' plots |
+| matplotlib | the screen's figures and the notebooks' plots |
 | pytest | the test suite |
 | pdoc | HTML API documentation |
-
-> ### 🧩 Point of note
-> scikit-learn needs a wheel built for your interpreter. On Python 3.14 that means
-> **scikit-learn 1.9.0 or later** — earlier releases have no `cp314` wheel and `pip` will
-> fall back to a source build that requires a C++ toolchain.
 
 Run everything from the repository root. The modules are a package, so a script runs as
 `python -m src.<package>.<module>`, not by its file path.
@@ -156,41 +202,11 @@ The Blasius and Kármán checks are notebooks, opened from their own folders:
 `src/friction/blasius_shooting/rk4_blasius_checks_cc.ipynb`, `fd_vs_shooting_cc.ipynb`,
 `shooting_for_blasius.ipynb` and `src/friction/von_karman/vonkarman.ipynb`.
 
-### 🔹 The screens
+### 🔹 The screen and Gate B
 
 ```bash
-python -m src.swd_model.identifiability_screen_live    # screen 2, about 7 minutes
-python -m src.friction.rerun_live_screen_ff            # Gate B: screen 2 with F_f
-```
-
-### 🔹 The earlier surrogate
-
-```python
-from src.data import build_training_table, FEATURES
-table = build_training_table()          # 389 rows, 13 boards, drift <= 20 deg
-print(table[FEATURES].corr().round(3))
-```
-
-```python
-from src.data import build_training_table
-from src.evaluate import evaluate_all, fold_scores, summarise, pooled_score
-
-table = build_training_table()
-print(evaluate_all(table))                                   # every model x target
-print(summarise(fold_scores(table, "drag_friction_n", "decision_tree")))
-print(pooled_score(table, "drag_friction_n", "knn5"))        # the +0.52 reconciliation
-```
-
-```python
-import pandas as pd
-from src.predict import SurrogatePredictor
-from src.data import build_training_table
-
-model = SurrogatePredictor().fit(build_training_table())
-model.predict(pd.DataFrame([{
-    "volume_shape_l": 40.0, "length_over_width": 3.7,
-    "thickness_over_length": 0.026, "drift_deg": 5.0, "roll_rad": 0.3,
-}]))
+python -m src.swd_model.identifiability_screen_live    # the live-solver screen, about 7 minutes
+python -m src.friction.rerun_live_screen_ff            # Gate B: the same screen with F_f
 ```
 
 ### 🔹 Regenerate the HTML documentation
@@ -243,7 +259,7 @@ starting speed.
 | `a` (input) | float array | m/s² | finite | numeric, the same length as t |
 | `complete` (input) | bool | — | must be True | the whole run, from `simulate()` |
 | `J` (output) | float | dimensionless | ≥ 0 | |
-| `D`, from `displacement` (output) | float | m | ≥ 0 | `jerk_cost` raises at D = 0, because C is undefined |
+| `D`, from `displacement` (output) | float | m | ≥ 0 | `jerk_cost` raises below 1e-5 m: C is undefined at 0 and meaningless near it |
 
 Each of those conditions, broken, raises `ValueError` with its own message.
 
@@ -259,42 +275,6 @@ Each of those conditions, broken, raises `ValueError` with its own message.
 The transition point sits at Re = 5×10⁵, SWD's value, capped at the wetted length. The laminar run uses
 the Blasius average coefficient from the shooting by default, and the turbulent run uses SWD's
 0.031/Re_L^(1/7).
-
-### 🔹 The earlier surrogate
-
-All targets are board totals for one (board, drift, roll case), in newtons.
-
-| Feature | Type | Unit | Range | Domain |
-|---|---|---|---|---|
-| `volume_shape_l` | float64 | litres | 24.0 – 130.7 | > 0 |
-| `length_over_width` | float64 | — | 2.91 – 5.56 | ≥ 1 |
-| `thickness_over_length` | float64 | — | 0.0105 – 0.0425 | > 0 |
-| `drift_deg` | float64 | degrees | 0 – 20 | 0 – 90 available |
-| `roll_rad` | float64 | radians | −0.200 – 1.368 | — |
-
-Target ranges below are **corpus-wide, across all 11 drift angles**, not the envelope the
-feature table describes. Inside the `drift ≤ 20°` envelope the extremes are smaller — lift
-tops out at 841,823 N rather than 894,599 N — because the largest forces occur with the
-board near broadside.
-
-| Target | Unit | Range (all 11 angles) | Note |
-|---|---|---|---|
-| `drag_total_n` | N | 157 – 522,339 | SWD's own global field, **not** a sum of the others |
-| `drag_friction_n` | N | 16.9 – 5,169 | the only target that generalises |
-| `drag_planing_n` | N | 47 – 512,482 | |
-| `drag_rail_n` | N | −5,541 – 15,951 | **negative is thrust**; zero on 113 rows means the rail is not engaged |
-| `lift_total_n` | N | 982 – 894,599 | |
-
-A NaN in a query is refused, not imputed — there is no defensible way to guess a board dimension. A
-query outside the ranges above is predicted but flagged `in_envelope = False`, and by default warns;
-`policy="refuse"` raises instead.
-
-> ### 💬 Aside
-> The envelope is a per-feature bounding box, so it will pass a combination that exists
-> nowhere in the data — a 130 L hull with a shortboard's aspect ratio sits inside every
-> individual margin. This is asserted as a known limitation in `tests/test_predict.py`
-> rather than left to be discovered later. A convex hull would catch it; with 13 boards a
-> convex hull would not be trustworthy either.
 
 ---
 
@@ -314,6 +294,16 @@ any tolerance was written (`AI-USE.md` § 4).
 | Skin friction C_f√Re_x from the shot | 4.3×10⁻⁹ from 2σ/√2 |
 | Kármán integral with the Majdalani–Xuan quartic, Table 4-1 | all six values within half the last printed digit; C_f 0.517 % above Blasius; RK4 march p_obs = 4.069 |
 | F_f against SWD's own friction, pos_x 0.45, 2–10 m/s | 0.985–0.989 of it |
+
+### 🔹 The alternatives compared
+
+The brief asks for at least one alternative, compared with evidence (p. 5). Two are implemented,
+and both are measured in the table above.
+
+| Used | Alternative | Evidence | Choice |
+|---|---|---|---|
+| Blasius f″(0) by RK4 shooting | a second-order central difference on the same grid | f″(0) within 1.5×10⁻⁸ against the difference's 1.7×10⁻⁵, which takes about a quarter of the time | shooting, for F_f |
+| the Blasius laminar law in F_f | the Kármán integral with the Majdalani–Xuan quartic | its C_f sits 0.517 % above Blasius | Blasius by default (`AI-USE.md` § 4); Kármán through `laminar_avg_C_f=vk.avg_C_f` |
 
 ### 🔹 The forward model
 
@@ -346,53 +336,12 @@ On the author's run, D = 2.657 m, C = 34.42 s⁵/m² and **J = 64.58**.
 > makes D = 2.657 m. The distance actually travelled is 20.657 m, which would give J = 1.068, sixty
 > times smaller. The author chose the literal form (`AI-USE.md` § 4).
 
-### 🔹 The screens and Gate B
+### 🔹 The screen and Gate B
 
-Two identifiability screens (2026-10-24) measured how well a fit recovers a friction multiplier k
-from acceleration sampled at about 15 Hz. Gate B re-ran the second with F_f in place of SWD's
+The live-solver identifiability screen (2026-10-24) measured how well a fit recovers a friction
+multiplier k from acceleration sampled at about 15 Hz. Gate B re-ran it with F_f in place of SWD's
 friction: every spread of the fitted k is 0.2–5.6 % wider. **Neither gate has a verdict yet;**
-the author decides.
-
-### 🔹 The earlier surrogate
-
-A physics solver that takes **12 to 31 minutes** per board across 11 drift angles is too slow for a
-shaper comparing hulls. The surrogate was trained on SWD's own output to predict the same forces in
-microseconds. It was scored leave-one-board-out over 13 boards, in newtons. The SVR column is
-**nested**: an inner grouped cross-validation on the training boards chose the hyperparameters, so the
-held-out board never influences the model it scores.
-
-| Target | SVR (nested) | folds < 0 | Decision tree | 5-NN |
-|---|---:|---:|---:|---:|
-| `drag_friction_n` | **+0.521** | **1/13** | +0.366 | +0.342 |
-| `drag_rail_n` | −0.175 | 8/13 | +0.084 | +0.030 |
-| `lift_total_n` | −0.302 | 9/13 | −0.265 | −0.170 |
-| `drag_planing_n` | −0.540 | 10/13 | −0.506 | −0.387 |
-| `drag_total_n` | −0.655 | 13/13 | −0.733 | −0.485 |
-
-**Friction drag generalises to an unseen hull. Planing drag, total drag and lift do not.**
-Geometry features improve every target, so the geometry axis is real; there is too
-little of it at 13 hulls.
-
-> ### 🧩 Point of note — the defaults were the story, and then they were not
-> On scikit-learn's stock `gamma='scale'`, `C=100`, the SVR scored **−0.265** on
-> friction: worse than the mean baseline, and beaten by a decision tree on its own
-> defaults. That was a property of the defaults, not the method — 339 of 389 training
-> rows became support vectors, which is memorisation. Nested tuning takes it to
-> **+0.521**, and `gamma=0.1` was selected in **13 of 13** folds. Tuning did *not*
-> rescue any other target, which is the useful part: hyperparameters cannot fix a
-> shortage of hulls.
->
-> Searching the grid against the held-out boards instead scores **+0.556**. That figure
-> is 0.035 higher and is not reported as a result, because it was chosen by looking at
-> the data it is scored on.
-
-> ### 🧩 Point of note — the metric convention does more work than the model
-> The same predictions, the same folds and the same model score **−0.485** per-fold in
-> newtons, **+0.193** pooled in newtons, and **+0.284** pooled in signed-log space. Pooling
-> moves between-board variance into the denominator, crediting the model for knowing that a
-> 130 L paddleboard drags more than a 24 L shortboard — the one thing a board-grouped split
-> exists to withhold. `src/evaluate.py` reports both so the flattering figure cannot be
-> quoted alone.
+the author decides. A first screen, built on the removed trajectory model, left with Part A.
 
 ### 🔹 What this validation cannot establish
 
@@ -404,19 +353,11 @@ little of it at 13 hulls.
   −22.1 N at (2 m/s, −10°).
 - The jerk cost is not compared with the paper; that comparison is future work. J here is for a
   3 s straight glide with no turns, not a surfed wave, and Radicality is not computed.
-- The surrogate says nothing about other flow speeds. All 720 operating points were computed at
-  20.000 m/s, and SWD's turbulent friction scales as `V^1.857`, not `V²`.
-- Nothing about hulls outside 24–131 L, and little about combinations of shape not
-  represented among 13 boards.
-- Absolute dimensions carry a 1.56 % calibration bound. They are reconstructed through
-  a single shape coefficient fitted on the two boards whose true length is independently
-  known. The *ratios* are direct measurements and agree with SWD's own panel to 0.05 %.
-- The drag components do not sum to the total in SWD's own data — 0 of 720 rows match,
-  median residual +0.25 %. Any consistency audit must be scored against that residual, not
-  against zero.
-- `src/swd_model/trajectory.py`, the first trajectory model, sums its polar wrongly (`AI-USE.md`
-  § 5 E133), so its forces, Board-Jerk and Radicality are inflated. It is superseded and not fixed.
-
+- The screen's set (b), which fits k and V0 together, is taken at 3 s to match the forward model's
+  3 s run. At 3 s its fits depend on the optimiser's starting point and on the V0 ≤ 10 m/s bound:
+  about 22 % of them stop on the bound, so its V0 spread is not what the data alone give. At
+  10.055 s, mmc1's full wave, only 3 % do at the lower noise level, but the forward model cannot
+  run that long at this attitude: held at 0° after its ramp, it leaves the force data at 5.07 s.
 ---
 
 ## 📂 6. The data acquisition half
@@ -483,7 +424,7 @@ says where each answer is and how the checking worked.
 |---|---|---|---|
 | Claude Code (Anthropic) | 2.1.246–2.1.311 | `claude-opus-5`; `claude-opus-5-5` from 23 Sep 2026 | writing and editing code and documents under direction — 42 sessions, 435 prompts, 26 Aug – 27 Oct 2026 |
 | SQA-loop agents, run inside Claude Code | as installed Aug 2026; rebuilt 27 Sep 2026 | `claude-opus-5`, then `claude-opus-5-5` | reviewing and fixing that code — 15 review dispatches and 6 fix rounds in Aug–Sep 2026; read-only `sqa-numerical` and `sqa-functional` reviews in Oct 2026 |
-| humanizer plugin | 2.11.2 | the session's model | four prose passes over this README, the latest on 28 Oct 2026, each followed by a fact diff |
+| humanizer plugin | 2.11.2 | the session's model | five prose passes over this README, the latest on 28 Oct 2026, each followed by a fact diff |
 | graphify | 0.9.52 | none for code | a navigation graph of the repo; gitignored, not a deliverable; retired 14 Sep 2026 |
 | Google Antigravity CLI (agy) | 2026-09 onwards | Gemini (3.8 Flash, 3.1 Pro, 4 Argon, as selected) | auditing and fixing the SWD extraction code (24–25 Sep 2026); since 27 Sep, the first stage of the SQA pass; from Oct 2026, review-only checks of the friction, forward-model and jerk-cost code |
 | Devin CLI (Cognition) | 3000.11.3 | `swe-1-7` | drafting the second-source auditor config (24 Sep 2026); since 27 Sep, the second stage of the SQA pass; from Oct 2026, the second review-only check |
@@ -552,6 +493,19 @@ repository since 28 Oct 2026.
 > reasons, and three faults found in trial runs: `AI-USE.md` § 2 (2026-09-26/27 and 2026-09-27) and
 > § 5 E78–E80.
 
+<!-- REVIEW: drafted from AI-USE.md § 4 (2026-10-28) and the author's prompt by Claude Code. Rewrite it in
+     your own words, change what is not true, and delete this comment. Exempt from style passes. -->
+
+### 🔹 What Part A taught about using AI
+
+The project's first stage, Part A (the surrogate, the first trajectory model and the first screen),
+was produced from very high-level instructions, and I did not oversee it closely while it was being
+produced. Its tests passed, but I could not attest them. On 28 October 2026 I removed it from the
+repository, and the original goal it served changed with it. Part B was built the other way: I
+derived each equation and chose each grid and tolerance before the code that tests them was
+written, and Claude Code implemented them. The prompts that produced Part A stay in `AI-USE.md`
+§ 6, and the decision is recorded in § 4.
+
 ### 🔹 Errors the AI made
 
 The brief's Excellent band asks for "identification of errors", and its Poor band names
@@ -597,11 +551,12 @@ reference is flagged for a human to check. The brief does not ask for this; it i
 > 28 October 2026), which wrote and edited code and documentation under my direction across 42
 > sessions and 435 prompts (to 27 October), and ran the **SQA-loop** review agents over its own
 > output. **Google Antigravity (agy)** and **Devin CLI** audited the code, and from October reviewed
-> it without editing it. The **humanizer** plugin (2.11.2) was used for four prose passes over this
+> it without editing it. The **humanizer** plugin (2.11.2) was used for five prose passes over this
 > README. **graphify** (0.9.52) built a navigation graph that is not part of the submission; it was
 > retired on 14 September 2026.
 >
-> AI was used for the SWD extraction and UI-automation scripts, the surrogate pipeline in `src/`,
+> AI was used for the SWD extraction and UI-automation scripts, the surrogate pipeline and first
+> trajectory model that I later removed from the repository (Part A),
 > the friction-function, forward-model and jerk-cost code in `src/` (implementing my own
 > derivations), the test suites, and the drafting of the documentation. The complete record — what
 > was asked, what came back, what I changed, and what it got wrong — is `AI-USE.md`.

@@ -107,8 +107,12 @@ def main():
     print("=== Gate B rerun: friction is F_f(V), not SWD's friction_n (FEASIBILITY ONLY) ===")
     print(f"Attitude pos_y {POS_Y:g}, pos_x {POS_X:g} and V0 = {V0:g} m/s are held at the original run's. "
           f"PLANTED = {screen.PLANTED} and FRICTION_SHIFT = {screen.FRICTION_SHIFT} now scale F_f, not friction_n.\n")
+    patched = screen.load_forces, screen.select, screen.OUT_DIR
     screen.load_forces, screen.select, screen.OUT_DIR = load_forces_ff, select_held, OUT_DIR
-    screen.main()
+    try:
+        screen.main()
+    finally:  # the screen module is left as it was found
+        screen.load_forces, screen.select, screen.OUT_DIR = patched
 
     keys = ["duration_s", "sigma", "set"]
     columns = keys + ["N", "mean k", "sd k", "within ±band", "converged"]

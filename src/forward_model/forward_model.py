@@ -214,7 +214,8 @@ def _scalar(name, value):
 def march(rhs, V0, T, h):
     """RK4 for dV/dt = rhs(t, [V]) from V0 on t = 0, h, ..., T, stopping where rhs raises OutOfData.
 
-    Each step is one call of the author's rk4_solve. A run stops (A6) at the last node whose own derivative and all
+    Each step is one call of the author's rk4_solve, given the node's slope as its k1 (four rhs calls per step, not
+    five; the result is bit-identical). A run stops (A6) at the last node whose own derivative and all
     four RK4 stages stayed inside the data, so every returned node is inside it.
 
     Parameters
@@ -255,15 +256,15 @@ def march(rhs, V0, T, h):
     V[0] = V0
     for i in range(n + 1):
         try:
-            # ponytail: rk4_solve recomputes this as its k1, so a step costs 5 rhs calls, not 4 (+25 %); the price of
-            #           calling the author's rk4_solve unchanged
-            a[i] = rhs(t[i], V[i:i + 1])[0]
+            slope = rhs(t[i], V[i:i + 1])
+            a[i] = slope[0]
         except OutOfData:
             return t[:i], V[:i], a[:i], False
         if i == n:
             break
         try:
-            V[i + 1] = rk4_solve(rhs, [V[i]], t[i:i + 2], h)[1, 0]
+            # The slope at the node is rk4_solve's k1, so it is handed over rather than worked out twice
+            V[i + 1] = rk4_solve(rhs, [V[i]], t[i:i + 2], h, first_k1=slope)[1, 0]
         except OutOfData:
             # A trial stage left the data: node i is the last one inside it
             return t[:i + 1], V[:i + 1], a[:i + 1], False

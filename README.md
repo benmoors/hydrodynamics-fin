@@ -85,7 +85,7 @@ inside the data, or it accepts the 3 s start dependence of the screen's set (b) 
     │   ├── forward_model/
     │   │   └── forward_model.py      V(t) down the face: the author's E15 and E16, by RK4
     │   └── swd_model/                the live-solver identifiability screen, for the inverse PINN
-    ├── tests/                        pytest: 261 pass
+    ├── tests/                        pytest: 272 pass
     ├── docs/                         pdoc HTML, generated
     ├── figures/                      the README's figures
     ├── SWD/                          the data acquired from SWD, and its documentation (section 6)

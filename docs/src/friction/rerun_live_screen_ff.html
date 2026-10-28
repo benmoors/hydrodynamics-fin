@@ -322,23 +322,23 @@ OUT_DIR       identifiability_screen_live_ff/, beside the original, which is not
 
     </div>
     <a class="headerlink" href="#original_load_forces"></a>
-            <div class="pdoc-code codehilite"><pre><span></span><span id="original_load_forces-124"><a href="#original_load_forces-124"><span class="linenos">124</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_forces</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">SOLVER_CSV</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
-</span><span id="original_load_forces-125"><a href="#original_load_forces-125"><span class="linenos">125</span></a><span class="w">    </span><span class="sd">"""Converged live-solver reads at slope 0 and drift 0 that pass the decomposition check.</span>
-</span><span id="original_load_forces-126"><a href="#original_load_forces-126"><span class="linenos">126</span></a>
-</span><span id="original_load_forces-127"><a href="#original_load_forces-127"><span class="linenos">127</span></a><span class="sd">    Parameters</span>
-</span><span id="original_load_forces-128"><a href="#original_load_forces-128"><span class="linenos">128</span></a><span class="sd">    ----------</span>
-</span><span id="original_load_forces-129"><a href="#original_load_forces-129"><span class="linenos">129</span></a><span class="sd">    path : pathlib.Path</span>
-</span><span id="original_load_forces-130"><a href="#original_load_forces-130"><span class="linenos">130</span></a><span class="sd">        ``converged/solver_points.csv``.</span>
-</span><span id="original_load_forces-131"><a href="#original_load_forces-131"><span class="linenos">131</span></a>
-</span><span id="original_load_forces-132"><a href="#original_load_forces-132"><span class="linenos">132</span></a><span class="sd">    Returns</span>
-</span><span id="original_load_forces-133"><a href="#original_load_forces-133"><span class="linenos">133</span></a><span class="sd">    -------</span>
-</span><span id="original_load_forces-134"><a href="#original_load_forces-134"><span class="linenos">134</span></a><span class="sd">    kept : pandas.DataFrame</span>
-</span><span id="original_load_forces-135"><a href="#original_load_forces-135"><span class="linenos">135</span></a><span class="sd">        Rows kept.</span>
-</span><span id="original_load_forces-136"><a href="#original_load_forces-136"><span class="linenos">136</span></a><span class="sd">    n_dropped : int</span>
-</span><span id="original_load_forces-137"><a href="#original_load_forces-137"><span class="linenos">137</span></a><span class="sd">        Rows dropped by :func:`drop_inconsistent`.</span>
-</span><span id="original_load_forces-138"><a href="#original_load_forces-138"><span class="linenos">138</span></a><span class="sd">    """</span>
-</span><span id="original_load_forces-139"><a href="#original_load_forces-139"><span class="linenos">139</span></a>    <span class="n">d</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-</span><span id="original_load_forces-140"><a href="#original_load_forces-140"><span class="linenos">140</span></a>    <span class="k">return</span> <span class="n">drop_inconsistent</span><span class="p">(</span><span class="n">d</span><span class="p">[(</span><span class="n">d</span><span class="o">.</span><span class="n">slope_deg</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">drift_deg</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)])</span>
+            <div class="pdoc-code codehilite"><pre><span></span><span id="original_load_forces-312"><a href="#original_load_forces-312"><span class="linenos">312</span></a><span class="k">def</span><span class="w"> </span><span class="nf">load_forces</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">=</span> <span class="n">SOLVER_CSV</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+</span><span id="original_load_forces-313"><a href="#original_load_forces-313"><span class="linenos">313</span></a><span class="w">    </span><span class="sd">"""Converged live-solver reads at slope 0 and drift 0 that pass the decomposition check.</span>
+</span><span id="original_load_forces-314"><a href="#original_load_forces-314"><span class="linenos">314</span></a>
+</span><span id="original_load_forces-315"><a href="#original_load_forces-315"><span class="linenos">315</span></a><span class="sd">    Parameters</span>
+</span><span id="original_load_forces-316"><a href="#original_load_forces-316"><span class="linenos">316</span></a><span class="sd">    ----------</span>
+</span><span id="original_load_forces-317"><a href="#original_load_forces-317"><span class="linenos">317</span></a><span class="sd">    path : pathlib.Path</span>
+</span><span id="original_load_forces-318"><a href="#original_load_forces-318"><span class="linenos">318</span></a><span class="sd">        ``converged/solver_points.csv``.</span>
+</span><span id="original_load_forces-319"><a href="#original_load_forces-319"><span class="linenos">319</span></a>
+</span><span id="original_load_forces-320"><a href="#original_load_forces-320"><span class="linenos">320</span></a><span class="sd">    Returns</span>
+</span><span id="original_load_forces-321"><a href="#original_load_forces-321"><span class="linenos">321</span></a><span class="sd">    -------</span>
+</span><span id="original_load_forces-322"><a href="#original_load_forces-322"><span class="linenos">322</span></a><span class="sd">    kept : pandas.DataFrame</span>
+</span><span id="original_load_forces-323"><a href="#original_load_forces-323"><span class="linenos">323</span></a><span class="sd">        Rows kept.</span>
+</span><span id="original_load_forces-324"><a href="#original_load_forces-324"><span class="linenos">324</span></a><span class="sd">    n_dropped : int</span>
+</span><span id="original_load_forces-325"><a href="#original_load_forces-325"><span class="linenos">325</span></a><span class="sd">        Rows dropped by :func:`drop_inconsistent`.</span>
+</span><span id="original_load_forces-326"><a href="#original_load_forces-326"><span class="linenos">326</span></a><span class="sd">    """</span>
+</span><span id="original_load_forces-327"><a href="#original_load_forces-327"><span class="linenos">327</span></a>    <span class="n">d</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+</span><span id="original_load_forces-328"><a href="#original_load_forces-328"><span class="linenos">328</span></a>    <span class="k">return</span> <span class="n">drop_inconsistent</span><span class="p">(</span><span class="n">d</span><span class="p">[(</span><span class="n">d</span><span class="o">.</span><span class="n">slope_deg</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">drift_deg</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)])</span>
 </span></pre></div>
 
 
